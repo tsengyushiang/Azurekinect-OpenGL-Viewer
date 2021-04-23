@@ -83,20 +83,21 @@ cmake-gui  ..
     
     ![step4](./docs/build-realsense-lib-4.PNG)
 
-- include `<librealsense2-net/rs_net.hpp>`
+- Use our `./rs-imshow.cpp` code to test network device or build one your self :
 
-- build network pipe
+    - include `<librealsense2-net/rs_net.hpp>`
 
-    ```
-    rs2::net_device dev("192.168.0.106");
-    rs2::context ctx;
-    dev.add_to(ctx);
-    rs2::pipeline pipe(ctx);
+    - build network pipe
+        ```
+        rs2::net_device dev("192.168.0.106");
+        rs2::context ctx;
+        dev.add_to(ctx);
+        rs2::pipeline pipe(ctx);
 
-    rs2::config cfg;
-    cfg.enable_stream(RS2_STREAM_DEPTH,640,480,RS2_FORMAT_Z16,30);
-    cfg.enable_stream(RS2_STREAM_COLOR,640,480, RS2_FORMAT_YUYV, 30);
-    ```
-    ![step3](./docs/build-realsense-lib-3.PNG)
+        rs2::config cfg;
+        cfg.enable_stream(RS2_STREAM_DEPTH,640,480,RS2_FORMAT_Z16,30);
+        cfg.enable_stream(RS2_STREAM_COLOR,1280,720, RS2_FORMAT_BGR8, 30);
+        ```
+        ![step3](./docs/build-realsense-lib-3.PNG)
 
-- run and click `reload project`.
+    - run and click `reload project`.
