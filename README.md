@@ -35,11 +35,20 @@
 
 - run command `rs-server`
 
-# window Client
+# Windows Client
+
+- requirements
+
+    - vs2019 + Window SDK
+    - [cmake 3.18.3](https://github.com/Kitware/CMake/releases?after=v3.19.0-rc2)
 
 - build realsenseSDK with opencv, network-device
 
-- [build with opencv](https://github.com/IntelRealSense/librealsense/blob/master/wrappers/opencv/readme.md)( [local version](./doc/realsense-opencv.md) )
+- [build with opencv](https://github.com/IntelRealSense/librealsense/blob/master/wrappers/opencv/readme.md)( [local version](./doc/realsense-opencv.md) ), Uncheck `BUILD_SHARED_LIBS`, check `old-jpeg` 
+    - if you need `NETWORK_DEVICE` in realsense, because realsense cmake have `libjpeg-turbo` too.
+
+![cmake-configure](./docs/RealsenseNetwokDevice-opencv-libjpegtubo-conflict.PNG)
+
 
 - build with network-device  :
 
@@ -56,7 +65,6 @@ cmake-gui  ..
 
 - Press Configure and Make sure you check the `BUILD_CV_EXAMPLES` and `BUILD_NETWORK_DEVICE` flag and click Configure again
 
-![cmake-v140](./docs/cmake-v140.PNG)
 ![cmake-configure](./docs/cmake-configure.PNG)
 
 - Specify CMake binaries folder for OpenCV as `OpenCV_DIR` (c:/git/opencv-3.4/build)
