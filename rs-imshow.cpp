@@ -4,30 +4,31 @@
 #include <librealsense2/rs.hpp> // Include RealSense Cross Platform API
 #include <librealsense2-net/rs_net.hpp>
 #include <opencv2/opencv.hpp>   // Include OpenCV API
+#include <thread>
 
-int main(int argc, char * argv[]) try
-{
+void opencv_panels(std::string url) {
+
     // Declare depth colorizer for pretty visualization of depth data
     rs2::colorizer color_map;
 
-    rs2::net_device dev("192.168.0.120");
+    rs2::net_device dev(url);
     rs2::context ctx;
     dev.add_to(ctx);
     rs2::pipeline pipe(ctx);
 
     rs2::config cfg;
-    cfg.enable_stream(RS2_STREAM_DEPTH,640,480,RS2_FORMAT_Z16,30);
+    cfg.enable_stream(RS2_STREAM_DEPTH, 1280, 720, RS2_FORMAT_Z16, 30);
     cfg.enable_stream(RS2_STREAM_COLOR, 1280, 720, RS2_FORMAT_BGR8, 30);
     // Declare RealSense pipeline, encapsulating the actual device and sensors
     // Start streaming with default recommended configuration
     pipe.start(cfg);
 
     using namespace cv;
-    const auto window_name = "Depth Image";
-    const auto window_name2 = "Color Image";
+    const auto window_name = "Depth Image" + url;
+    const auto window_name2 = "Color Image" + url;
 
-    namedWindow(window_name, WINDOW_AUTOSIZE);
-    namedWindow(window_name2, WINDOW_AUTOSIZE);
+    namedWindow(window_name, WINDOW_FREERATIO);
+    namedWindow(window_name2, WINDOW_FREERATIO);
 
     while (waitKey(1) < 0 && getWindowProperty(window_name, WND_PROP_AUTOSIZE) >= 0)
     {
@@ -50,10 +51,19 @@ int main(int argc, char * argv[]) try
         imshow(window_name, image);
         imshow(window_name2, image2);
     }
+}
+
+int main(int argc, char* argv[]) try
+{
+    std::thread device1(opencv_panels, "192.168.0.120");
+    std::thread device2(opencv_panels, "192.168.0.106");
+
+    device1.join();
+    device2.join();
 
     return EXIT_SUCCESS;
 }
-catch (const rs2::error & e)
+catch (const rs2::error& e)
 {
     std::cerr << "RealSense error calling " << e.get_failed_function() << "(" << e.get_failed_args() << "):\n    " << e.what() << std::endl;
     return EXIT_FAILURE;
