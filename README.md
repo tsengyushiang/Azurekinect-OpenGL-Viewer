@@ -49,6 +49,10 @@
 
 ![cmake-configure](./docs/RealsenseNetwokDevice-opencv-libjpegtubo-conflict.PNG)
 
+- if you need aruco build with [opencv_contrib](https://github.com/opencv/opencv_contrib/tree/3.4) and include `.hpp`
+
+![cmake-configure](./docs/opencv-aruco-build.PNG)
+![cmake-configure](./docs/opencv-aruco-lib.PNG)
 
 - build with network-device  :
 

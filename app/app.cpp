@@ -4,7 +4,38 @@
 #include <librealsense2/rs.hpp> // Include RealSense Cross Platform API
 #include <librealsense2-net/rs_net.hpp>
 #include <opencv2/opencv.hpp>   // Include OpenCV API
+#include <opencv2/aruco.hpp>
 #include <thread>
+
+namespace OpencvAruco {
+    cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
+
+    void saveOpencvAruco() {
+        cv::Mat markerImage;
+        cv::aruco::drawMarker(dictionary, 23, 500, markerImage, 1);
+        cv::imwrite("aruco23.png", markerImage);
+        cv::aruco::drawMarker(dictionary, 50, 500, markerImage, 1);
+        cv::imwrite("aruco50.png", markerImage);
+        cv::aruco::drawMarker(dictionary, 73, 500, markerImage, 1);
+        cv::imwrite("aruco73.png", markerImage);
+    }
+
+    void dectecAruco(cv::Mat& image2, std::string url) {
+        cv::Mat imageCopy;
+        image2.copyTo(imageCopy);
+
+        std::vector<int> ids;
+        std::vector<std::vector<cv::Point2f> > corners;
+        cv::aruco::detectMarkers(image2, dictionary, corners, ids);
+        // if at least one marker detected
+        if (ids.size() > 0)
+            cv::aruco::drawDetectedMarkers(imageCopy, corners, ids);
+
+        cv::imshow("Aruco " + url, imageCopy);
+    }
+};
+
+
 
 void opencv_panels(std::string url) {
 
@@ -49,6 +80,8 @@ void opencv_panels(std::string url) {
         Mat image(Size(w, h), CV_8UC3, (void*)depth.get_data(), Mat::AUTO_STEP);
         Mat image2(Size(cw, ch), CV_8UC3, (void*)color.get_data(), Mat::AUTO_STEP);
 
+        OpencvAruco::dectecAruco(image2, url);
+
         Mat dst;
         addWeighted(image, 0.5, image2, 0.5, 0.0, dst);
         // Update the window with new data
@@ -58,6 +91,8 @@ void opencv_panels(std::string url) {
 
 int main(int argc, char* argv[]) try
 {
+    OpencvAruco::saveOpencvAruco();
+
     std::thread device1(opencv_panels, "192.168.0.120");
     std::thread device2(opencv_panels, "192.168.0.106");
 
