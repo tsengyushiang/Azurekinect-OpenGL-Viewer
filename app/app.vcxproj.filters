@@ -44,6 +44,12 @@
     <ClCompile Include="src\gl3w\gl3w.c">
       <Filter>來源檔案\gl3w</Filter>
     </ClCompile>
+    <ClCompile Include="src\imgui\official-example.cpp">
+      <Filter>來源檔案\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="src\imgui\shader-example.cpp">
+      <Filter>來源檔案\imgui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -68,6 +74,9 @@
       <Filter>來源檔案\imgui</Filter>
     </ClInclude>
     <ClInclude Include="src\imgui\imgui_internal.h">
+      <Filter>來源檔案\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="src\imgui\examples.h">
       <Filter>來源檔案\imgui</Filter>
     </ClInclude>
   </ItemGroup>

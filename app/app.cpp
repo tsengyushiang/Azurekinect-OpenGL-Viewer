@@ -6,6 +6,7 @@
 #include <opencv2/opencv.hpp>   // Include OpenCV API
 #include <opencv2/aruco.hpp>
 #include <thread>
+#include "./src//imgui/examples.h";
 
 namespace OpencvAruco {
     cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
@@ -91,13 +92,14 @@ void opencv_panels(std::string url) {
 
 int main(int argc, char* argv[]) try
 {
-    OpencvAruco::saveOpencvAruco();
+    glfw_shader_example();
+    /*OpencvAruco::saveOpencvAruco();
 
     std::thread device1(opencv_panels, "192.168.0.120");
     std::thread device2(opencv_panels, "192.168.0.106");
 
     device1.join();
-    device2.join();
+    device2.join();*/
 
     return EXIT_SUCCESS;
 }
