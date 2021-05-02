@@ -9,57 +9,69 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
     </Filter>
-    <Filter Include="來源檔案\imgui">
-      <UniqueIdentifier>{1e5ad840-f581-43f5-a716-00b341f4e87f}</UniqueIdentifier>
-    </Filter>
     <Filter Include="來源檔案\gl3w">
       <UniqueIdentifier>{36a150af-4cb9-40a3-aacd-7e33da57d9d1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="來源檔案\realsense">
+      <UniqueIdentifier>{637e98e3-1cc5-4676-bbb9-24640ce55dbf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="來源檔案\imgui+opengl3">
+      <UniqueIdentifier>{1e5ad840-f581-43f5-a716-00b341f4e87f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="來源檔案\imgui+opengl3\include">
+      <UniqueIdentifier>{7d06e8c8-de46-41b0-8470-536aa793c636}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="來源檔案\imgui+opengl3\example">
+      <UniqueIdentifier>{8750612c-7a4b-4b11-968f-08159df39303}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="來源檔案\realsense\example">
+      <UniqueIdentifier>{8e20ca46-16c4-4684-b158-6d5be138a266}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="app.cpp">
       <Filter>來源檔案</Filter>
     </ClCompile>
-    <ClCompile Include="src\imgui\imgui_widgets.cpp">
-      <Filter>來源檔案\imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="src\imgui\imgui.cpp">
-      <Filter>來源檔案\imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="src\imgui\imgui_demo.cpp">
-      <Filter>來源檔案\imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="src\imgui\imgui_draw.cpp">
-      <Filter>來源檔案\imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="src\imgui\imgui_impl_glfw.cpp">
-      <Filter>來源檔案\imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="src\imgui\imgui_impl_opengl3.cpp">
-      <Filter>來源檔案\imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="src\imgui\imgui_tables.cpp">
-      <Filter>來源檔案\imgui</Filter>
-    </ClCompile>
     <ClCompile Include="src\gl3w\gl3w.c">
       <Filter>來源檔案\gl3w</Filter>
     </ClCompile>
+    <ClCompile Include="src\imgui\ImguiOpeGL3App.cpp">
+      <Filter>來源檔案\imgui+opengl3</Filter>
+    </ClCompile>
+    <ClCompile Include="src\imgui\imgui.cpp">
+      <Filter>來源檔案\imgui+opengl3\include</Filter>
+    </ClCompile>
+    <ClCompile Include="src\imgui\imgui_demo.cpp">
+      <Filter>來源檔案\imgui+opengl3\include</Filter>
+    </ClCompile>
+    <ClCompile Include="src\imgui\imgui_draw.cpp">
+      <Filter>來源檔案\imgui+opengl3\include</Filter>
+    </ClCompile>
+    <ClCompile Include="src\imgui\imgui_impl_glfw.cpp">
+      <Filter>來源檔案\imgui+opengl3\include</Filter>
+    </ClCompile>
+    <ClCompile Include="src\imgui\imgui_impl_opengl3.cpp">
+      <Filter>來源檔案\imgui+opengl3\include</Filter>
+    </ClCompile>
+    <ClCompile Include="src\imgui\imgui_tables.cpp">
+      <Filter>來源檔案\imgui+opengl3\include</Filter>
+    </ClCompile>
+    <ClCompile Include="src\imgui\imgui_widgets.cpp">
+      <Filter>來源檔案\imgui+opengl3\include</Filter>
+    </ClCompile>
     <ClCompile Include="src\imgui\official-example.cpp">
-      <Filter>來源檔案\imgui</Filter>
+      <Filter>來源檔案\imgui+opengl3\example</Filter>
     </ClCompile>
     <ClCompile Include="src\imgui\shader-example.cpp">
-      <Filter>來源檔案\imgui</Filter>
+      <Filter>來源檔案\imgui+opengl3\example</Filter>
+    </ClCompile>
+    <ClCompile Include="src\realsnese\realsense-net-opencv.cpp">
+      <Filter>來源檔案\realsense\example</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
       <Filter>標頭檔</Filter>
-    </ClInclude>
-    <ClInclude Include="src\imgui\imgui_impl_glfw.h">
-      <Filter>來源檔案\imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="src\imgui\imgui_impl_opengl3.h">
-      <Filter>來源檔案\imgui</Filter>
     </ClInclude>
     <ClInclude Include="src\gl3w\gl3w.h">
       <Filter>來源檔案\gl3w</Filter>
@@ -67,17 +79,29 @@
     <ClInclude Include="src\gl3w\glcorearb.h">
       <Filter>來源檔案\gl3w</Filter>
     </ClInclude>
+    <ClInclude Include="src\imgui\ImguiOpeGL3App.h">
+      <Filter>來源檔案\imgui+opengl3</Filter>
+    </ClInclude>
     <ClInclude Include="src\imgui\imconfig.h">
-      <Filter>來源檔案\imgui</Filter>
+      <Filter>來源檔案\imgui+opengl3\include</Filter>
     </ClInclude>
     <ClInclude Include="src\imgui\imgui.h">
-      <Filter>來源檔案\imgui</Filter>
+      <Filter>來源檔案\imgui+opengl3\include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\imgui\imgui_impl_glfw.h">
+      <Filter>來源檔案\imgui+opengl3\include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\imgui\imgui_impl_opengl3.h">
+      <Filter>來源檔案\imgui+opengl3\include</Filter>
     </ClInclude>
     <ClInclude Include="src\imgui\imgui_internal.h">
-      <Filter>來源檔案\imgui</Filter>
+      <Filter>來源檔案\imgui+opengl3\include</Filter>
     </ClInclude>
     <ClInclude Include="src\imgui\examples.h">
-      <Filter>來源檔案\imgui</Filter>
+      <Filter>來源檔案\imgui+opengl3\example</Filter>
+    </ClInclude>
+    <ClInclude Include="src\realsnese\example-realsense.h">
+      <Filter>來源檔案\realsense\example</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
