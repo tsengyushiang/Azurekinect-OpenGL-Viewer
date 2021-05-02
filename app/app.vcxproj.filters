@@ -27,6 +27,9 @@
     <Filter Include="來源檔案\realsense\example">
       <UniqueIdentifier>{8e20ca46-16c4-4684-b158-6d5be138a266}</UniqueIdentifier>
     </Filter>
+    <Filter Include="來源檔案\imgui+opengl3\shaders">
+      <UniqueIdentifier>{242da6df-a65d-48d4-88bc-57c4077f5cd5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="app.cpp">
@@ -68,6 +71,9 @@
     <ClCompile Include="src\realsnese\realsense-net-opencv.cpp">
       <Filter>來源檔案\realsense\example</Filter>
     </ClCompile>
+    <ClCompile Include="src\imgui\ImguiOpenGL3App_gl.cpp">
+      <Filter>來源檔案\imgui+opengl3</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -103,5 +109,13 @@
     <ClInclude Include="src\realsnese\example-realsense.h">
       <Filter>來源檔案\realsense\example</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="src\imgui\shaders\vertexcolor.fs">
+      <Filter>來源檔案\imgui+opengl3\shaders</Filter>
+    </None>
+    <None Include="src\imgui\shaders\vertexcolor.vs">
+      <Filter>來源檔案\imgui+opengl3\shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

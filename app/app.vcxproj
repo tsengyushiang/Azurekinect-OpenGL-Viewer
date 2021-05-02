@@ -148,6 +148,7 @@
     <ClCompile Include="src\gl3w\gl3w.c" />
     <ClCompile Include="src\imgui\imgui.cpp" />
     <ClCompile Include="src\imgui\ImguiOpeGL3App.cpp" />
+    <ClCompile Include="src\imgui\ImguiOpenGL3App_gl.cpp" />
     <ClCompile Include="src\imgui\imgui_demo.cpp" />
     <ClCompile Include="src\imgui\imgui_draw.cpp" />
     <ClCompile Include="src\imgui\imgui_impl_glfw.cpp" />
@@ -170,6 +171,10 @@
     <ClInclude Include="src\imgui\imgui_impl_opengl3.h" />
     <ClInclude Include="src\imgui\imgui_internal.h" />
     <ClInclude Include="src\realsnese\example-realsense.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="src\imgui\shaders\vertexcolor.fs" />
+    <None Include="src\imgui\shaders\vertexcolor.vs" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

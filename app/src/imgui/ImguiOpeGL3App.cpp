@@ -1,5 +1,9 @@
 #include "ImguiOpeGL3App.h"
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
+
 void ImguiOpeGL3App::glfw_error_callback(int error, const char* description)
 {
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
@@ -15,6 +19,20 @@ void ImguiOpeGL3App::mousedrag(float dx,float dy) {
     std::cout << "Inheritance public:mousedrag(float dx,float dy) to interact with window" << std::endl;
 }
 
+void ImguiOpeGL3App::setcamera(float width, float height) {
+    glm::mat4 Projection = glm::perspective(glm::radians(fov), (float)width / (float)height, 0.1f, 100.0f);
+    glm::mat4 View = glm::lookAt(
+        glm::vec3(
+            distance * sin(PolarAngle) * cos(AzimuthAngle),
+            distance * sin(PolarAngle) * sin(AzimuthAngle),
+            distance * cos(PolarAngle)), // Camera is at (4,3,3), in World Space
+        glm::vec3(0, 0, 0), // and looks at the origin
+        glm::vec3(0, 1, 0)  // Head is up (set to 0,-1,0 to look upside-down)
+    );
+
+    mvp = Projection * View;
+}
+
 void ImguiOpeGL3App::initImguiOpenGL3(float width, float height) {
 	
     // Setup window
@@ -28,7 +46,7 @@ void ImguiOpeGL3App::initImguiOpenGL3(float width, float height) {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
     // Create window with graphics context
-    GLFWwindow* window = glfwCreateWindow(width, height, "Dear ImGui GLFW+OpenGL3 example", NULL, NULL);
+    window = glfwCreateWindow(width, height, "Dear ImGui GLFW+OpenGL3 App", NULL, NULL);
     if (window == NULL)
         return ;
     glfwMakeContextCurrent(window);
@@ -63,9 +81,16 @@ void ImguiOpeGL3App::initImguiOpenGL3(float width, float height) {
     // Main loop
     while (!glfwWindowShouldClose(window))
     {
+        setcamera(width, height);
+
         // clear first
         glClear(GL_COLOR_BUFFER_BIT);
         glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
+        
+        int display_w, display_h;
+        glfwGetFramebufferSize(window, &display_w, &display_h);
+        glViewport(0, 0, display_w, display_h);
+
 
         mainloop();
 
@@ -88,7 +113,11 @@ void ImguiOpeGL3App::initImguiOpenGL3(float width, float height) {
 
             ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
 
-            ImGui::SliderFloat("float", &f, 0.0f, 0.5f);            // Edit 1 float using a slider from 0.0f to 0.5f
+            ImGui::Text("Camera parameters.");               // Display some text (you can use a format strings too)
+            ImGui::SliderFloat("distance", &distance, 0.0f, 5.0f);            // Edit 1 float using a slider from 0.0f to 0.5f
+            ImGui::SliderFloat("PolarAngle", &PolarAngle, -3.14f, 3.14f);            // Edit 1 float using a slider from 0.0f to 0.5f
+            ImGui::SliderFloat("AzimuthAngle", &AzimuthAngle, -3.14f, 3.14f);            // Edit 1 float using a slider from 0.0f to 0.5f
+
 
             ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
 
