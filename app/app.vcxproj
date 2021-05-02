@@ -158,6 +158,7 @@
     <ClCompile Include="src\imgui\official-example.cpp" />
     <ClCompile Include="src\imgui\shader-example.cpp" />
     <ClCompile Include="src\realsnese\realsense-net-opencv.cpp" />
+    <ClCompile Include="src\realsnese\RealsenseDevice.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
@@ -171,6 +172,7 @@
     <ClInclude Include="src\imgui\imgui_impl_opengl3.h" />
     <ClInclude Include="src\imgui\imgui_internal.h" />
     <ClInclude Include="src\realsnese\example-realsense.h" />
+    <ClInclude Include="src\realsnese\RealsenseDevice.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="src\imgui\shaders\vertexcolor.fs" />

@@ -25,6 +25,7 @@ public:
 	void initImguiOpenGL3(float width = 1280, float height = 720);
 	virtual void initGL();
 	virtual void mainloop();
+	virtual void addGui();
 	virtual void mousedrag(float,float);
 	static void glfw_error_callback(int error, const char* description);
 

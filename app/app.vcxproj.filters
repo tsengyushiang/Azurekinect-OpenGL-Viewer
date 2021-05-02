@@ -74,6 +74,9 @@
     <ClCompile Include="src\imgui\ImguiOpenGL3App_gl.cpp">
       <Filter>來源檔案\imgui+opengl3</Filter>
     </ClCompile>
+    <ClCompile Include="src\realsnese\RealsenseDevice.cpp">
+      <Filter>來源檔案\realsense</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -108,6 +111,9 @@
     </ClInclude>
     <ClInclude Include="src\realsnese\example-realsense.h">
       <Filter>來源檔案\realsense\example</Filter>
+    </ClInclude>
+    <ClInclude Include="src\realsnese\RealsenseDevice.h">
+      <Filter>來源檔案\realsense</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

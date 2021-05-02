@@ -1,5 +1,6 @@
 ﻿
 #include "src/imgui/ImguiOpeGL3App.h"
+#include "src/realsnese//RealsenseDevice.h"
 
 class PointcloudApp :public ImguiOpeGL3App {
 
@@ -7,38 +8,59 @@ class PointcloudApp :public ImguiOpeGL3App {
 
 	// pointcloud datas {x1,y1,z1,r1,g1,b1,...}
 	GLuint vao,vbo;
+	int vertexCount;
+	GLfloat* vertexData;
 
-	float t;
+	RealsenseDevice cam;
+
+	float t,pointsize=0.1f;
 public:
 	PointcloudApp():ImguiOpeGL3App(){}
 	~PointcloudApp() {
 		glDeleteVertexArrays(1, &vao);
 		glDeleteBuffers(1, &vbo);
+		free(vertexData);
 	}
 
+	void addGui() override {
+
+	}
 	void initGL() override {
 		shader_program = ImguiOpeGL3App::genPointcloudShader(this->window);
 
 		glGenVertexArrays(1, &vao);
 		glGenBuffers(1, &vbo);
 
+		cam.runNetworkDevice("192.168.0.106");
+
+		vertexCount = cam.width * cam.height;
+		vertexData = (GLfloat*)calloc(6 * vertexCount, sizeof(GLfloat)); // 6 represent xyzrgb
+
 	}
 	void mainloop() override {
-		t += 0.1;
-		// data for a fullscreen quad
-		GLfloat vertexData[] = {
-			//  X     Y     Z           R     G     B
-				0.5f, 0.5f, 0.0f,       0.5f, 0.0f, 0.0f, // vertex 0
-				-0.5f, 0.5f, 0.0f,       0.0f, 0.5f, 0.0f, // vertex 1
-				0.5f,-0.5f, 0.0f,       0.0f, 0.0f, 0.5f, // vertex 2
-				0.5f,-0.5f, 0.0f,       0.0f, 0.0f, 0.5f, // vertex 3
-				-0.5f, 0.5f, 0.0f,       0.0f, 0.5f, 0.0f, // vertex 4
-				-0.5f,-0.5f, 0.0f,       0.5f, 0.0f, 0.0f, // vertex 5
-				cos(t),0.0f, sin(t),       0.5f, 0.5f, 0.5f, // vertex 6
-		}; // 6 vertices with 6 components (floats) each
-		ImguiOpeGL3App::setPointsVAO(vao, vbo, vertexData, 7);
+		if (cam.fetchframes(true)) {
+			
+			for (int i = 0; i < cam.height; i++) {
+				for (int j = 0; j < cam.width; j++) {
+					int index = i * cam.width + j;
+					if (cam.p_depth_frame) {
+						float depthValue = (float)cam.p_depth_frame[index] * cam.intri.depth_scale;
+						vertexData[index * 6 + 0] = (float(j) - cam.intri.ppx) / cam.intri.fx * depthValue;
+						vertexData[index * 6 + 1] = (float(i) - cam.intri.ppy) / cam.intri.fy * depthValue;
+						vertexData[index * 6 + 2] = depthValue;
+					}
 
-		ImguiOpeGL3App::renderPoints(mvp, 10.0, shader_program, vao, 7);
+					if (cam.p_color_frame) {
+						vertexData[index * 6 + 3] = (float)cam.p_color_frame[index * 3 + 2] / 255;
+						vertexData[index * 6 + 4] = (float)cam.p_color_frame[index * 3 + 1] / 255;
+						vertexData[index * 6 + 5] = (float)cam.p_color_frame[index * 3 + 0] / 255;
+					}
+				}
+			}
+		}
+		ImguiOpeGL3App::setPointsVAO(vao, vbo, vertexData, vertexCount);
+
+		ImguiOpeGL3App::renderPoints(mvp, pointsize, shader_program, vao, vertexCount);
 		//std::cout << "Render" << std::endl;
 	}
 	void mousedrag(float dx, float dy) override {}
