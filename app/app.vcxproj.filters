@@ -30,6 +30,9 @@
     <Filter Include="來源檔案\imgui+opengl3\shaders">
       <UniqueIdentifier>{242da6df-a65d-48d4-88bc-57c4077f5cd5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="來源檔案\opencv">
+      <UniqueIdentifier>{d9880825-8359-4d40-ba57-88f891e6b251}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="app.cpp">
@@ -77,6 +80,9 @@
     <ClCompile Include="src\realsnese\RealsenseDevice.cpp">
       <Filter>來源檔案\realsense</Filter>
     </ClCompile>
+    <ClCompile Include="src\opencv\opencv-aruco.cpp">
+      <Filter>來源檔案\opencv</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -114,6 +120,9 @@
     </ClInclude>
     <ClInclude Include="src\realsnese\RealsenseDevice.h">
       <Filter>來源檔案\realsense</Filter>
+    </ClInclude>
+    <ClInclude Include="src\opencv\opecv-utils.h">
+      <Filter>來源檔案\opencv</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

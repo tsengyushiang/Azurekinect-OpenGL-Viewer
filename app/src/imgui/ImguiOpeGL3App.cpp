@@ -23,17 +23,15 @@ void ImguiOpeGL3App::addGui() {
 }
 
 void ImguiOpeGL3App::setcamera(float width, float height) {
-    glm::mat4 Projection = glm::perspective(glm::radians(fov), (float)width / (float)height, 0.1f, 100.0f);
-    glm::mat4 View = glm::lookAt(
+    Projection = glm::perspective(glm::radians(fov), (float)width / (float)height, 0.1f, 100.0f);
+    View = glm::lookAt(
         glm::vec3(
             distance * sin(PolarAngle) * cos(AzimuthAngle),
             distance * sin(PolarAngle) * sin(AzimuthAngle),
             distance * cos(PolarAngle)), // Camera is at (4,3,3), in World Space
         glm::vec3(0, 0, 0), // and looks at the origin
-        glm::vec3(0, 1, 0)  // Head is up (set to 0,-1,0 to look upside-down)
+        glm::vec3(0, -1, 0)  // Head is up (set to 0,-1,0 to look upside-down)
     );
-
-    mvp = Projection * View;
 }
 
 void ImguiOpeGL3App::initImguiOpenGL3(int width, int height) {

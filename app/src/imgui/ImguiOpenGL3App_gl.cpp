@@ -1,6 +1,6 @@
 #include "ImguiOpeGL3App.h"
 
-void ImguiOpeGL3App::renderPoints(glm::mat4& mvp,float psize,GLuint shader_program, GLuint vao, float size) {
+void ImguiOpeGL3App::render(glm::mat4& mvp,float psize,GLuint shader_program, GLuint vao, float size, int type) {
 
     GLuint pointsize = glGetUniformLocation(shader_program, "pointsize");
     glUniform1f(pointsize, psize);
@@ -14,7 +14,7 @@ void ImguiOpeGL3App::renderPoints(glm::mat4& mvp,float psize,GLuint shader_progr
     glBindVertexArray(vao);
     // draw
     glEnable(GL_PROGRAM_POINT_SIZE);
-    glDrawArrays(GL_POINTS, 0, size);
+    glDrawArrays(type, 0, size);
 }
 
 void ImguiOpeGL3App::setPointsVAO(GLuint& vao, GLuint& vbo,GLfloat* vertexData,float size) {

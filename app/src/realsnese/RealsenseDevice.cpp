@@ -28,6 +28,11 @@ RealsenseDevice::RealsenseDevice(int w, int h ) {
 
     vertexCount = width * height;
     vertexData = (float*)calloc(6 * vertexCount, sizeof(float)); // 6 represent xyzrgb
+
+    modelMat = glm::mat4(1.0);
+    //modelMat[3][0] = 1.0; // translate x
+    //modelMat[3][1] = 0.0; // translate y
+    //modelMat[3][2] = 0.0; // translate z
 }
 
 RealsenseDevice::~RealsenseDevice() {
@@ -80,11 +85,28 @@ void RealsenseDevice::runNetworkDevice(std::string url, rs2::context ctx) {
     intri.depth_scale = get_depth_scale(profile.get_device());
 }
 
+glm::vec3 RealsenseDevice::colorPixel2point(glm::vec2 pixel) {
+    int i = pixel.y;
+    int j = pixel.x;
+    int index = i * width + j;
+
+    float depthValue = (float)p_depth_frame[index] * intri.depth_scale;
+
+    glm::vec3 point(
+        (float(j) - intri.ppx) / intri.fx * depthValue,
+        (float(i) - intri.ppy) / intri.fy * depthValue,
+        depthValue
+    );
+
+    return point;
+}
+
+
 bool RealsenseDevice::fetchframes() {
 
     rs2::frameset frameset; // Wait for next set of frames from the camera
 
-    if (enable && pipe->poll_for_frames(&frameset)) {
+    if (pipe->poll_for_frames(&frameset)) {
         rs2::frameset data = align_to_color.process(frameset);
       
         rs2::frame depth = data.get_depth_frame();
@@ -98,10 +120,10 @@ bool RealsenseDevice::fetchframes() {
             for (int j = 0; j < width; j++) {
                 int index = i * width + j;
 
-                float depthValue = (float)p_depth_frame[index] * intri.depth_scale;
-                vertexData[index * 6 + 0] = (float(j) - intri.ppx) / intri.fx * depthValue;
-                vertexData[index * 6 + 1] = (float(i) - intri.ppy) / intri.fy * depthValue;
-                vertexData[index * 6 + 2] = depthValue;
+                glm::vec3 point = colorPixel2point(glm::vec2(j,i));
+                vertexData[index * 6 + 0] = point.x;
+                vertexData[index * 6 + 1] = point.y;
+                vertexData[index * 6 + 2] = point.z;
 
                 vertexData[index * 6 + 3] = (float)p_color_frame[index * 3 + 2] / 255;
                 vertexData[index * 6 + 4] = (float)p_color_frame[index * 3 + 1] / 255;

@@ -35,7 +35,8 @@ public:
 	float distance = 3;
 	float PolarAngle = 0;
 	float AzimuthAngle = 0;
-	glm::mat4 mvp;
+	glm::mat4 Projection;
+	glm::mat4 View;
 
 	//---------------------following method implement in ImguiOpeGL3App_gl.cpp
 
@@ -46,7 +47,7 @@ public:
 	// opengl render pointcloud 
 	static GLuint genPointcloudShader(GLFWwindow* window);
 	static void setPointsVAO(GLuint& vao, GLuint& vbo,GLfloat* vertexData, float size);
-	static void renderPoints(glm::mat4& mvp, float pointsize,GLuint shader_program, GLuint vao, float size);
+	static void render(glm::mat4& mvp, float pointsize,GLuint shader_program, GLuint vao, float size, int type);
 };
 
 //custum rener and init demo
