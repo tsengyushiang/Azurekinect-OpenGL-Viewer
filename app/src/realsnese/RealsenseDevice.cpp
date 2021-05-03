@@ -148,6 +148,9 @@ bool RealsenseDevice::fetchframes() {
             // Update the window with new data
             imshow(serial.c_str(), dst);
         }
+        else {
+            cvDestroyWindow(serial.c_str());
+        }
         return true;
     }
     return false;
