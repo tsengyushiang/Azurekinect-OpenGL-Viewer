@@ -2,66 +2,101 @@
 #include "src/imgui/ImguiOpeGL3App.h"
 #include "src/realsnese//RealsenseDevice.h"
 
-class PointcloudApp :public ImguiOpeGL3App {
+typedef struct realsenseGL {
+	RealsenseDevice* camera;
+	// pointcloud datas {x1,y1,z1,r1,g1,b1,...}	
+	GLuint vao, vbo;
+}RealsenseGL;
 
+class PointcloudApp :public ImguiOpeGL3App {
 	GLuint shader_program;
 
-	// pointcloud datas {x1,y1,z1,r1,g1,b1,...}
-	GLuint vao,vbo;
-	int vertexCount;
-	GLfloat* vertexData;
+	int width = 640;
+	int height = 480;
 
-	RealsenseDevice cam;
+	rs2::context ctx;
+	std::vector<RealsenseGL> realsenses;
+	std::set<std::string> activeDeviceSerials;
+	std::set<std::string> serials;
 
 	float t,pointsize=0.1f;
 public:
-	PointcloudApp():ImguiOpeGL3App(){}
+	PointcloudApp():ImguiOpeGL3App(){
+		serials = RealsenseDevice::getAllDeviceSerialNumber(ctx);
+	}
 	~PointcloudApp() {
-		glDeleteVertexArrays(1, &vao);
-		glDeleteBuffers(1, &vbo);
-		free(vertexData);
+		for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
+			removeDevice(device);
+		}
 	}
 
-	void addGui() override {
+	void addGui() override {		
 
-	}
-	void initGL() override {
-		shader_program = ImguiOpeGL3App::genPointcloudShader(this->window);
+		// list all usb3.0 realsense device
+		if (ImGui::Button("Refresh"))
+			serials = RealsenseDevice::getAllDeviceSerialNumber(ctx);
+		ImGui::SameLine();
+		ImGui::Text("Realsense device :");
 
-		glGenVertexArrays(1, &vao);
-		glGenBuffers(1, &vbo);
-
-		cam.runNetworkDevice("192.168.0.106");
-
-		vertexCount = cam.width * cam.height;
-		vertexData = (GLfloat*)calloc(6 * vertexCount, sizeof(GLfloat)); // 6 represent xyzrgb
-
-	}
-	void mainloop() override {
-		if (cam.fetchframes(true)) {
-			
-			for (int i = 0; i < cam.height; i++) {
-				for (int j = 0; j < cam.width; j++) {
-					int index = i * cam.width + j;
-					if (cam.p_depth_frame) {
-						float depthValue = (float)cam.p_depth_frame[index] * cam.intri.depth_scale;
-						vertexData[index * 6 + 0] = (float(j) - cam.intri.ppx) / cam.intri.fx * depthValue;
-						vertexData[index * 6 + 1] = (float(i) - cam.intri.ppy) / cam.intri.fy * depthValue;
-						vertexData[index * 6 + 2] = depthValue;
-					}
-
-					if (cam.p_color_frame) {
-						vertexData[index * 6 + 3] = (float)cam.p_color_frame[index * 3 + 2] / 255;
-						vertexData[index * 6 + 4] = (float)cam.p_color_frame[index * 3 + 1] / 255;
-						vertexData[index * 6 + 5] = (float)cam.p_color_frame[index * 3 + 0] / 255;
-					}
+		// waiting active device
+		for (std::string serial : serials) {
+			if (activeDeviceSerials.find(serial.c_str()) == activeDeviceSerials.end())
+			{
+				if (ImGui::Button(serial.c_str())) {
+					addDevice(serial);
 				}
+			}				
+		}
+
+		// Running device
+		ImGui::Text("Running Realsense device :");
+		for (auto device = realsenses.begin(); device!=realsenses.end(); device++) {
+			if (ImGui::Button((std::string("stop##") + device->camera->serial).c_str())) {
+				removeDevice(device);
+				device--;
+			}
+			else {
+				ImGui::SameLine();
+				ImGui::Checkbox((std::string("OpencvWindow##") + device->camera->serial).c_str(), &(device->camera->opencvImshow));
 			}
 		}
-		ImguiOpeGL3App::setPointsVAO(vao, vbo, vertexData, vertexCount);
+	}
 
-		ImguiOpeGL3App::renderPoints(mvp, pointsize, shader_program, vao, vertexCount);
-		//std::cout << "Render" << std::endl;
+	void removeDevice(std::vector<RealsenseGL>::iterator device) {
+		device->camera->enable = false;
+
+		activeDeviceSerials.erase(device->camera->serial.c_str());
+
+		delete device->camera;
+		glDeleteVertexArrays(1, &device->vao);
+		glDeleteBuffers(1, &device->vbo);
+
+		realsenses.erase(device);
+		serials = RealsenseDevice::getAllDeviceSerialNumber(ctx);
+	}
+	void addDevice(std::string serial) {
+		activeDeviceSerials.insert(serial.c_str());
+
+		RealsenseGL device;
+
+		device.camera = new RealsenseDevice();
+		device.camera->runDevice(serial.c_str(), ctx);
+
+		glGenVertexArrays(1, &device.vao);
+		glGenBuffers(1, &device.vbo);
+
+		realsenses.push_back(device);
+	}
+
+	void initGL() override {
+		shader_program = ImguiOpeGL3App::genPointcloudShader(this->window);
+	}
+	void mainloop() override {
+		for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
+			device->camera->fetchframes();
+			ImguiOpeGL3App::setPointsVAO(device->vao, device->vbo, device->camera->vertexData, device->camera->vertexCount);
+			ImguiOpeGL3App::renderPoints(mvp, pointsize, shader_program, device->vao, device->camera->vertexCount);
+		}
 	}
 	void mousedrag(float dx, float dy) override {}
 };

@@ -19,7 +19,6 @@ class RealsenseDevice
 {
     rs2::colorizer color_map;
     rs2::align align_to_color{ RS2_STREAM_COLOR };
-    rs2::context ctx;
     rs2::config cfg;
 
     rs2::pipeline* pipe;
@@ -31,14 +30,26 @@ public :
     RealsenseDevice(int w = 640, int h = 480);
     ~RealsenseDevice();
 
+    bool calibrated=false;
+    bool opencvImshow = false;
+    bool enable = true;
+
     Intrinsic intri;
 
+    std::string serial;
     int width;
     int height;
+
     const uint16_t* p_depth_frame;
     const uchar* p_color_frame;
 
-    void runNetworkDevice(std::string url);
-    bool fetchframes(bool opencvImshow=true);
+    int vertexCount;
+    float* vertexData = nullptr;
+
+    void runNetworkDevice(std::string url, rs2::context ctx);
+    void runDevice(std::string serial, rs2::context ctx);
+    bool fetchframes();
+
+    static std::set<std::string> getAllDeviceSerialNumber(rs2::context& ctx);
 };
 

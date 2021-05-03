@@ -22,7 +22,7 @@ public:
 	//---------------------following method implement in ImguiOpeGL3App.cpp
 
 	GLFWwindow* window;
-	void initImguiOpenGL3(float width = 1280, float height = 720);
+	void initImguiOpenGL3(int width = 1280, int height = 720);
 	virtual void initGL();
 	virtual void mainloop();
 	virtual void addGui();
