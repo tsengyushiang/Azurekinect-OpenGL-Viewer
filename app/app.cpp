@@ -9,11 +9,24 @@ typedef struct calibrateResult {
 	bool success;
 }CalibrateResult;
 
-typedef struct realsenseGL {
+class RealsenseGL {
+
+public :
 	RealsenseDevice* camera;
 	// pointcloud datas {x1,y1,z1,r1,g1,b1,...}	
-	GLuint vao, vbo;
-}RealsenseGL;
+	GLuint vao, vbo, image;
+
+	RealsenseGL() {
+		glGenVertexArrays(1, &vao);
+		glGenBuffers(1, &vbo);
+		glGenTextures(1, &image);
+	}
+	~RealsenseGL() {
+		glDeleteVertexArrays(1, &vao);
+		glDeleteBuffers(1, &vbo);
+		glDeleteTextures(1, &image);
+	}
+};
 
 class PointcloudApp :public ImguiOpeGL3App {
 	GLuint shader_program;
@@ -40,62 +53,67 @@ public:
 		glDeleteBuffers(1, &axisVbo);
 	}
 
-	void addGui() override {		
-
-		// input url for network device
-		static char url[20] = "192.168.0.106";
-		ImGui::Text("Network device Ip: "); 
-		ImGui::SameLine(); 
-		if (ImGui::Button("add")) {
-			addNetworkDevice(url);
-		}
-		ImGui::SameLine();
-		ImGui::InputText("##urlInput", url, 20);		
-
-		// list all usb3.0 realsense device
-		if (ImGui::Button("Refresh"))
-			serials = RealsenseDevice::getAllDeviceSerialNumber(ctx);
-		ImGui::SameLine();
-		ImGui::Text("Realsense device :");
-
-		// waiting active device
-		for (std::string serial : serials) {
-			if (activeDeviceSerials.find(serial.c_str()) == activeDeviceSerials.end())
-			{
-				if (ImGui::Button(serial.c_str())) {
-					addDevice(serial);
-				}
-			}				
-		}
-
-		// Running device
-		ImGui::Text("Running Realsense device :");
-		for (auto device = realsenses.begin(); device!=realsenses.end(); device++) {
-			ImGui::TextColored(ImVec4(device->camera->calibrated?255:0, 255,255, 255), device->camera->serial.c_str());
+	void addGui() override {
+		{
+			ImGui::Begin("Realsense Gui: ");                          // Create a window called "Hello, world!" and append into it.
+			// input url for network device
+			static char url[20] = "192.168.0.106";
+			ImGui::Text("Network device Ip: ");
 			ImGui::SameLine();
-			if (ImGui::Button((std::string("stop##") + device->camera->serial).c_str())) {
-				removeDevice(device);
-				device--;
+			if (ImGui::Button("add")) {
+				addNetworkDevice(url);
 			}
-			else {
-				ImGui::SameLine();
-				ImGui::Checkbox((std::string("##visible") + device->camera->serial).c_str(), &(device->camera->visible));
-				ImGui::SameLine();
-				if (ImGui::Button((std::string("calibrate##") + device->camera->serial).c_str())) {
-					device->camera->calibrated = !device->camera->calibrated;
+			ImGui::SameLine();
+			ImGui::InputText("##urlInput", url, 20);
+
+			// list all usb3.0 realsense device
+			if (ImGui::Button("Refresh"))
+				serials = RealsenseDevice::getAllDeviceSerialNumber(ctx);
+			ImGui::SameLine();
+			ImGui::Text("Realsense device :");
+
+			// waiting active device
+			for (std::string serial : serials) {
+				if (activeDeviceSerials.find(serial.c_str()) == activeDeviceSerials.end())
+				{
+					if (ImGui::Button(serial.c_str())) {
+						addDevice(serial);
+					}
 				}
-				ImGui::SameLine();
-				ImGui::Checkbox((std::string("OpencvWindow##") + device->camera->serial).c_str(), &(device->camera->opencvImshow));
 			}
+
+			// Running device
+			ImGui::Text("Running Realsense device :");
+			for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
+				ImGui::TextColored(ImVec4(device->camera->calibrated ? 255 : 0, 255, 255, 255), device->camera->serial.c_str());
+				ImGui::SameLine();
+				if (ImGui::Button((std::string("stop##") + device->camera->serial).c_str())) {
+					removeDevice(device);
+					device--;
+				}
+				else {
+					ImGui::SameLine();
+					ImGui::Checkbox((std::string("##visible") + device->camera->serial).c_str(), &(device->camera->visible));
+					ImGui::SameLine();
+					if (ImGui::Button((std::string("calibrate##") + device->camera->serial).c_str())) {
+						device->camera->calibrated = !device->camera->calibrated;
+					}
+					ImGui::SameLine();
+					ImGui::Checkbox((std::string("OpencvWindow##") + device->camera->serial).c_str(), &(device->camera->opencvImshow));
+					// show image with imgui
+					//ImGui::Image((void*)(intptr_t)device->image, ImVec2(device->camera->width, device->camera->height));
+				}
+			}
+			ImGui::End();
 		}
+
+		
 	}
 
 	void removeDevice(std::vector<RealsenseGL>::iterator device) {
 		activeDeviceSerials.erase(device->camera->serial.c_str());
 
 		delete device->camera;
-		glDeleteVertexArrays(1, &device->vao);
-		glDeleteBuffers(1, &device->vbo);
 
 		realsenses.erase(device);
 		serials = RealsenseDevice::getAllDeviceSerialNumber(ctx);
@@ -106,10 +124,7 @@ public:
 
 		device.camera = new RealsenseDevice();		
 		std::string serial= device.camera->runNetworkDevice(url, ctx);
-		activeDeviceSerials.insert(serial);
-
-		glGenVertexArrays(1, &device.vao);
-		glGenBuffers(1, &device.vbo);
+		activeDeviceSerials.insert(serial);	
 
 		realsenses.push_back(device);
 	}
@@ -195,7 +210,7 @@ public:
 				continue;
 			device->camera->fetchframes();
 			ImguiOpeGL3App::setPointsVAO(device->vao, device->vbo, device->camera->vertexData, device->camera->vertexCount);
-
+			ImguiOpeGL3App::setTexture(device->image, device->camera->p_color_frame, device->camera->width, device->camera->height);
 			glm::mat4 mvp = Projection * View * device->camera->modelMat;
 			ImguiOpeGL3App::render(mvp, pointsize, shader_program, device->vao, device->camera->vertexCount,GL_POINTS);
 			

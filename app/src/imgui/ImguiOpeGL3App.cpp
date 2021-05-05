@@ -160,9 +160,7 @@ void ImguiOpeGL3App::initImguiOpenGL3(int width, int height) {
             ImGui::End();
         }
         {
-            ImGui::Begin("Custom Gui: ");                          // Create a window called "Hello, world!" and append into it.
             addGui();
-            ImGui::End();
         }
 
         // Rendering

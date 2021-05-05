@@ -17,6 +17,19 @@ void ImguiOpeGL3App::render(glm::mat4& mvp,float psize,GLuint shader_program, GL
     glDrawArrays(type, 0, size);
 }
 
+void ImguiOpeGL3App::setTexture(GLuint& image,const unsigned char* image_data, int width, int height) {
+
+    glBindTexture(GL_TEXTURE_2D, image);
+
+    // Setup filtering parameters for display
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // This is required on WebGL for non power-of-two textures
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); // Same
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_BGR, GL_UNSIGNED_BYTE, image_data);
+}
+
+
 void ImguiOpeGL3App::setPointsVAO(GLuint& vao, GLuint& vbo,GLfloat* vertexData,float size) {
     
     // input vao vbo need to gen first
