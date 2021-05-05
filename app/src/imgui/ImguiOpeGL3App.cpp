@@ -16,7 +16,32 @@ void ImguiOpeGL3App::initGL() {
     std::cout << "Inheritance public:initGL() to create shader,vbo,vao..." << std::endl;
 }
 void ImguiOpeGL3App::mousedrag(float dx,float dy) {
-    std::cout << "Inheritance public:mousedrag(float dx,float dy) to interact with window" << std::endl;
+    //std::cout << "Inheritance public:mousedrag(float dx,float dy) to interact with window" << std::endl;
+    
+    if (abs(dx) > abs(dy)) {
+        if (dx > 0) {
+            AzimuthAngle += sensity;
+            if (AzimuthAngle > AzimuthAngleMax) {
+                AzimuthAngle = AzimuthAnglemin;
+            }
+        }
+        else if (dx < 0) {
+            AzimuthAngle -= sensity;
+            if (AzimuthAngle < AzimuthAnglemin) {
+                AzimuthAngle = AzimuthAngleMax;
+            }
+        }
+    }
+    else {
+        if (dy > 0) {
+            if ((PolarAngle + sensity) > PolarAngleMax) return;
+            PolarAngle += sensity;
+        }
+        else if (dy < 0) {
+            if ((PolarAngle - sensity) < PolarAnglemin) return;
+            PolarAngle -= sensity;
+        }
+    }       
 }
 void ImguiOpeGL3App::addGui() {
     ImGui::Text("Inherit addGui() to add custum ui.");               // Display some text (you can use a format strings too)
@@ -27,8 +52,8 @@ void ImguiOpeGL3App::setcamera(float width, float height) {
     View = glm::lookAt(
         glm::vec3(
             distance * sin(PolarAngle) * cos(AzimuthAngle),
-            distance * sin(PolarAngle) * sin(AzimuthAngle),
-            distance * cos(PolarAngle)), // Camera is at (4,3,3), in World Space
+            distance * cos(PolarAngle),
+            distance * sin(PolarAngle) * sin(AzimuthAngle)), // Camera is at (4,3,3), in World Space
         glm::vec3(0, 0, 0), // and looks at the origin
         glm::vec3(0, -1, 0)  // Head is up (set to 0,-1,0 to look upside-down)
     );
@@ -105,7 +130,8 @@ void ImguiOpeGL3App::initImguiOpenGL3(int width, int height) {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        if (ImGui::IsMouseDragging(0)) {
+        
+        if (!ImGui::IsAnyItemActive() && ImGui::IsMouseDragging(0)) {
             ImVec2 mousedelta = ImGui::GetMouseDragDelta();
             mousedrag(mousedelta.x, mousedelta.y);
         }
@@ -121,13 +147,21 @@ void ImguiOpeGL3App::initImguiOpenGL3(int width, int height) {
 
             ImGui::ColorEdit3("background color", (float*)&clear_color); // Edit 3 floats representing a color
 
-            ImGui::Text("Camera parameters : ");               // Display some text (you can use a format strings too)
-            ImGui::SliderFloat("distance", &distance, 0.0f, 5.0f);            // Edit 1 float using a slider from 0.0f to 0.5f
-            ImGui::SliderFloat("PolarAngle", &PolarAngle, -3.14f, 3.14f);            // Edit 1 float using a slider from 0.0f to 0.5f
-            ImGui::SliderFloat("AzimuthAngle", &AzimuthAngle, -3.14f, 3.14f);            // Edit 1 float using a slider from 0.0f to 0.5f
+            ImGui::Text("Camera parameters : ");    
+            ImGui::SliderFloat("fov", &fov, 30.0f,80.0f); 
+            ImGui::SliderFloat("distance", &distance, 0.0f, 5.0f);  
             
+            ImGui::Text("Mouse dragging : ");              
+            ImGui::SliderFloat("sensity", &sensity, 1e-1, 1e-3);           
+            ImGui::SliderFloat("PolarAngle", &PolarAngle, PolarAnglemin, PolarAngleMax);        
+            ImGui::SliderFloat("AzimuthAngle", &AzimuthAngle, AzimuthAnglemin, AzimuthAngleMax);  
+            
+         
+            ImGui::End();
+        }
+        {
+            ImGui::Begin("Custom Gui: ");                          // Create a window called "Hello, world!" and append into it.
             addGui();
-
             ImGui::End();
         }
 

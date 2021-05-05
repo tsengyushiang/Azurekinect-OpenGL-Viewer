@@ -25,7 +25,7 @@ class RealsenseDevice
     rs2::config cfg;
 
     rs2::pipeline* pipe;
-    rs2::net_device* dev;
+    rs2::net_device* netdev;
 
     float get_depth_scale(rs2::device dev);
 public :
@@ -35,6 +35,7 @@ public :
     RealsenseDevice(int w = 640, int h = 480);
     ~RealsenseDevice();
 
+    bool visible = true;
     bool calibrated=false;
     bool opencvImshow = false;
 
@@ -50,7 +51,7 @@ public :
     int vertexCount;
     float* vertexData = nullptr;
 
-    void runNetworkDevice(std::string url, rs2::context ctx);
+    std::string runNetworkDevice(std::string url, rs2::context ctx);
     void runDevice(std::string serial, rs2::context ctx);
     bool fetchframes();
     glm::vec3 colorPixel2point(glm::vec2);

@@ -40,6 +40,8 @@ RealsenseDevice::~RealsenseDevice() {
     free((void*)p_color_frame);
     pipe->stop();
     cvDestroyWindow(serial.c_str());
+    if (netdev)
+        free(netdev);
 }
 
 void RealsenseDevice::runDevice(std::string serialnum, rs2::context ctx) {
@@ -62,13 +64,14 @@ void RealsenseDevice::runDevice(std::string serialnum, rs2::context ctx) {
     intri.depth_scale = get_depth_scale(profile.get_device());
 }
 
-void RealsenseDevice::runNetworkDevice(std::string url, rs2::context ctx) {
+std::string RealsenseDevice::runNetworkDevice(std::string url, rs2::context ctx) {
     // Declare depth colorizer for pretty visualization of depth data
 
-    dev = new rs2::net_device(url);
-    dev->add_to(ctx);
+    netdev = new rs2::net_device(url);
+    netdev->add_to(ctx);
     pipe = new rs2::pipeline(ctx);
 
+    serial = url;
 
     cfg.enable_stream(RS2_STREAM_DEPTH, 640, 480, RS2_FORMAT_Z16, 30);
     cfg.enable_stream(RS2_STREAM_COLOR, width, height, RS2_FORMAT_BGR8, 30);
@@ -83,6 +86,8 @@ void RealsenseDevice::runNetworkDevice(std::string url, rs2::context ctx) {
     intri.fy = intrins.fy;
     intri.ppy = intrins.ppy;
     intri.depth_scale = get_depth_scale(profile.get_device());
+
+    return netdev->get_info(RS2_CAMERA_INFO_SERIAL_NUMBER);
 }
 
 glm::vec3 RealsenseDevice::colorPixel2point(glm::vec2 pixel) {

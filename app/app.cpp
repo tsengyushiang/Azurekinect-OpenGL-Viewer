@@ -42,6 +42,16 @@ public:
 
 	void addGui() override {		
 
+		// input url for network device
+		static char url[20] = "192.168.0.106";
+		ImGui::Text("Network device Ip: "); 
+		ImGui::SameLine(); 
+		if (ImGui::Button("add")) {
+			addNetworkDevice(url);
+		}
+		ImGui::SameLine();
+		ImGui::InputText("##urlInput", url, 20);		
+
 		// list all usb3.0 realsense device
 		if (ImGui::Button("Refresh"))
 			serials = RealsenseDevice::getAllDeviceSerialNumber(ctx);
@@ -69,6 +79,8 @@ public:
 			}
 			else {
 				ImGui::SameLine();
+				ImGui::Checkbox((std::string("##visible") + device->camera->serial).c_str(), &(device->camera->visible));
+				ImGui::SameLine();
 				if (ImGui::Button((std::string("calibrate##") + device->camera->serial).c_str())) {
 					device->camera->calibrated = !device->camera->calibrated;
 				}
@@ -88,6 +100,24 @@ public:
 		realsenses.erase(device);
 		serials = RealsenseDevice::getAllDeviceSerialNumber(ctx);
 	}
+
+	void addNetworkDevice(std::string url) try {
+		RealsenseGL device;
+
+		device.camera = new RealsenseDevice();		
+		std::string serial= device.camera->runNetworkDevice(url, ctx);
+		activeDeviceSerials.insert(serial);
+
+		glGenVertexArrays(1, &device.vao);
+		glGenBuffers(1, &device.vbo);
+
+		realsenses.push_back(device);
+	}
+	catch (const rs2::error& e)
+	{
+		std::cerr << "RealSense error calling " << e.get_failed_function() << "(" << e.get_failed_args() << "):\n    " << e.what() << std::endl;
+	}
+
 	void addDevice(std::string serial) {
 		activeDeviceSerials.insert(serial.c_str());
 
@@ -161,6 +191,8 @@ public:
 
 	void mainloop() override {
 		for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
+			if (!device->camera->visible)
+				continue;
 			device->camera->fetchframes();
 			ImguiOpeGL3App::setPointsVAO(device->vao, device->vbo, device->camera->vertexData, device->camera->vertexCount);
 
@@ -187,7 +219,6 @@ public:
 		glm::mat4 mvp = Projection * View;
 		ImguiOpeGL3App::render(mvp, pointsize, shader_program, axisVao, 6, GL_LINES);
 	}
-	void mousedrag(float dx, float dy) override {}
 };
 
 int main() {

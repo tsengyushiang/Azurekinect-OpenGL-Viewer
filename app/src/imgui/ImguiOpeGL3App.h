@@ -33,8 +33,14 @@ public:
 	void setcamera(float width, float height);
 	float fov = 60;
 	float distance = 3;
-	float PolarAngle = 0;
-	float AzimuthAngle = 0;
+	float PolarAngle = 1.57;
+	float PolarAngleMax = 3.0;
+	float PolarAnglemin = 0.1;
+	float AzimuthAngle = 0.1;
+	float AzimuthAngleMax = 6.28;
+	float AzimuthAnglemin = 0;
+	float sensity = 1e-2;
+
 	glm::mat4 Projection;
 	glm::mat4 View;
 
