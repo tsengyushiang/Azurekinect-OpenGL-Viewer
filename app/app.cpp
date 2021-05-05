@@ -85,7 +85,10 @@ public:
 			// Running device
 			ImGui::Text("Running Realsense device :");
 			for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
-				ImGui::TextColored(ImVec4(device->camera->calibrated ? 255 : 0, 255, 255, 255), device->camera->serial.c_str());
+				
+				ImGui::TextColored(device->camera->calibrated ? ImVec4(0,255,0,255) : ImVec4(255, 0, 0, 255), "O");
+				ImGui::SameLine();
+				ImGui::Text(device->camera->serial.c_str());
 				ImGui::SameLine();
 				if (ImGui::Button((std::string("stop##") + device->camera->serial).c_str())) {
 					removeDevice(device);
@@ -93,11 +96,9 @@ public:
 				}
 				else {
 					ImGui::SameLine();
-					ImGui::Checkbox((std::string("##visible") + device->camera->serial).c_str(), &(device->camera->visible));
+					ImGui::Checkbox((std::string("visible##") + device->camera->serial).c_str(), &(device->camera->visible));
 					ImGui::SameLine();
-					if (ImGui::Button((std::string("calibrate##") + device->camera->serial).c_str())) {
-						device->camera->calibrated = !device->camera->calibrated;
-					}
+					ImGui::Checkbox((std::string("calibrated##") + device->camera->serial).c_str(), &(device->camera->calibrated));
 					ImGui::SameLine();
 					ImGui::Checkbox((std::string("OpencvWindow##") + device->camera->serial).c_str(), &(device->camera->opencvImshow));
 					// show image with imgui
@@ -152,16 +153,38 @@ public:
 		glGenVertexArrays(1, &axisVao);
 		glGenBuffers(1, &axisVbo);
 	}
-	CalibrateResult putAruco2Origion(std::vector<RealsenseGL>::iterator device) {
+
+	void alignDevice2calibratedDevice(RealsenseDevice* uncalibratedCam) {
+
+		RealsenseDevice* baseCamera = nullptr;
+		glm::mat4 baseCam2Markerorigion;
+		for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
+			if (device->camera->calibrated) {
+				CalibrateResult c = putAruco2Origion(device->camera);
+				if (c.success) {
+					baseCamera = device->camera;
+					baseCam2Markerorigion = c.calibMat;
+					break;
+				}
+			}
+		}
+		if (baseCamera) {
+			CalibrateResult c = putAruco2Origion(uncalibratedCam);
+			if (c.success) {
+				uncalibratedCam->modelMat = glm::inverse(baseCam2Markerorigion) * c.calibMat;
+			}
+		}
+	}
+
+	CalibrateResult putAruco2Origion(RealsenseDevice* camera) {
 
 		CalibrateResult result;
 
 		// detect aruco and put tag in origion
 		std::vector<glm::vec2> corner = OpenCVUtils::opencv_detect_aruco_from_RealsenseRaw(
-			device->camera->width,
-			device->camera->height,
-			device->camera->p_depth_frame,
-			device->camera->p_color_frame
+			camera->width,
+			camera->height,
+			camera->p_color_frame
 		);
 		result.success = corner.size() > 0;
 
@@ -169,7 +192,7 @@ public:
 			glm::vec3 center(0, 0, 0);
 			std::vector<glm::vec3> points;
 			for (auto p : corner) {
-				glm::vec3 point = device->camera->colorPixel2point(p);
+				glm::vec3 point =camera->colorPixel2point(p);
 				points.push_back(point);
 				center += point;
 			}
@@ -214,10 +237,14 @@ public:
 			glm::mat4 mvp = Projection * View * device->camera->modelMat;
 			ImguiOpeGL3App::render(mvp, pointsize, shader_program, device->vao, device->camera->vertexCount,GL_POINTS);
 			
-			CalibrateResult c = putAruco2Origion(device);
-			if (c.success) {
-				device->camera->modelMat = c.calibMat;
+
+			if (device == realsenses.begin()) {
+				device->camera->calibrated = true;
+				device->camera->modelMat = glm::mat4(1.0);
 			}
+			else if(!device->camera->calibrated){
+				alignDevice2calibratedDevice(device->camera);				
+			}			
 		}
 
 		//// draw xyz-axis

@@ -1,6 +1,6 @@
 #include "opecv-utils.h"
 
-std::vector<glm::vec2> OpenCVUtils::opencv_detect_aruco_from_RealsenseRaw(int w, int h, const uint16_t* p_depth_frame, const uchar* p_color_frame) {
+std::vector<glm::vec2> OpenCVUtils::opencv_detect_aruco_from_RealsenseRaw(int w, int h,const uchar* p_color_frame) {
 
     cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
     cv::Mat image(cv::Size(w, h), CV_8UC3, (void*)p_color_frame, cv::Mat::AUTO_STEP);
