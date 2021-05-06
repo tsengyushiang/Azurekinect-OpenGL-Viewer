@@ -42,17 +42,26 @@
     - vs2019 + Window SDK
     - [cmake 3.18.3](https://github.com/Kitware/CMake/releases?after=v3.19.0-rc2)
 
+## OpenCV
+
 - build realsenseSDK with opencv, network-device
 
 - [build with opencv](https://github.com/IntelRealSense/librealsense/blob/master/wrappers/opencv/readme.md)( [local version](./doc/realsense-opencv.md) ), Uncheck `BUILD_SHARED_LIBS`, check `old-jpeg` 
     - if you need `NETWORK_DEVICE` in realsense, because realsense cmake have `libjpeg-turbo` too.
+    
+        ![cmake-configure](./docs/RealsenseNetwokDevice-opencv-libjpegtubo-conflict.PNG)
 
-![cmake-configure](./docs/RealsenseNetwokDevice-opencv-libjpegtubo-conflict.PNG)
+    - disable `BUILD_WITH_STATIC_CRT`
 
-- if you need aruco build with [opencv_contrib](https://github.com/opencv/opencv_contrib/tree/3.4) and include `.hpp`
+        ![opencv-cmake-configure](./docs/opencv-cmake-configure.jpg)
 
-![cmake-configure](./docs/opencv-aruco-build.png)
-![cmake-configure](./docs/opencv-aruco-lib.png)
+
+    - aruco is needed build with [opencv_contrib](https://github.com/opencv/opencv_contrib/tree/3.4) and include `.hpp`
+
+        ![cmake-configure](./docs/opencv-aruco-build.png)
+        ![cmake-configure](./docs/opencv-aruco-lib.png)
+
+## Realsense
 
 - build with network-device  :
 
@@ -67,9 +76,9 @@ cd build
 cmake-gui  ..
 ```
 
-- Press Configure and Make sure you check the `BUILD_CV_EXAMPLES` and `BUILD_NETWORK_DEVICE` flag and click Configure again
+- Press Configure and Make sure you check the `BUILD_CV_EXAMPLES` and `BUILD_NETWORK_DEVICE` flag but disable `BUILD_WITH_STATIC_CRT`, then click Configure again
 
-![cmake-configure](./docs/cmake-configure.PNG)
+![cmake-configure](./docs/cmake-configure.jpg)
 
 - Specify CMake binaries folder for OpenCV as `OpenCV_DIR` (c:/git/opencv-3.4/build)
 

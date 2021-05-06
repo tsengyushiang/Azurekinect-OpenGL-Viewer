@@ -16,6 +16,8 @@
 
 ![vs code](./docs/copycode-imgui-opengl3.jpg)
 
+## Error
+
 - if `glfw3.lib` symbol cannot be resovled
 
     ![vs linerr](./docs/linkerror-glfw3lib.jpg)
@@ -38,6 +40,8 @@
     - set new `glfw3.lib` in origion project
 
     ![vs linerr](./docs/link-new-glfw3lib.jpg)
+
+- error message : `__imp_ wglGetProcAddress`, set config to link `opengl32.lib`.
 
 ## sample code copy from example_glfw_opengl3
 ```
