@@ -39,7 +39,7 @@ public:
 	float AzimuthAngle = 0.1;
 	float AzimuthAngleMax = 6.28;
 	float AzimuthAnglemin = 0;
-	float sensity = 1e-2;
+	float sensity = 5e-2;
 
 	glm::mat4 Projection;
 	glm::mat4 View;
@@ -55,6 +55,13 @@ public:
 	static void setTexture(GLuint& image,const unsigned char* vertexData, int width, int height);
 	static void setPointsVAO(GLuint& vao, GLuint& vbo,GLfloat* vertexData, float size);
 	static void render(glm::mat4& mvp, float pointsize,GLuint shader_program, GLuint vao, float size, int type);
+
+	//---------------------following method implement in ImguiOpeGL3App_glhelper.cpp
+
+	//helper shape
+	static void genCameraHelper(GLuint& vao, GLuint& vbo, float width, float height, float ppx, float ppy, float fx, float fy, glm::ivec3 color, float size);
+	static void genOrigionAxis(GLuint& vao, GLuint& vbo);
+
 };
 
 //custum rener and init demo

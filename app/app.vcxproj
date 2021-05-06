@@ -149,6 +149,7 @@
     <ClCompile Include="src\imgui\imgui.cpp" />
     <ClCompile Include="src\imgui\ImguiOpeGL3App.cpp" />
     <ClCompile Include="src\imgui\ImguiOpenGL3App_gl.cpp" />
+    <ClCompile Include="src\imgui\ImguiOpenGL3App_glhelper.cpp" />
     <ClCompile Include="src\imgui\imgui_demo.cpp" />
     <ClCompile Include="src\imgui\imgui_draw.cpp" />
     <ClCompile Include="src\imgui\imgui_impl_glfw.cpp" />

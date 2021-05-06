@@ -15,6 +15,8 @@ void ImguiOpeGL3App::render(glm::mat4& mvp,float psize,GLuint shader_program, GL
     // draw
     glEnable(GL_PROGRAM_POINT_SIZE);
     glDrawArrays(type, 0, size);
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
 void ImguiOpeGL3App::setTexture(GLuint& image,const unsigned char* image_data, int width, int height) {

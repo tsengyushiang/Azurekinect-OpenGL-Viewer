@@ -12,18 +12,26 @@ typedef struct calibrateResult {
 class RealsenseGL {
 
 public :
+	bool ready2Delete = false;
 	RealsenseDevice* camera;
 	// pointcloud datas {x1,y1,z1,r1,g1,b1,...}	
 	GLuint vao, vbo, image;
+
+	//helper 
+	GLuint camIconVao, camIconVbo;
 
 	RealsenseGL() {
 		glGenVertexArrays(1, &vao);
 		glGenBuffers(1, &vbo);
 		glGenTextures(1, &image);
+		glGenVertexArrays(1, &camIconVao);
+		glGenBuffers(1, &camIconVbo);
 	}
 	~RealsenseGL() {
 		glDeleteVertexArrays(1, &vao);
 		glDeleteBuffers(1, &vbo);
+		glDeleteVertexArrays(1, &camIconVao);
+		glDeleteBuffers(1, &camIconVbo);
 		glDeleteTextures(1, &image);
 	}
 };
@@ -37,7 +45,6 @@ class PointcloudApp :public ImguiOpeGL3App {
 
 	rs2::context ctx;
 	std::vector<RealsenseGL> realsenses;
-	std::set<std::string> activeDeviceSerials;
 	std::set<std::string> serials;
 
 	float t,pointsize=0.1f;
@@ -74,7 +81,14 @@ public:
 
 			// waiting active device
 			for (std::string serial : serials) {
-				if (activeDeviceSerials.find(serial.c_str()) == activeDeviceSerials.end())
+				bool alreadyStart = false;
+				for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
+					if (device->camera->serial == serial) {
+						alreadyStart = true;
+						break;
+					}
+				}
+				if (!alreadyStart)
 				{
 					if (ImGui::Button(serial.c_str())) {
 						addDevice(serial);
@@ -84,40 +98,30 @@ public:
 
 			// Running device
 			ImGui::Text("Running Realsense device :");
-			for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
+			for (auto device = realsenses.begin(); device != realsenses.end(); device++) {				
 				
-				ImGui::TextColored(device->camera->calibrated ? ImVec4(0,255,0,255) : ImVec4(255, 0, 0, 255), "O");
+				if (ImGui::Button((std::string("stop##") + device->camera->serial).c_str())) {
+					device->ready2Delete = true;
+				}
 				ImGui::SameLine();
 				ImGui::Text(device->camera->serial.c_str());
 				ImGui::SameLine();
-				if (ImGui::Button((std::string("stop##") + device->camera->serial).c_str())) {
-					removeDevice(device);
-					device--;
-				}
-				else {
-					ImGui::SameLine();
-					ImGui::Checkbox((std::string("visible##") + device->camera->serial).c_str(), &(device->camera->visible));
-					ImGui::SameLine();
-					ImGui::Checkbox((std::string("calibrated##") + device->camera->serial).c_str(), &(device->camera->calibrated));
-					ImGui::SameLine();
-					ImGui::Checkbox((std::string("OpencvWindow##") + device->camera->serial).c_str(), &(device->camera->opencvImshow));
-					// show image with imgui
-					//ImGui::Image((void*)(intptr_t)device->image, ImVec2(device->camera->width, device->camera->height));
-				}
+				ImGui::Checkbox((std::string("visible##") + device->camera->serial).c_str(), &(device->camera->visible));
+				ImGui::SameLine();
+				ImGui::Checkbox((std::string("calibrated##") + device->camera->serial).c_str(), &(device->camera->calibrated));
+				ImGui::SameLine();
+				ImGui::Checkbox((std::string("OpencvWindow##") + device->camera->serial).c_str(), &(device->camera->opencvImshow));
+				// show image with imgui
+				//ImGui::Image((void*)(intptr_t)device->image, ImVec2(device->camera->width, device->camera->height));
 			}
 			ImGui::End();
-		}
-
-		
+		}		
 	}
 
-	void removeDevice(std::vector<RealsenseGL>::iterator device) {
-		activeDeviceSerials.erase(device->camera->serial.c_str());
-
-		delete device->camera;
-
-		realsenses.erase(device);
+	void removeDevice(std::vector<RealsenseGL>::iterator& device) {
+		delete device->camera;		
 		serials = RealsenseDevice::getAllDeviceSerialNumber(ctx);
+		device = realsenses.erase(device);
 	}
 
 	void addNetworkDevice(std::string url) try {
@@ -125,7 +129,6 @@ public:
 
 		device.camera = new RealsenseDevice();		
 		std::string serial= device.camera->runNetworkDevice(url, ctx);
-		activeDeviceSerials.insert(serial);	
 
 		realsenses.push_back(device);
 	}
@@ -135,8 +138,6 @@ public:
 	}
 
 	void addDevice(std::string serial) {
-		activeDeviceSerials.insert(serial.c_str());
-
 		RealsenseGL device;
 
 		device.camera = new RealsenseDevice();
@@ -152,6 +153,8 @@ public:
 		shader_program = ImguiOpeGL3App::genPointcloudShader(this->window);
 		glGenVertexArrays(1, &axisVao);
 		glGenBuffers(1, &axisVbo);
+
+		ImguiOpeGL3App::genOrigionAxis(axisVao, axisVbo);
 	}
 
 	void alignDevice2calibratedDevice(RealsenseDevice* uncalibratedCam) {
@@ -171,7 +174,7 @@ public:
 		if (baseCamera) {
 			CalibrateResult c = putAruco2Origion(uncalibratedCam);
 			if (c.success) {
-				uncalibratedCam->modelMat = glm::inverse(baseCam2Markerorigion) * c.calibMat;
+				uncalibratedCam->modelMat = baseCamera->modelMat*glm::inverse(baseCam2Markerorigion)* c.calibMat;
 			}
 		}
 	}
@@ -179,6 +182,7 @@ public:
 	CalibrateResult putAruco2Origion(RealsenseDevice* camera) {
 
 		CalibrateResult result;
+		result.success = false;
 
 		// detect aruco and put tag in origion
 		std::vector<glm::vec2> corner = OpenCVUtils::opencv_detect_aruco_from_RealsenseRaw(
@@ -186,13 +190,15 @@ public:
 			camera->height,
 			camera->p_color_frame
 		);
-		result.success = corner.size() > 0;
 
-		if (result.success) {
+		if (corner.size()>0) {
 			glm::vec3 center(0, 0, 0);
 			std::vector<glm::vec3> points;
 			for (auto p : corner) {
 				glm::vec3 point =camera->colorPixel2point(p);
+				if (point.z == 0) {
+					return result;
+				}
 				points.push_back(point);
 				center += point;
 			}
@@ -210,6 +216,7 @@ public:
 				z.x, z.y, z.z, 0.0,
 				center.x, center.y, center.z, 1.0
 			);
+			result.success = true;
 			result.calibMat = glm::inverse(tranform);		 
 
 			// draw xyz-axis
@@ -229,14 +236,33 @@ public:
 
 	void mainloop() override {
 		for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
-			if (!device->camera->visible)
+
+			if (device->ready2Delete) {
+				removeDevice(device);
+				device--;
 				continue;
+			}
+			else if (!device->camera->visible) {
+				continue;
+			}		
+
 			device->camera->fetchframes();
+
+			// render pointcloud
 			ImguiOpeGL3App::setPointsVAO(device->vao, device->vbo, device->camera->vertexData, device->camera->vertexCount);
 			ImguiOpeGL3App::setTexture(device->image, device->camera->p_color_frame, device->camera->width, device->camera->height);
 			glm::mat4 mvp = Projection * View * device->camera->modelMat;
 			ImguiOpeGL3App::render(mvp, pointsize, shader_program, device->vao, device->camera->vertexCount,GL_POINTS);
 			
+			// render camera frustum
+			ImguiOpeGL3App::genCameraHelper(
+				device->camIconVao, device->camIconVbo,
+				device->camera->width, device->camera->height,
+				device->camera->intri.ppx, device->camera->intri.ppy, device->camera->intri.fx, device->camera->intri.fy,
+				glm::vec3(1, 1, 1), 0.2
+			);
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			ImguiOpeGL3App::render(mvp, pointsize, shader_program, device->camIconVao, 3*4, GL_TRIANGLES);
 
 			if (device == realsenses.begin()) {
 				device->camera->calibrated = true;
@@ -244,20 +270,9 @@ public:
 			}
 			else if(!device->camera->calibrated){
 				alignDevice2calibratedDevice(device->camera);				
-			}			
+			}
 		}
 
-		//// draw xyz-axis
-		GLfloat axisData[] = {
-			//  X     Y     Z           R     G     B
-				0.0f, 0.0f, 0.0f,       0.0f, 1.0f, 0.0f, // vertex 0
-				0.0f, 0.1f, 0.0f,       0.0f, 1.0f, 0.0f, // vertex 1
-				0.0f, 0.0f, 0.0f,       1.0f, 0.0f, 0.0f, // vertex 2
-				0.1f, 0.0f, 0.0f,       1.0f, 0.0f, 0.0f, // vertex 3
-				0.0f, 0.0f, 0.0f,       0.0f, 0.0f, 1.0f, // vertex 4
-				0.0f, 0.0f, 0.1f,       0.0f, 0.0f, 1.0f, // vertex 5
-		};
-		ImguiOpeGL3App::setPointsVAO(axisVao, axisVbo, axisData, 6);
 		glm::mat4 mvp = Projection * View;
 		ImguiOpeGL3App::render(mvp, pointsize, shader_program, axisVao, 6, GL_LINES);
 	}

@@ -99,8 +99,10 @@ void ImguiOpeGL3App::initImguiOpenGL3(int width, int height) {
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
+    glEnable(GL_DEPTH_TEST);
+    //glEnable(GL_CULL_FACE);
+    //glCullFace(GL_BACK);
     initGL();
-
 
     // Our state
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
@@ -111,9 +113,6 @@ void ImguiOpeGL3App::initImguiOpenGL3(int width, int height) {
         glfwGetFramebufferSize(window, &width, &height);
         glViewport(0, 0, width, height);
         setcamera(width, height);
-        glEnable(GL_CULL_FACE);
-        glCullFace(GL_BACK);
-        glEnable(GL_DEPTH_TEST);
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
@@ -121,7 +120,6 @@ void ImguiOpeGL3App::initImguiOpenGL3(int width, int height) {
         int display_w, display_h;
         glfwGetFramebufferSize(window, &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
-
 
         mainloop();
 

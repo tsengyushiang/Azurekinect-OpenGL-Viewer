@@ -83,6 +83,9 @@
     <ClCompile Include="src\opencv\opencv-aruco.cpp">
       <Filter>來源檔案\opencv</Filter>
     </ClCompile>
+    <ClCompile Include="src\imgui\ImguiOpenGL3App_glhelper.cpp">
+      <Filter>來源檔案\imgui+opengl3</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
