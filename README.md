@@ -51,8 +51,8 @@
 
 - if you need aruco build with [opencv_contrib](https://github.com/opencv/opencv_contrib/tree/3.4) and include `.hpp`
 
-![cmake-configure](./docs/opencv-aruco-build.PNG)
-![cmake-configure](./docs/opencv-aruco-lib.PNG)
+![cmake-configure](./docs/opencv-aruco-build.png)
+![cmake-configure](./docs/opencv-aruco-lib.png)
 
 - build with network-device  :
 
