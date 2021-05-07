@@ -4,6 +4,7 @@
 #include "src/opencv/opecv-utils.h"
 
 typedef struct calibrateResult {
+	std::vector<glm::vec3> points;
 	glm::mat4 calibMat;
 	// pointcloud datas {x1,y1,z1,r1,g1,b1,...}	
 	bool success;
@@ -153,8 +154,6 @@ public:
 		shader_program = ImguiOpeGL3App::genPointcloudShader(this->window);
 		glGenVertexArrays(1, &axisVao);
 		glGenBuffers(1, &axisVbo);
-
-		ImguiOpeGL3App::genOrigionAxis(axisVao, axisVbo);
 	}
 
 	void alignDevice2calibratedDevice(RealsenseDevice* uncalibratedCam) {
@@ -175,6 +174,7 @@ public:
 			CalibrateResult c = putAruco2Origion(uncalibratedCam);
 			if (c.success) {
 				uncalibratedCam->modelMat = baseCamera->modelMat*glm::inverse(baseCam2Markerorigion)* c.calibMat;
+				uncalibratedCam->calibrated = true;
 			}
 		}
 	}
@@ -191,20 +191,16 @@ public:
 			camera->p_color_frame
 		);
 
-		if (corner.size()>0) {
-			glm::vec3 center(0, 0, 0);
-			std::vector<glm::vec3> points;
+		if (corner.size() > 0) {
 			for (auto p : corner) {
-				glm::vec3 point =camera->colorPixel2point(p);
+				glm::vec3 point = camera->colorPixel2point(p);
 				if (point.z == 0) {
 					return result;
 				}
-				points.push_back(point);
-				center += point;
+				result.points.push_back(point);
 			}
-			center /= 4;
-			glm::vec3 x = glm::normalize(points[1] - center);
-			glm::vec3 z = glm::normalize(points[2] - center);
+			glm::vec3 x = glm::normalize(result.points[0] - result.points[1]);
+			glm::vec3 z = glm::normalize(result.points[2] - result.points[1]);
 			glm::vec3 y = glm::vec3(
 				x.y * z.z - x.z * z.y,
 				x.z * z.x - x.x * z.z,
@@ -214,10 +210,10 @@ public:
 				x.x, x.y, x.z, 0.0,
 				y.x, y.y, y.z, 0.0,
 				z.x, z.y, z.z, 0.0,
-				center.x, center.y, center.z, 1.0
+				result.points[1].x, result.points[1].y, result.points[1].z, 1.0
 			);
 			result.success = true;
-			result.calibMat = glm::inverse(tranform);		 
+			result.calibMat = glm::inverse(tranform);
 
 			// draw xyz-axis
 			//GLfloat axisData[] = {
@@ -235,6 +231,11 @@ public:
 	}
 
 	void mainloop() override {
+
+		glm::mat4 mvp = Projection * View* glm::translate(glm::mat4(1.0),lookAtPoint);
+		ImguiOpeGL3App::genOrigionAxis(axisVao, axisVbo);
+		ImguiOpeGL3App::render(mvp, pointsize, shader_program, axisVao, 6, GL_LINES);
+
 		for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
 
 			if (device->ready2Delete) {
@@ -272,9 +273,6 @@ public:
 				alignDevice2calibratedDevice(device->camera);				
 			}
 		}
-
-		glm::mat4 mvp = Projection * View;
-		ImguiOpeGL3App::render(mvp, pointsize, shader_program, axisVao, 6, GL_LINES);
 	}
 };
 

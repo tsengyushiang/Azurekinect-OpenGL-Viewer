@@ -40,7 +40,7 @@ public:
 	float AzimuthAngleMax = 6.28;
 	float AzimuthAnglemin = 0;
 	float sensity = 5e-2;
-
+	glm::vec3 lookAtPoint;
 	glm::mat4 Projection;
 	glm::mat4 View;
 
