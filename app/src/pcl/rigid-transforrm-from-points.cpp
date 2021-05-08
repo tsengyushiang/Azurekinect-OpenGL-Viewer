@@ -1,5 +1,45 @@
 #include "examples-pcl.h"
 
+glm::mat4 pcl_pointset_rigid_calibrate(int size, std::vector<glm::vec3> srcPoint, std::vector<glm::vec3> dstPoints) {
+
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_in(new pcl::PointCloud<pcl::PointXYZ>());
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_out(new pcl::PointCloud<pcl::PointXYZ>());
+
+	cloud_in->width = size;
+	cloud_in->height = 1;
+	cloud_in->is_dense = false;
+	cloud_in->resize(cloud_in->width * cloud_in->height);
+
+	cloud_out->width = size;
+	cloud_out->height = 1;
+	cloud_out->is_dense = false;
+	cloud_out->resize(cloud_out->width * cloud_out->height);
+
+	for (int i = 0; i < srcPoint.size(); i++) {
+		cloud_in->points[i].x = srcPoint[i].x;
+		cloud_in->points[i].y = srcPoint[i].y;
+		cloud_in->points[i].z = srcPoint[i].z;
+	}
+
+	for (int i = 0; i < dstPoints.size(); i++) {
+		cloud_out->points[i].x = dstPoints[i].x;
+		cloud_out->points[i].y = dstPoints[i].y;
+		cloud_out->points[i].z = dstPoints[i].z;
+	}
+
+	pcl::registration::TransformationEstimationSVD<pcl::PointXYZ, pcl::PointXYZ> TESVD;
+	pcl::registration::TransformationEstimationSVD<pcl::PointXYZ, pcl::PointXYZ>::Matrix4 transformation2;
+	TESVD.estimateRigidTransformation(*cloud_in, *cloud_out, transformation2);
+
+	return glm::mat4(
+		transformation2(0, 0), transformation2(1, 0), transformation2(2, 0), 0.0,
+		transformation2(0, 1), transformation2(1, 1), transformation2(2, 1), 0.0,
+		transformation2(0, 2), transformation2(1, 2), transformation2(2, 2),0.0,
+		transformation2(0, 3), transformation2(1, 3), transformation2(2, 3),1.0
+	);
+}
+
+
 void pcl_rigid_transform_from_correspondPoints() {
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_in(new pcl::PointCloud<pcl::PointXYZ>());

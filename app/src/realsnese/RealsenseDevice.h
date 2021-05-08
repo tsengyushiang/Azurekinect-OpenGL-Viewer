@@ -25,7 +25,7 @@ class RealsenseDevice
     rs2::config cfg;
 
     rs2::pipeline* pipe;
-    rs2::net_device* netdev;
+    rs2::net_device* netdev=nullptr;
 
     float get_depth_scale(rs2::device dev);
 public :
@@ -47,6 +47,7 @@ public :
 
     const uint16_t* p_depth_frame;
     const uchar* p_color_frame;
+    float farPlane = 5.0;
 
     int vertexCount;
     float* vertexData = nullptr;

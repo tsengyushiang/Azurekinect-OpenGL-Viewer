@@ -20,7 +20,7 @@ float RealsenseDevice::get_depth_scale(rs2::device dev)
     }
     throw std::runtime_error("Device does not have a depth sensor");
 }
-RealsenseDevice::RealsenseDevice(int w, int h ) {
+RealsenseDevice::RealsenseDevice(int w, int h) {
     width = w;
     height = h;
     p_depth_frame = (uint16_t*)calloc(width * height, sizeof(uint16_t));
@@ -40,15 +40,15 @@ RealsenseDevice::~RealsenseDevice() {
     free((void*)p_color_frame);
     pipe->stop();
     cvDestroyWindow(serial.c_str());
-    if (netdev)
+    if (netdev!=nullptr)
         free(netdev);
 }
 
 void RealsenseDevice::runDevice(std::string serialnum, rs2::context ctx) {
     serial = serialnum;
     pipe = new rs2::pipeline(ctx);
-    
-    cfg.enable_stream(RS2_STREAM_DEPTH, 640, 480, RS2_FORMAT_Z16, 30);
+
+    cfg.enable_stream(RS2_STREAM_DEPTH, width, height, RS2_FORMAT_Z16, 30);
     cfg.enable_stream(RS2_STREAM_COLOR, width, height, RS2_FORMAT_BGR8, 30);
     cfg.enable_device(serialnum);
 
@@ -96,7 +96,9 @@ glm::vec3 RealsenseDevice::colorPixel2point(glm::vec2 pixel) {
     int index = i * width + j;
 
     float depthValue = (float)p_depth_frame[index] * intri.depth_scale;
-
+    if (depthValue > farPlane) {
+        return glm::vec3(0, 0, 0);
+    }
     glm::vec3 point(
         (float(j) - intri.ppx) / intri.fx * depthValue,
         (float(i) - intri.ppy) / intri.fy * depthValue,
@@ -113,7 +115,7 @@ bool RealsenseDevice::fetchframes() {
 
     if (pipe->poll_for_frames(&frameset)) {
         rs2::frameset data = align_to_color.process(frameset);
-      
+
         rs2::frame depth = data.get_depth_frame();
         rs2::frame color = data.get_color_frame();
 
@@ -125,14 +127,14 @@ bool RealsenseDevice::fetchframes() {
             for (int j = 0; j < width; j++) {
                 int index = i * width + j;
 
-                glm::vec3 point = colorPixel2point(glm::vec2(j,i));
+                glm::vec3 point = colorPixel2point(glm::vec2(j, i));
                 vertexData[index * 6 + 0] = point.x;
                 vertexData[index * 6 + 1] = point.y;
                 vertexData[index * 6 + 2] = point.z;
 
                 vertexData[index * 6 + 3] = (float)p_color_frame[index * 3 + 2] / 255;
                 vertexData[index * 6 + 4] = (float)p_color_frame[index * 3 + 1] / 255;
-                vertexData[index * 6 + 5] = (float)p_color_frame[index * 3 + 0] / 255;                
+                vertexData[index * 6 + 5] = (float)p_color_frame[index * 3 + 0] / 255;
             }
         }
 

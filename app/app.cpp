@@ -1,7 +1,108 @@
-﻿
+
 #include "src/imgui/ImguiOpeGL3App.h"
 #include "src/realsnese//RealsenseDevice.h"
 #include "src/opencv/opecv-utils.h"
+#include "src/pcl/examples-pcl.h"
+
+class CorrespondPointCollector {
+
+public :
+	GLuint srcVao, srcVbo;
+	GLuint trgVao, trgVbo;
+
+	RealsenseDevice* sourcecam;
+	RealsenseDevice* targetcam;
+	int vaildCount = 0;
+	int size;
+	float pushThresholdmin = 0.2f;
+
+	std::vector<glm::vec3> srcPoint;
+	std::vector<glm::vec3> dstPoint;
+	float* source;
+	float* target;
+	float* result;
+	CorrespondPointCollector(RealsenseDevice* srcCam, RealsenseDevice* trgCam,int count = 10) {
+		sourcecam = srcCam;
+		targetcam = trgCam;
+		size = count;
+		source = (float*)calloc(size * 3 * 2, sizeof(float));
+		target = (float*)calloc(size * 3 * 2, sizeof(float));
+		result = (float*)calloc(size * 3 * 2, sizeof(float));
+		glGenVertexArrays(1, &srcVao);
+		glGenBuffers(1, &srcVbo);
+		glGenVertexArrays(1, &trgVao);
+		glGenBuffers(1, &trgVbo);
+	}
+	~CorrespondPointCollector() {
+		free(source);
+		free(target);
+		free(result);
+		glDeleteVertexArrays(1, &srcVao);
+		glDeleteBuffers(1, &srcVbo);
+		glDeleteVertexArrays(1, &trgVao);
+		glDeleteBuffers(1, &trgVbo);
+	}
+
+	void render(glm::mat4 mvp,GLuint shader_program) {
+		ImguiOpeGL3App::setPointsVAO(srcVao, srcVao, source, size);
+		ImguiOpeGL3App::setPointsVAO(trgVao,trgVbo, target, size);
+
+		ImguiOpeGL3App::render(mvp, 10, shader_program, srcVao, size, GL_POINTS);
+		ImguiOpeGL3App::render(mvp, 10, shader_program,trgVao, size, GL_POINTS);
+	}
+
+	bool pushCorrepondPoint(glm::vec3 src, glm::vec3 trg) {
+
+		int index = vaildCount;
+		if (index != 0) {
+			// check threshold
+			glm::vec3 p;
+			int previousIndex = index - 1;
+
+			auto srcDistance = glm::length(glm::vec3(
+				source[previousIndex * 6 + 0],
+				source[previousIndex * 6 + 1],
+				source[previousIndex * 6 + 2]
+			) - src);
+
+			auto dstDistance = glm::length(glm::vec3(
+				target[previousIndex * 6 + 0],
+				target[previousIndex * 6 + 1],
+				target[previousIndex * 6 + 2]
+			) - trg);
+
+			if (srcDistance < pushThresholdmin || dstDistance < pushThresholdmin)
+				return false;
+		}
+
+		srcPoint.push_back(src);
+		dstPoint.push_back(trg);
+
+		source[index*6+0] = src.x;
+		source[index*6+1] = src.y;
+		source[index*6+2] = src.z;
+		source[index*6+3]=1.0;
+		source[index*6+4]=0.0;
+		source[index*6+5]=0.0;
+		
+		target[index*6+0] = trg.x;
+		target[index*6+1] = trg.y;
+		target[index*6+2] = trg.z;
+		target[index*6+3]=0.0;
+		target[index*6+4]=1.0;
+		target[index*6+5]=0.0;
+		
+		vaildCount++;
+		
+		return true;
+	}
+
+	glm::mat4 calibrate() {
+		glm::mat4 transform = pcl_pointset_rigid_calibrate(size, srcPoint, dstPoint);
+		sourcecam->modelMat = transform * sourcecam->modelMat;
+		sourcecam->calibrated = true;
+	}
+};
 
 typedef struct calibrateResult {
 	std::vector<glm::vec3> points;
@@ -49,6 +150,9 @@ class PointcloudApp :public ImguiOpeGL3App {
 	std::set<std::string> serials;
 
 	float t,pointsize=0.1f;
+
+	CorrespondPointCollector* calibrator=nullptr;
+
 public:
 	PointcloudApp():ImguiOpeGL3App(){
 		serials = RealsenseDevice::getAllDeviceSerialNumber(ctx);
@@ -63,7 +167,10 @@ public:
 
 	void addGui() override {
 		{
-			ImGui::Begin("Realsense Gui: ");                          // Create a window called "Hello, world!" and append into it.
+			ImGui::Begin("Realsense pointcloud viewer: ");                          // Create a window called "Hello, world!" and append into it.
+			
+			ImGui::SliderFloat("Point size", &pointsize, 0.5f, 50.0f);
+
 			// input url for network device
 			static char url[20] = "192.168.0.106";
 			ImGui::Text("Network device Ip: ");
@@ -110,6 +217,8 @@ public:
 				ImGui::Checkbox((std::string("visible##") + device->camera->serial).c_str(), &(device->camera->visible));
 				ImGui::SameLine();
 				ImGui::Checkbox((std::string("calibrated##") + device->camera->serial).c_str(), &(device->camera->calibrated));
+
+				ImGui::SliderFloat((std::string("clip-z##") + device->camera->serial).c_str(), &device->camera->farPlane, 0.5f, 15.0f);
 				ImGui::SameLine();
 				ImGui::Checkbox((std::string("OpencvWindow##") + device->camera->serial).c_str(), &(device->camera->opencvImshow));
 				// show image with imgui
@@ -156,6 +265,60 @@ public:
 		glGenBuffers(1, &axisVbo);
 	}
 
+	void collectCalibratePoints() {
+
+		std::vector<glm::vec2> cornerSrc = OpenCVUtils::opencv_detect_aruco_from_RealsenseRaw(
+			calibrator->sourcecam->width,
+			calibrator->sourcecam->height,
+			calibrator->sourcecam->p_color_frame
+		);
+
+		std::vector<glm::vec2> cornerTrg = OpenCVUtils::opencv_detect_aruco_from_RealsenseRaw(
+			calibrator->targetcam->width,
+			calibrator->targetcam->height,
+			calibrator->targetcam->p_color_frame
+		);
+
+		if (cornerSrc.size() > 0 && cornerTrg.size() > 0) {
+			if (calibrator->vaildCount == calibrator->size) {
+				calibrator->calibrate();
+				delete calibrator;
+				calibrator = nullptr;
+			}
+			else {
+				glm::vec3 centerSrc = glm::vec3(0, 0, 0);
+				int count = 0;
+				for (auto p : cornerSrc) {
+					glm::vec3 point = calibrator->sourcecam->colorPixel2point(p);
+					if(point.z==0)	return;
+					centerSrc += point;
+					count++;
+				}
+				centerSrc /= count;
+
+				glm::vec3 centerTrg = glm::vec3(0, 0, 0);
+				count = 0;
+				for (auto p : cornerTrg) {
+					glm::vec3 point = calibrator->targetcam->colorPixel2point(p);
+					if (point.z == 0)	return;
+					centerTrg += point;
+					count++;
+				}
+				centerTrg /= count;
+
+				glm::vec4 src = calibrator->sourcecam->modelMat * glm::vec4(centerSrc.x, centerSrc.y, centerSrc.z, 1.0);
+				glm::vec4 dst = calibrator->targetcam->modelMat * glm::vec4(centerTrg.x, centerTrg.y, centerTrg.z, 1.0);
+
+				bool result = calibrator->pushCorrepondPoint(
+					glm::vec3(src.x, src.y, src.z),
+					glm::vec3(dst.x, dst.y, dst.z)
+				);
+			}
+		}
+
+		//calibrator->sourcecam->calibrated = true;
+	}
+
 	void alignDevice2calibratedDevice(RealsenseDevice* uncalibratedCam) {
 
 		RealsenseDevice* baseCamera = nullptr;
@@ -174,7 +337,8 @@ public:
 			CalibrateResult c = putAruco2Origion(uncalibratedCam);
 			if (c.success) {
 				uncalibratedCam->modelMat = baseCamera->modelMat*glm::inverse(baseCam2Markerorigion)* c.calibMat;
-				uncalibratedCam->calibrated = true;
+				
+				calibrator = new CorrespondPointCollector(uncalibratedCam,baseCamera,10);
 			}
 		}
 	}
@@ -255,12 +419,24 @@ public:
 			glm::mat4 mvp = Projection * View * device->camera->modelMat;
 			ImguiOpeGL3App::render(mvp, pointsize, shader_program, device->vao, device->camera->vertexCount,GL_POINTS);
 			
+			glm::vec3 camhelper = glm::vec3(1, 1, 1);
+
+			if (calibrator != nullptr) {
+				if (device->camera->serial == calibrator->sourcecam->serial) {
+					camhelper = glm::vec3(1, 0, 0);
+				}
+				if (device->camera->serial == calibrator->targetcam->serial) {
+					camhelper = glm::vec3(0, 1, 0);
+				}
+				calibrator->render(Projection * View, shader_program);
+			}
+
 			// render camera frustum
 			ImguiOpeGL3App::genCameraHelper(
 				device->camIconVao, device->camIconVbo,
 				device->camera->width, device->camera->height,
 				device->camera->intri.ppx, device->camera->intri.ppy, device->camera->intri.fx, device->camera->intri.fy,
-				glm::vec3(1, 1, 1), 0.2
+				camhelper, 0.2
 			);
 			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 			ImguiOpeGL3App::render(mvp, pointsize, shader_program, device->camIconVao, 3*4, GL_TRIANGLES);
@@ -270,7 +446,13 @@ public:
 				device->camera->modelMat = glm::mat4(1.0);
 			}
 			else if(!device->camera->calibrated){
-				alignDevice2calibratedDevice(device->camera);				
+
+				if (calibrator == nullptr) {
+					alignDevice2calibratedDevice(device->camera);
+				}
+				else {
+					collectCalibratePoints();
+				}
 			}
 		}
 	}
