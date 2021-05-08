@@ -71,6 +71,7 @@
     <Import Project="Realsense-opencv-without-staticCRT-Release_x64.props" />
     <Import Project="imgui-glf3-Release_x64.props" />
     <Import Project="opencv-aruco.props" />
+    <Import Project="pcl-Release_x64.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -130,7 +131,7 @@
       <WarningLevel>Level3</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <SDLCheck>true</SDLCheck>
+      <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>.\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -142,8 +143,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>
-      </AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -162,6 +162,7 @@
     <ClCompile Include="src\imgui\official-example.cpp" />
     <ClCompile Include="src\imgui\shader-example.cpp" />
     <ClCompile Include="src\opencv\opencv-aruco.cpp" />
+    <ClCompile Include="src\pcl\rigid-transforrm-from-points.cpp" />
     <ClCompile Include="src\realsnese\realsense-net-opencv.cpp" />
     <ClCompile Include="src\realsnese\RealsenseDevice.cpp" />
   </ItemGroup>
@@ -177,6 +178,7 @@
     <ClInclude Include="src\imgui\imgui_impl_opengl3.h" />
     <ClInclude Include="src\imgui\imgui_internal.h" />
     <ClInclude Include="src\opencv\opecv-utils.h" />
+    <ClInclude Include="src\pcl\examples-pcl.h" />
     <ClInclude Include="src\realsnese\example-realsense.h" />
     <ClInclude Include="src\realsnese\RealsenseDevice.h" />
   </ItemGroup>

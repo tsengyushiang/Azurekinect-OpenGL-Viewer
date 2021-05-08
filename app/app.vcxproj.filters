@@ -33,6 +33,9 @@
     <Filter Include="來源檔案\opencv">
       <UniqueIdentifier>{d9880825-8359-4d40-ba57-88f891e6b251}</UniqueIdentifier>
     </Filter>
+    <Filter Include="來源檔案\pcl">
+      <UniqueIdentifier>{b1958a15-975d-4d27-93ad-0a8fb958c48d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="app.cpp">
@@ -86,6 +89,9 @@
     <ClCompile Include="src\imgui\ImguiOpenGL3App_glhelper.cpp">
       <Filter>來源檔案\imgui+opengl3</Filter>
     </ClCompile>
+    <ClCompile Include="src\pcl\rigid-transforrm-from-points.cpp">
+      <Filter>來源檔案\pcl</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -126,6 +132,9 @@
     </ClInclude>
     <ClInclude Include="src\opencv\opecv-utils.h">
       <Filter>來源檔案\opencv</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pcl\examples-pcl.h">
+      <Filter>來源檔案\pcl</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
