@@ -21,10 +21,11 @@ public :
 	float* source;
 	float* target;
 	float* result;
-	CorrespondPointCollector(RealsenseDevice* srcCam, RealsenseDevice* trgCam,int count = 10) {
+	CorrespondPointCollector(RealsenseDevice* srcCam, RealsenseDevice* trgCam,int count = 10,float threshold=0.2f) {
 		sourcecam = srcCam;
 		targetcam = trgCam;
 		size = count;
+		pushThresholdmin = threshold;
 		source = (float*)calloc(size * 3 * 2, sizeof(float));
 		target = (float*)calloc(size * 3 * 2, sizeof(float));
 		result = (float*)calloc(size * 3 * 2, sizeof(float));
@@ -32,6 +33,9 @@ public :
 		glGenBuffers(1, &srcVbo);
 		glGenVertexArrays(1, &trgVao);
 		glGenBuffers(1, &trgVbo);
+
+		sourcecam->opencvImshow = true;
+		targetcam->opencvImshow = true;
 	}
 	~CorrespondPointCollector() {
 		free(source);
@@ -41,6 +45,9 @@ public :
 		glDeleteBuffers(1, &srcVbo);
 		glDeleteVertexArrays(1, &trgVao);
 		glDeleteBuffers(1, &trgVbo);
+
+		sourcecam->opencvImshow = false;
+		targetcam->opencvImshow = false;
 	}
 
 	void render(glm::mat4 mvp,GLuint shader_program) {
@@ -59,20 +66,19 @@ public :
 			glm::vec3 p;
 			int previousIndex = index - 1;
 
-			auto srcDistance = glm::length(glm::vec3(
-				source[previousIndex * 6 + 0],
-				source[previousIndex * 6 + 1],
-				source[previousIndex * 6 + 2]
-			) - src);
+			for (auto p : srcPoint) {
+				auto d = glm::length(p - src);
+				if (d < pushThresholdmin) {
+					return false;
+				}
+			}
 
-			auto dstDistance = glm::length(glm::vec3(
-				target[previousIndex * 6 + 0],
-				target[previousIndex * 6 + 1],
-				target[previousIndex * 6 + 2]
-			) - trg);
-
-			if (srcDistance < pushThresholdmin || dstDistance < pushThresholdmin)
-				return false;
+			for (auto p : dstPoint) {
+				auto d = glm::length(p - trg);
+				if (d < pushThresholdmin) {
+					return false;
+				}
+			}
 		}
 
 		srcPoint.push_back(src);
@@ -152,6 +158,8 @@ class PointcloudApp :public ImguiOpeGL3App {
 	float t,pointsize=0.1f;
 
 	CorrespondPointCollector* calibrator=nullptr;
+	int collectPointCout = 10;
+	float collectthreshold = 0.2f;
 
 public:
 	PointcloudApp():ImguiOpeGL3App(){
@@ -166,6 +174,19 @@ public:
 	}
 
 	void addGui() override {
+		{
+			ImGui::Begin("Aruco calibrate: ");
+			ImGui::SliderFloat("Threshold", &collectthreshold, 0.1f, 1.0f);
+			ImGui::SliderInt("ExpectCollect Point Count", &collectPointCout, 3, 50);
+			if (calibrator != nullptr) {
+				if (ImGui::Button("cancel calibrate")) {
+					delete calibrator;
+					calibrator = nullptr;
+				}
+			}
+			ImGui::End();
+		}
+
 		{
 			ImGui::Begin("Realsense pointcloud viewer: ");                          // Create a window called "Hello, world!" and append into it.
 			
@@ -221,8 +242,6 @@ public:
 				ImGui::SliderFloat((std::string("clip-z##") + device->camera->serial).c_str(), &device->camera->farPlane, 0.5f, 15.0f);
 				ImGui::SameLine();
 				ImGui::Checkbox((std::string("OpencvWindow##") + device->camera->serial).c_str(), &(device->camera->opencvImshow));
-				// show image with imgui
-				//ImGui::Image((void*)(intptr_t)device->image, ImVec2(device->camera->width, device->camera->height));
 			}
 			ImGui::End();
 		}		
@@ -338,7 +357,7 @@ public:
 			if (c.success) {
 				uncalibratedCam->modelMat = baseCamera->modelMat*glm::inverse(baseCam2Markerorigion)* c.calibMat;
 				
-				calibrator = new CorrespondPointCollector(uncalibratedCam,baseCamera,10);
+				calibrator = new CorrespondPointCollector(uncalibratedCam,baseCamera,collectPointCout, collectthreshold);
 			}
 		}
 	}
