@@ -14,7 +14,7 @@ public :
 	RealsenseDevice* targetcam;
 	int vaildCount = 0;
 	int size;
-	float pushThresholdmin = 0.2f;
+	float pushThresholdmin = 0.1f;
 
 	std::vector<glm::vec3> srcPoint;
 	std::vector<glm::vec3> dstPoint;
@@ -158,8 +158,8 @@ class PointcloudApp :public ImguiOpeGL3App {
 	float t,pointsize=0.1f;
 
 	CorrespondPointCollector* calibrator=nullptr;
-	int collectPointCout = 10;
-	float collectthreshold = 0.2f;
+	int collectPointCout = 15;
+	float collectthreshold = 0.1f;
 
 public:
 	PointcloudApp():ImguiOpeGL3App(){
@@ -431,23 +431,33 @@ public:
 			}		
 
 			device->camera->fetchframes();
-
-			// render pointcloud
-			ImguiOpeGL3App::setPointsVAO(device->vao, device->vbo, device->camera->vertexData, device->camera->vertexCount);
-			ImguiOpeGL3App::setTexture(device->image, device->camera->p_color_frame, device->camera->width, device->camera->height);
-			glm::mat4 mvp = Projection * View * device->camera->modelMat;
-			ImguiOpeGL3App::render(mvp, pointsize, shader_program, device->vao, device->camera->vertexCount,GL_POINTS);
-			
+				
 			glm::vec3 camhelper = glm::vec3(1, 1, 1);
-
+			bool isCalibratingCamer = false;
 			if (calibrator != nullptr) {
 				if (device->camera->serial == calibrator->sourcecam->serial) {
 					camhelper = glm::vec3(1, 0, 0);
+					isCalibratingCamer = true;
+					calibrator->render(Projection * View, shader_program);
 				}
 				if (device->camera->serial == calibrator->targetcam->serial) {
 					camhelper = glm::vec3(0, 1, 0);
+					isCalibratingCamer = true;
+					calibrator->render(Projection * View, shader_program);
 				}
-				calibrator->render(Projection * View, shader_program);
+			}
+			else {
+				if (device->camera->calibrated) {
+					camhelper = glm::vec3(0, 0, 1);
+				}
+			}
+			
+			glm::mat4 mvp = Projection * View * device->camera->modelMat;
+			if (isCalibratingCamer || calibrator==nullptr) {
+				// render pointcloud
+				ImguiOpeGL3App::setPointsVAO(device->vao, device->vbo, device->camera->vertexData, device->camera->vertexCount);
+				ImguiOpeGL3App::setTexture(device->image, device->camera->p_color_frame, device->camera->width, device->camera->height);
+				ImguiOpeGL3App::render(mvp, pointsize, shader_program, device->vao, device->camera->vertexCount, GL_POINTS);
 			}
 
 			// render camera frustum

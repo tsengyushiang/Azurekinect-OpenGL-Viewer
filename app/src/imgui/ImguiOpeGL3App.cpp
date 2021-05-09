@@ -48,15 +48,25 @@ void ImguiOpeGL3App::addGui() {
 }
 
 void ImguiOpeGL3App::setcamera(float width, float height) {
+
+    AzimuthAngle += autoRotateSpeed;
+    if (AzimuthAngle > AzimuthAngleMax) {
+        AzimuthAngle = AzimuthAnglemin;
+    }
+
     Projection = glm::perspective(glm::radians(fov), (float)width / (float)height, 0.1f, 100.0f);
     View = glm::lookAt(
         glm::vec3(
-            distance * sin(PolarAngle) * cos(AzimuthAngle)+ lookAtPoint.x,
-            distance * cos(PolarAngle)+ lookAtPoint.y,
-            distance * sin(PolarAngle) * sin(AzimuthAngle)+ lookAtPoint.z), // Camera is at (4,3,3), in World Space
+            distance * sin(PolarAngle) * cos(AzimuthAngle) + lookAtPoint.x,
+            distance * cos(PolarAngle) + lookAtPoint.y,
+            distance * sin(PolarAngle) * sin(AzimuthAngle) + lookAtPoint.z), // Camera is at (4,3,3), in World Space
         lookAtPoint, // and looks at the origin
         glm::vec3(0, -1, 0)  // Head is up (set to 0,-1,0 to look upside-down)
-    );
+    ) * (
+        camVertical ?
+            glm::rotate(glm::mat4(1.0), -1.57f, glm::vec3(0.0, 0.0, 1.0)) :
+            glm::mat4(1.0)
+        );
 }
 
 void ImguiOpeGL3App::initImguiOpenGL3(int width, int height) {
@@ -152,7 +162,8 @@ void ImguiOpeGL3App::initImguiOpenGL3(int width, int height) {
             ImGui::SliderFloat("lookAt-Y", &lookAtPoint.y, -10.0f, 10.0f);
             ImGui::SliderFloat("lookAt-Z", &lookAtPoint.z, -10.0f, 10.0f);            
 
-            ImGui::Text("Mouse dragging : ");              
+            ImGui::Text("Mouse dragging : ");
+            ImGui::SliderFloat("autoRotateSpeed", &autoRotateSpeed, 0.0, 1e-1);
             ImGui::SliderFloat("sensity", &sensity, 1e-1, 1e-3);           
             ImGui::SliderFloat("PolarAngle", &PolarAngle, PolarAnglemin, PolarAngleMax);        
             ImGui::SliderFloat("AzimuthAngle", &AzimuthAngle, AzimuthAnglemin, AzimuthAngleMax);            
