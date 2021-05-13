@@ -21,7 +21,8 @@ typedef struct intrinsic {
 class RealsenseDevice
 {
     rs2::colorizer color_map;
-    rs2::align align_to_color{ RS2_STREAM_COLOR };
+    rs2_stream targetStream = RS2_STREAM_COLOR;
+    rs2::align align_to_color{ targetStream };
     rs2::config cfg;
 
     rs2::pipeline* pipe;
@@ -32,7 +33,7 @@ public :
 
     glm::mat4 modelMat;
 
-    RealsenseDevice(int w = 640, int h = 480);
+    RealsenseDevice();
     ~RealsenseDevice();
 
     bool visible = true;
@@ -42,8 +43,16 @@ public :
     Intrinsic intri;
 
     std::string serial;
+
+    // result resolution depend on targetStream var
     int width;
     int height;
+
+    // resolution for color/depth
+    int cwidth=1280;
+    int cheight=720;
+    int dwidth = 640;
+    int dheight = 480;
 
     const uint16_t* p_depth_frame;
     const uchar* p_color_frame;

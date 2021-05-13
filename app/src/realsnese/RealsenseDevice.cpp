@@ -20,12 +20,19 @@ float RealsenseDevice::get_depth_scale(rs2::device dev)
     }
     throw std::runtime_error("Device does not have a depth sensor");
 }
-RealsenseDevice::RealsenseDevice(int w, int h) {
-    width = w;
-    height = h;
+RealsenseDevice::RealsenseDevice() {
+
+    if (targetStream == RS2_STREAM_COLOR) {
+        width = cwidth;
+        height = cheight;
+    }
+    else if (targetStream == RS2_STREAM_DEPTH) {
+        width = dwidth;
+        height = dheight;
+    }
+
     p_depth_frame = (uint16_t*)calloc(width * height, sizeof(uint16_t));
     p_color_frame = (uchar*)calloc(3 * width * height, sizeof(uchar));
-
     vertexCount = width * height;
     vertexData = (float*)calloc(6 * vertexCount, sizeof(float)); // 6 represent xyzrgb
 
@@ -48,14 +55,14 @@ void RealsenseDevice::runDevice(std::string serialnum, rs2::context ctx) {
     serial = serialnum;
     pipe = new rs2::pipeline(ctx);
 
-    cfg.enable_stream(RS2_STREAM_DEPTH, width, height, RS2_FORMAT_Z16, 30);
-    cfg.enable_stream(RS2_STREAM_COLOR, width, height, RS2_FORMAT_BGR8, 30);
+    cfg.enable_stream(RS2_STREAM_DEPTH, dwidth, dheight, RS2_FORMAT_Z16, 30);
+    cfg.enable_stream(RS2_STREAM_COLOR, cwidth, cheight, RS2_FORMAT_BGR8, 30);
     cfg.enable_device(serialnum);
 
     rs2::pipeline_profile profile = pipe->start(cfg);
 
-    auto color_stream = profile.get_stream(RS2_STREAM_COLOR).as<rs2::video_stream_profile>();
-
+    auto color_stream = profile.get_stream(targetStream).as<rs2::video_stream_profile>();
+    
     auto intrins = color_stream.get_intrinsics();
     intri.fx = intrins.fx;
     intri.ppx = intrins.ppx;
@@ -73,12 +80,12 @@ std::string RealsenseDevice::runNetworkDevice(std::string url, rs2::context ctx)
 
     serial = url;
 
-    cfg.enable_stream(RS2_STREAM_DEPTH, 640, 480, RS2_FORMAT_Z16, 30);
-    cfg.enable_stream(RS2_STREAM_COLOR, width, height, RS2_FORMAT_BGR8, 30);
+    cfg.enable_stream(RS2_STREAM_DEPTH, dwidth, dheight, RS2_FORMAT_Z16, 30);
+    cfg.enable_stream(RS2_STREAM_COLOR, cwidth, cheight, RS2_FORMAT_BGR8, 30);
 
     rs2::pipeline_profile profile = pipe->start(cfg);
 
-    auto color_stream = profile.get_stream(RS2_STREAM_COLOR).as<rs2::video_stream_profile>();
+    auto color_stream = profile.get_stream(targetStream).as<rs2::video_stream_profile>();
 
     auto intrins = color_stream.get_intrinsics();
     intri.fx = intrins.fx;
