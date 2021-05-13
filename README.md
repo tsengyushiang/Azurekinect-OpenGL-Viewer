@@ -125,3 +125,5 @@ cmake-gui  ..
 
 - [opencv + realsense](./OpenCV-Realsesne.md)
 - [imgui + opengl3](./Imgui-OpenGL3.md)
+- [pcl](./pcl.md)
+- [cuda v11.2](./cuda.md)

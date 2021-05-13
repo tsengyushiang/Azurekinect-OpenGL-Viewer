@@ -36,6 +36,9 @@
     <Filter Include="來源檔案\pcl">
       <UniqueIdentifier>{b1958a15-975d-4d27-93ad-0a8fb958c48d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="來源檔案\cuda">
+      <UniqueIdentifier>{da7ef0ca-6541-46ad-a42d-ca36a1a86fe0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="app.cpp">
@@ -144,5 +147,10 @@
     <None Include="src\imgui\shaders\vertexcolor.vs">
       <Filter>來源檔案\imgui+opengl3\shaders</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="src\cuda\cudaUtils.cu">
+      <Filter>來源檔案\cuda</Filter>
+    </CudaCompile>
   </ItemGroup>
 </Project>
