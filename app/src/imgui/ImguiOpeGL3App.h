@@ -56,6 +56,10 @@ public:
 	// opengl render pointcloud 
 	static GLuint genPointcloudShader(GLFWwindow* window);
 	static void setTexture(GLuint& image,const unsigned char* vertexData, int width, int height);
+	
+	static void setTrianglesVAOIBO(GLuint& vao, GLuint& vbo, GLuint& ibo, GLfloat* vertexData, int vertexSize,unsigned int* indices,int indicesSize);
+	static void renderElements(glm::mat4& mvp, float pointsize, GLuint shader_program, GLuint vao, int size);
+
 	static void setPointsVAO(GLuint& vao, GLuint& vbo,GLfloat* vertexData, float size);
 	static void render(glm::mat4& mvp, float pointsize,GLuint shader_program, GLuint vao, float size, int type);
 

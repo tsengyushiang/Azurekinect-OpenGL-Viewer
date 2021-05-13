@@ -147,6 +147,12 @@ public :
 class PointcloudApp :public ImguiOpeGL3App {
 	GLuint shader_program;
 	GLuint axisVao, axisVbo;
+	
+	GLuint meshVao, meshVbo, meshibo;
+	GLfloat* vertices = nullptr;
+	int verticesCount = 0;
+	unsigned int *indices = nullptr;
+	int indicesCount = 0;
 
 	int width = 640;
 	int height = 480;
@@ -171,9 +177,27 @@ public:
 		}
 		glDeleteVertexArrays(1, &axisVao);
 		glDeleteBuffers(1, &axisVbo);
+
+		glDeleteVertexArrays(1, &meshVao);
+		glDeleteBuffers(1, &meshVbo);
+		glDeleteBuffers(1, &meshibo);
 	}
 
 	void addGui() override {
+		{
+			ImGui::Begin("Reconstruct: ");
+			if (ImGui::Button("Reconstruct")) {
+				if (realsenses.size() > 0) {
+					fast_triangulation_of_unordered_pcd(
+						realsenses[0].camera->vertexData,
+						realsenses[0].camera->vaildVeticesCount,
+						indices,
+						indicesCount
+					);
+				}
+			}
+			ImGui::End();
+		}
 		{
 			ImGui::Begin("Aruco calibrate: ");
 			ImGui::SliderFloat("Threshold", &collectthreshold, 0.1f, 1.0f);
@@ -282,6 +306,10 @@ public:
 		shader_program = ImguiOpeGL3App::genPointcloudShader(this->window);
 		glGenVertexArrays(1, &axisVao);
 		glGenBuffers(1, &axisVbo);
+
+		glGenVertexArrays(1, &meshVao);
+		glGenBuffers(1, &meshVbo);
+		glGenBuffers(1, &meshibo);
 	}
 
 	void collectCalibratePoints() {
@@ -419,6 +447,11 @@ public:
 		ImguiOpeGL3App::genOrigionAxis(axisVao, axisVbo);
 		ImguiOpeGL3App::render(mvp, pointsize, shader_program, axisVao, 6, GL_LINES);
 
+		if (indicesCount != 0) {
+			ImguiOpeGL3App::setTrianglesVAOIBO(meshVao, meshVao, meshibo, vertices, verticesCount, indices, indicesCount);
+			ImguiOpeGL3App::renderElements(mvp, pointsize, shader_program, meshVao, indicesCount);
+		}
+
 		for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
 
 			if (device->ready2Delete) {
@@ -457,7 +490,7 @@ public:
 				// render pointcloud
 				ImguiOpeGL3App::setPointsVAO(device->vao, device->vbo, device->camera->vertexData, device->camera->vertexCount);
 				ImguiOpeGL3App::setTexture(device->image, device->camera->p_color_frame, device->camera->width, device->camera->height);
-				ImguiOpeGL3App::render(mvp, pointsize, shader_program, device->vao, device->camera->vertexCount, GL_POINTS);
+				ImguiOpeGL3App::render(mvp, pointsize, shader_program, device->vao, device->camera->vaildVeticesCount, GL_POINTS);
 			}
 
 			// render camera frustum

@@ -130,18 +130,22 @@ bool RealsenseDevice::fetchframes() {
         memcpy((void*)p_color_frame, color.get_data(), 3 * width * height * sizeof(uchar));
 
         // copy to memory
+        vaildVeticesCount = 0;
         for (int i = 0; i < height; i++) {
             for (int j = 0; j < width; j++) {
                 int index = i * width + j;
 
                 glm::vec3 point = colorPixel2point(glm::vec2(j, i));
-                vertexData[index * 6 + 0] = point.x;
-                vertexData[index * 6 + 1] = point.y;
-                vertexData[index * 6 + 2] = point.z;
+                if (point.z > 0) {
+                    vertexData[vaildVeticesCount * 6 + 0] = point.x;
+                    vertexData[vaildVeticesCount * 6 + 1] = point.y;
+                    vertexData[vaildVeticesCount * 6 + 2] = point.z;
 
-                vertexData[index * 6 + 3] = (float)p_color_frame[index * 3 + 2] / 255;
-                vertexData[index * 6 + 4] = (float)p_color_frame[index * 3 + 1] / 255;
-                vertexData[index * 6 + 5] = (float)p_color_frame[index * 3 + 0] / 255;
+                    vertexData[vaildVeticesCount * 6 + 3] = (float)p_color_frame[index * 3 + 2] / 255;
+                    vertexData[vaildVeticesCount * 6 + 4] = (float)p_color_frame[index * 3 + 1] / 255;
+                    vertexData[vaildVeticesCount * 6 + 5] = (float)p_color_frame[index * 3 + 0] / 255;
+                    vaildVeticesCount++;
+                }          
             }
         }
 

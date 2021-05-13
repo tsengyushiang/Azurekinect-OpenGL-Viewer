@@ -58,6 +58,7 @@ public :
     const uchar* p_color_frame;
     float farPlane = 5.0;
 
+    int vaildVeticesCount = 0;
     int vertexCount;
     float* vertexData = nullptr;
 

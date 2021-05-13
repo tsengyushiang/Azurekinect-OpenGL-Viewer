@@ -1,5 +1,18 @@
 #include "ImguiOpeGL3App.h"
 
+void ImguiOpeGL3App::renderElements(glm::mat4& mvp, float psize, GLuint shader_program, GLuint vao, int size) {
+
+    GLuint MatrixID = glGetUniformLocation(shader_program, "MVP");
+    glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &mvp[0][0]);
+
+    // use the shader program
+    glUseProgram(shader_program);
+    // bind the vao
+    glBindVertexArray(vao);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glDrawElements(GL_TRIANGLES, size, GL_UNSIGNED_INT, nullptr);
+}
+
 void ImguiOpeGL3App::render(glm::mat4& mvp,float psize,GLuint shader_program, GLuint vao, float size, int type) {
 
     GLuint pointsize = glGetUniformLocation(shader_program, "pointsize");
@@ -29,6 +42,32 @@ void ImguiOpeGL3App::setTexture(GLuint& image,const unsigned char* image_data, i
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // This is required on WebGL for non power-of-two textures
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); // Same
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_BGR, GL_UNSIGNED_BYTE, image_data);
+}
+
+void ImguiOpeGL3App::setTrianglesVAOIBO(
+    GLuint& vao, GLuint& vbo, GLuint& ibo, 
+    GLfloat* vertexData, int vertexSize, 
+    unsigned int* indices, int indicesSize) 
+{
+
+    // generate and bind the vao
+    glBindVertexArray(vao);
+
+    // generate and bind the buffer object
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+    // fill with data
+    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * vertexSize * 6, vertexData, GL_STATIC_DRAW);
+
+    // set up generic attrib pointers
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (char*)0 + 0 * sizeof(GLfloat));
+
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (char*)0 + 3 * sizeof(GLfloat));
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indicesSize * sizeof(unsigned int), indices, GL_STATIC_DRAW);
 }
 
 

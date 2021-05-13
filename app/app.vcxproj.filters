@@ -95,6 +95,9 @@
     <ClCompile Include="src\pcl\rigid-transforrm-from-points.cpp">
       <Filter>來源檔案\pcl</Filter>
     </ClCompile>
+    <ClCompile Include="src\pcl\Fast_triangulation_of_unordered_pcd.cpp">
+      <Filter>來源檔案\pcl</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -138,6 +141,9 @@
     </ClInclude>
     <ClInclude Include="src\pcl\examples-pcl.h">
       <Filter>來源檔案\pcl</Filter>
+    </ClInclude>
+    <ClInclude Include="src\cuda\cudaUtils.cuh">
+      <Filter>來源檔案\cuda</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
