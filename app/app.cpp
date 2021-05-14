@@ -158,6 +158,8 @@ class PointcloudApp :public ImguiOpeGL3App {
 	bool wireframe = false;
 	bool renderMesh = true;
 
+	int pointcloudDensity = 1;
+
 	int width = 640;
 	int height = 480;
 
@@ -190,11 +192,13 @@ public:
 	void addGui() override {
 		{
 			ImGui::Begin("Reconstruct: ");
+			ImGui::SliderInt("PointcloudDecimate", &pointcloudDensity, 1,10);
+
 			for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
 				ImGui::Checkbox((device->camera->serial+ std::string("##recon")).c_str(), &(device->use2createMesh));
 			}
 			if (ImGui::Button("Reconstruct")) {
-
+				clock_t start = clock();
 				verticesCount = 0;
 				for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
 					if (device->use2createMesh) {
@@ -225,6 +229,10 @@ public:
 					verticesCount,
 					indicesCount
 				);
+
+				clock_t end_t = clock();
+				printf("End of the Triangulation, t = %ld, vertices: %d, faces: %d",
+					end_t-start,verticesCount,indicesCount/3);
 			}
 			ImGui::Checkbox("wireframe", &wireframe);
 			ImGui::Checkbox("renderMesh", &renderMesh);
@@ -486,16 +494,8 @@ public:
 		// render reconstructed mesh
 		if (renderMesh && indicesCount != 0) {
 			ImguiOpeGL3App::setTrianglesVAOIBO(meshVao, meshVao, meshibo, vertices, verticesCount, indices, indicesCount);
-			
-			if (wireframe) {
-				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-			}
-
-			ImguiOpeGL3App::renderElements(mvp, pointsize, shader_program, meshVao, indicesCount);
-
-			if (wireframe) {
-				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-			}
+			ImguiOpeGL3App::renderElements(mvp, pointsize, shader_program, meshVao, indicesCount,
+				wireframe? GL_LINE: GL_FILL);
 		}
 
 		// render realsense Info
@@ -511,7 +511,7 @@ public:
 				continue;
 			}		
 
-			device->camera->fetchframes();
+			device->camera->fetchframes(pointcloudDensity);
 				
 			glm::vec3 camhelper = glm::vec3(1, 1, 1);
 			bool isCalibratingCamer = false;

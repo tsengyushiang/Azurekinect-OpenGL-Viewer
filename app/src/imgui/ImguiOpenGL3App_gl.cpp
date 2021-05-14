@@ -1,6 +1,6 @@
 #include "ImguiOpeGL3App.h"
 
-void ImguiOpeGL3App::renderElements(glm::mat4& mvp, float psize, GLuint shader_program, GLuint vao, int size) {
+void ImguiOpeGL3App::renderElements(glm::mat4& mvp, float psize, GLuint shader_program, GLuint vao, int size,int type) {
 
     GLuint MatrixID = glGetUniformLocation(shader_program, "MVP");
     glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &mvp[0][0]);
@@ -9,7 +9,7 @@ void ImguiOpeGL3App::renderElements(glm::mat4& mvp, float psize, GLuint shader_p
     glUseProgram(shader_program);
     // bind the vao
     glBindVertexArray(vao);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glPolygonMode(GL_FRONT_AND_BACK,type);
     glDrawElements(GL_TRIANGLES, size, GL_UNSIGNED_INT, nullptr);
 }
 

@@ -54,7 +54,7 @@ void ImguiOpeGL3App::setcamera(float width, float height) {
         AzimuthAngle = AzimuthAnglemin;
     }
 
-    Projection = glm::perspective(glm::radians(fov), (float)width / (float)height, 0.1f, 100.0f);
+    Projection = glm::perspective(glm::radians(fov), (float)width / (float)height, 0.01f, 100.0f);
     View = glm::lookAt(
         glm::vec3(
             distance * sin(PolarAngle) * cos(AzimuthAngle) + lookAtPoint.x,

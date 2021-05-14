@@ -116,7 +116,7 @@ glm::vec3 RealsenseDevice::colorPixel2point(glm::vec2 pixel) {
 }
 
 
-bool RealsenseDevice::fetchframes() {
+bool RealsenseDevice::fetchframes(int pointcloudStride) {
 
     rs2::frameset frameset; // Wait for next set of frames from the camera
 
@@ -131,8 +131,8 @@ bool RealsenseDevice::fetchframes() {
 
         // copy to memory
         vaildVeticesCount = 0;
-        for (int i = 0; i < height; i++) {
-            for (int j = 0; j < width; j++) {
+        for (int i = 0; i < height; i+= pointcloudStride) {
+            for (int j = 0; j < width; j+= pointcloudStride) {
                 int index = i * width + j;
 
                 glm::vec3 localPoint = colorPixel2point(glm::vec2(j, i));
