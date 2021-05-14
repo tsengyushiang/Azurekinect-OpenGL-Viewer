@@ -121,6 +121,7 @@ typedef struct calibrateResult {
 class RealsenseGL {
 
 public :
+	bool use2createMesh = true;
 	bool ready2Delete = false;
 	RealsenseDevice* camera;
 	// pointcloud datas {x1,y1,z1,r1,g1,b1,...}	
@@ -154,6 +155,8 @@ class PointcloudApp :public ImguiOpeGL3App {
 	int verticesCount = 0;
 	unsigned int *indices = nullptr;
 	int indicesCount = 0;
+	bool wireframe = false;
+	bool renderMesh = true;
 
 	int width = 640;
 	int height = 480;
@@ -187,37 +190,50 @@ public:
 	void addGui() override {
 		{
 			ImGui::Begin("Reconstruct: ");
-			if (ImGui::Button("Reconstruct")) {
-				if (realsenses.size() > 0) {
-					clock_t begin = clock();
-
-					if (indices != nullptr) {
-						free(indices);
-					}
-
-					indices = fast_triangulation_of_unordered_pcd(
-						realsenses[0].camera->vertexData,
-						realsenses[0].camera->vaildVeticesCount,
-						indicesCount
-					);
-
-					if (vertices != nullptr) {
-						free(vertices);
-					}
-					verticesCount = realsenses[0].camera->vaildVeticesCount;
-					vertices = (float*)calloc(verticesCount * 6, sizeof(float));
-					memcpy(vertices, realsenses[0].camera->vertexData, verticesCount * 6 * sizeof(float));
-
-					clock_t end = clock();
-					double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
-					std::cout << elapsed_secs << verticesCount << indicesCount << std::endl;
-				}
+			for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
+				ImGui::Checkbox((device->camera->serial+ std::string("##recon")).c_str(), &(device->use2createMesh));
 			}
+			if (ImGui::Button("Reconstruct")) {
+
+				verticesCount = 0;
+				for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
+					if (device->use2createMesh) {
+						verticesCount += device->camera->vaildVeticesCount;
+					}
+				}
+
+				if (vertices != nullptr) {
+					free(vertices);
+				}
+				vertices = (float*)calloc(verticesCount * 6, sizeof(float));
+
+				int currentEmpty = 0;
+				for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
+					if (device->use2createMesh) {
+						memcpy(vertices + currentEmpty,
+							device->camera->vertexData, 
+							device->camera->vaildVeticesCount * 6 * sizeof(float));
+						currentEmpty += device->camera->vaildVeticesCount * 6;
+					}
+				}
+
+				if (indices != nullptr) {
+					free(indices);
+				}
+				indices = fast_triangulation_of_unordered_pcd(
+					vertices,
+					verticesCount,
+					indicesCount
+				);
+			}
+			ImGui::Checkbox("wireframe", &wireframe);
+			ImGui::Checkbox("renderMesh", &renderMesh);
+
 			ImGui::End();
 		}
 		{
 			ImGui::Begin("Aruco calibrate: ");
-			ImGui::SliderFloat("Threshold", &collectthreshold, 0.1f, 1.0f);
+			ImGui::SliderFloat("Threshold", &collectthreshold, 0.05f, 0.3f);
 			ImGui::SliderInt("ExpectCollect Point Count", &collectPointCout, 3, 50);
 			if (calibrator != nullptr) {
 				if (ImGui::Button("cancel calibrate")) {
@@ -460,16 +476,31 @@ public:
 
 	void mainloop() override {
 
-		glm::mat4 mvp = Projection * View* glm::translate(glm::mat4(1.0),lookAtPoint);
-		ImguiOpeGL3App::genOrigionAxis(axisVao, axisVbo);
-		ImguiOpeGL3App::render(mvp, pointsize, shader_program, axisVao, 6, GL_LINES);
+		glm::mat4 mvp = Projection * View * Model;
 
-		if (indicesCount != 0) {
+		// render center axis
+		ImguiOpeGL3App::genOrigionAxis(axisVao, axisVbo);
+		glm::mat4 mvpAxis = Projection * View * glm::translate(glm::mat4(1.0),lookAtPoint) * Model;
+		ImguiOpeGL3App::render(mvpAxis, pointsize, shader_program, axisVao, 6, GL_LINES);
+
+		// render reconstructed mesh
+		if (renderMesh && indicesCount != 0) {
 			ImguiOpeGL3App::setTrianglesVAOIBO(meshVao, meshVao, meshibo, vertices, verticesCount, indices, indicesCount);
+			
+			if (wireframe) {
+				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			}
+
 			ImguiOpeGL3App::renderElements(mvp, pointsize, shader_program, meshVao, indicesCount);
+
+			if (wireframe) {
+				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			}
 		}
 
+		// render realsense Info
 		for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
+			glm::mat4 deviceMVP = mvp * device->camera->modelMat;
 
 			if (device->ready2Delete) {
 				removeDevice(device);
@@ -488,12 +519,12 @@ public:
 				if (device->camera->serial == calibrator->sourcecam->serial) {
 					camhelper = glm::vec3(1, 0, 0);
 					isCalibratingCamer = true;
-					calibrator->render(Projection * View, shader_program);
+					calibrator->render(mvp, shader_program);
 				}
 				if (device->camera->serial == calibrator->targetcam->serial) {
 					camhelper = glm::vec3(0, 1, 0);
 					isCalibratingCamer = true;
-					calibrator->render(Projection * View, shader_program);
+					calibrator->render(mvp, shader_program);
 				}
 			}
 			else {
@@ -502,7 +533,6 @@ public:
 				}
 			}
 			
-			glm::mat4 mvp = Projection * View * device->camera->modelMat;
 			if (isCalibratingCamer || calibrator==nullptr) {
 				// render pointcloud
 				ImguiOpeGL3App::setPointsVAO(device->vao, device->vbo, device->camera->vertexData, device->camera->vertexCount);
@@ -518,7 +548,7 @@ public:
 				camhelper, 0.2
 			);
 			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-			ImguiOpeGL3App::render(mvp, pointsize, shader_program, device->camIconVao, 3*4, GL_TRIANGLES);
+			ImguiOpeGL3App::render(deviceMVP, pointsize, shader_program, device->camIconVao, 3*4, GL_TRIANGLES);
 
 			if (device == realsenses.begin()) {
 				device->camera->calibrated = true;

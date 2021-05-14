@@ -46,6 +46,7 @@ public:
 	glm::vec3 lookAtPoint;
 	glm::mat4 Projection;
 	glm::mat4 View;
+	glm::mat4 Model;
 
 	//---------------------following method implement in ImguiOpeGL3App_gl.cpp
 

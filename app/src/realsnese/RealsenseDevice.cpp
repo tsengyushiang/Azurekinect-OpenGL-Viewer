@@ -135,8 +135,15 @@ bool RealsenseDevice::fetchframes() {
             for (int j = 0; j < width; j++) {
                 int index = i * width + j;
 
-                glm::vec3 point = colorPixel2point(glm::vec2(j, i));
-                if (point.z > 0) {
+                glm::vec3 localPoint = colorPixel2point(glm::vec2(j, i));
+                if (localPoint.z > 0) {
+                    glm::vec4 point = modelMat * glm::vec4(
+                        localPoint.x,
+                        localPoint.y,
+                        localPoint.z,
+                        1.0
+                    );
+
                     vertexData[vaildVeticesCount * 6 + 0] = point.x;
                     vertexData[vaildVeticesCount * 6 + 1] = point.y;
                     vertexData[vaildVeticesCount * 6 + 2] = point.z;

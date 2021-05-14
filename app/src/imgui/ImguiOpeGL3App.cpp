@@ -62,11 +62,11 @@ void ImguiOpeGL3App::setcamera(float width, float height) {
             distance * sin(PolarAngle) * sin(AzimuthAngle) + lookAtPoint.z), // Camera is at (4,3,3), in World Space
         lookAtPoint, // and looks at the origin
         glm::vec3(0, -1, 0)  // Head is up (set to 0,-1,0 to look upside-down)
-    ) * (
-        camVertical ?
+    );
+
+    Model = camVertical ?
             glm::rotate(glm::mat4(1.0), -1.57f, glm::vec3(0.0, 0.0, 1.0)) :
-            glm::mat4(1.0)
-        );
+            glm::mat4(1.0);
 }
 
 void ImguiOpeGL3App::initImguiOpenGL3(int width, int height) {
