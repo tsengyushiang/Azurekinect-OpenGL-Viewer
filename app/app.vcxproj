@@ -164,7 +164,7 @@
     <ClCompile Include="src\imgui\official-example.cpp" />
     <ClCompile Include="src\imgui\shader-example.cpp" />
     <ClCompile Include="src\opencv\opencv-aruco.cpp" />
-    <ClCompile Include="src\pcl\Fast_triangulation_of_unordered_pcd.cpp" />
+    <ClCompile Include="src\pcl\fast_triangulation_of_unordered_pcd.cpp" />
     <ClCompile Include="src\pcl\rigid-transforrm-from-points.cpp" />
     <ClCompile Include="src\realsnese\realsense-net-opencv.cpp" />
     <ClCompile Include="src\realsnese\RealsenseDevice.cpp" />

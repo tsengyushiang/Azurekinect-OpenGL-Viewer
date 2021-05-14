@@ -3,6 +3,7 @@
 #include "src/realsnese//RealsenseDevice.h"
 #include "src/opencv/opecv-utils.h"
 #include "src/pcl/examples-pcl.h"
+#include <ctime>
 
 class CorrespondPointCollector {
 
@@ -188,12 +189,28 @@ public:
 			ImGui::Begin("Reconstruct: ");
 			if (ImGui::Button("Reconstruct")) {
 				if (realsenses.size() > 0) {
-					fast_triangulation_of_unordered_pcd(
+					clock_t begin = clock();
+
+					if (indices != nullptr) {
+						free(indices);
+					}
+
+					indices = fast_triangulation_of_unordered_pcd(
 						realsenses[0].camera->vertexData,
 						realsenses[0].camera->vaildVeticesCount,
-						indices,
 						indicesCount
 					);
+
+					if (vertices != nullptr) {
+						free(vertices);
+					}
+					verticesCount = realsenses[0].camera->vaildVeticesCount;
+					vertices = (float*)calloc(verticesCount * 6, sizeof(float));
+					memcpy(vertices, realsenses[0].camera->vertexData, verticesCount * 6 * sizeof(float));
+
+					clock_t end = clock();
+					double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+					std::cout << elapsed_secs << verticesCount << indicesCount << std::endl;
 				}
 			}
 			ImGui::End();

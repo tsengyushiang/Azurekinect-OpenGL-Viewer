@@ -95,7 +95,7 @@
     <ClCompile Include="src\pcl\rigid-transforrm-from-points.cpp">
       <Filter>來源檔案\pcl</Filter>
     </ClCompile>
-    <ClCompile Include="src\pcl\Fast_triangulation_of_unordered_pcd.cpp">
+    <ClCompile Include="src\pcl\fast_triangulation_of_unordered_pcd.cpp">
       <Filter>來源檔案\pcl</Filter>
     </ClCompile>
   </ItemGroup>

@@ -40,7 +40,7 @@ public:
 	float AzimuthAngleMax = 6.28;
 	float AzimuthAnglemin = 0;
 	float autoRotateSpeed = 0.0;
-	float camVertical = true;
+	bool camVertical = true;
 
 	float sensity = 5e-2;
 	glm::vec3 lookAtPoint;

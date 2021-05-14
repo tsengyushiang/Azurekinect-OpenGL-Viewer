@@ -155,7 +155,8 @@ void ImguiOpeGL3App::initImguiOpenGL3(int width, int height) {
 
             ImGui::ColorEdit3("background color", (float*)&clear_color); // Edit 3 floats representing a color
 
-            ImGui::Text("Camera parameters : ");    
+            ImGui::Text("Camera parameters : ");
+            ImGui::Checkbox("isVertical", &camVertical);
             ImGui::SliderFloat("fov", &fov, 30.0f,80.0f); 
             ImGui::SliderFloat("distance", &distance, 0.0f, 5.0f);  
             ImGui::SliderFloat("lookAt-X", &lookAtPoint.x, -10.0f, 10.0f);
