@@ -1,23 +1,18 @@
 ﻿#include "examples-pcl.h"
 
 
-void fast_triangulation_of_unordered_pcd(float* points,int count, unsigned int* indices,int& indicesCount) {
+unsigned int* fast_triangulation_of_unordered_pcd(float* points,int count, int& indicesCount) {
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
 	
 	cloud->width = count;
 	cloud->height = 1;
 	cloud->is_dense = false;
 	cloud->resize(cloud->width * cloud->height);
+	
 	for (int i = 0; i < count; i++) {
 		cloud->points[i].x = points[i * 6 + 0];
 		cloud->points[i].y = points[i * 6 + 1];
 		cloud->points[i].z = points[i * 6 + 2];
-	}
-
-	std::ofstream myfile("result.obj");
-
-	for (auto p : cloud->points) {
-		myfile << "v " << p.x << " " << p.y << " " << p.z << std::endl;
 	}
 
 	// Normal estimation*
@@ -45,9 +40,9 @@ void fast_triangulation_of_unordered_pcd(float* points,int count, unsigned int* 
 	pcl::PolygonMesh triangles;
 
 	gp3.setSearchRadius(0.1);
-	gp3.setMu(1.0);
-	gp3.setMaximumNearestNeighbors(10);
-	gp3.setMaximumSurfaceAngle(M_PI / 3);
+	gp3.setMu(2.5);
+	gp3.setMaximumNearestNeighbors(30);
+	gp3.setMaximumSurfaceAngle(M_PI / 4);
 	gp3.setMinimumAngle(M_PI / 18);
 	gp3.setMaximumAngle(2 * M_PI / 3);
 	gp3.setNormalConsistency(false);
@@ -61,10 +56,17 @@ void fast_triangulation_of_unordered_pcd(float* points,int count, unsigned int* 
 	std::vector<int> parts = gp3.getPartIDs();
 	std::vector<int> states = gp3.getPointStates();
 
-	for (auto p : triangles.polygons) {
-		myfile << "f " << p.vertices[0] + 1 << " " << p.vertices[1] + 1 << " " << p.vertices[2] + 1 << std::endl;
+	;
+
+	unsigned int* indices = (unsigned int*)calloc(  triangles.polygons.size() * 3, sizeof(unsigned int));
+	indicesCount = triangles.polygons.size() * 3;
+
+	for (int i = 0; i < triangles.polygons.size(); i++) {
+		indices[i * 3 + 0] = triangles.polygons[i].vertices[0];
+		indices[i * 3 + 1] = triangles.polygons[i].vertices[1];
+		indices[i * 3 + 2] = triangles.polygons[i].vertices[2];
 	}
-	myfile.close();
+	return indices;
 }
 
 void fast_triangulation_of_unordered_pcd_fromFile(std::string filename= "bun0.pcd")
