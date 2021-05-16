@@ -49,13 +49,15 @@ public :
     int height;
 
     // resolution for color/depth
-    int cwidth=1280;
-    int cheight=720;
+    int cwidth= 640;
+    int cheight= 480;
     int dwidth = 640;
     int dheight = 480;
+    int shifty = 0;
+    int shiftx = 0;
 
     const uint16_t* p_depth_frame;
-    const uchar* p_color_frame;
+    uchar* p_color_frame;
     float farPlane = 5.0;
 
     int vaildVeticesCount = 0;

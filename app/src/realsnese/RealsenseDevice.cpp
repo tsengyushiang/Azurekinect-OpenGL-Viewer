@@ -129,14 +129,31 @@ bool RealsenseDevice::fetchframes(int pointcloudStride) {
         memcpy((void*)p_depth_frame, depth.get_data(), width * height * sizeof(uint16_t));
         memcpy((void*)p_color_frame, color.get_data(), 3 * width * height * sizeof(uchar));
 
+        // shiftTexture
+        for (int i = 0; i < height; i += pointcloudStride) {
+            for (int j = 0; j < width; j += pointcloudStride) {
+                if (
+                    (i + shifty) < height && (i + shifty) >= 0 &&
+                    (j + shiftx) < width && (j + shiftx) >= 0
+                    ) {
+                    int shiftindex = (i + shifty) * width + (j + shiftx);
+                    int index = (i) * width + (j);
+                    p_color_frame[index * 3 + 0] = (float)p_color_frame[shiftindex * 3 + 0];
+                    p_color_frame[index * 3 + 1] = (float)p_color_frame[shiftindex * 3 + 1];
+                    p_color_frame[index * 3 + 2] = (float)p_color_frame[shiftindex * 3 + 2];
+                }
+            }
+        }
         // copy to memory
         vaildVeticesCount = 0;
         for (int i = 0; i < height; i+= pointcloudStride) {
             for (int j = 0; j < width; j+= pointcloudStride) {
-                int index = i * width + j;
+                int index = (i) * width + (j);
 
                 glm::vec3 localPoint = colorPixel2point(glm::vec2(j, i));
-                if (localPoint.z > 0) {
+                if (
+                    localPoint.z > 0
+                    ) {
                     glm::vec4 point = modelMat * glm::vec4(
                         localPoint.x,
                         localPoint.y,
@@ -166,7 +183,7 @@ bool RealsenseDevice::fetchframes(int pointcloudStride) {
             const int ch = color.as<rs2::video_frame>().get_height();
 
             cv::Mat image(cv::Size(w, h), CV_8UC3, (void*)depthColorize.get_data(), cv::Mat::AUTO_STEP);
-            cv::Mat image2(cv::Size(cw, ch), CV_8UC3, (void*)color.get_data(), cv::Mat::AUTO_STEP);
+            cv::Mat image2(cv::Size(cw, ch), CV_8UC3, p_color_frame, cv::Mat::AUTO_STEP);
 
             cv::Mat dst;
             addWeighted(image, 0.5, image2, 0.5, 0.0, dst);

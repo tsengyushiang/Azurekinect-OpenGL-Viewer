@@ -304,6 +304,9 @@ public:
 				ImGui::SameLine();
 				ImGui::Checkbox((std::string("calibrated##") + device->camera->serial).c_str(), &(device->camera->calibrated));
 
+				ImGui::SliderInt((std::string("offset-x##") + device->camera->serial).c_str(), &device->camera->shiftx, -100,100);
+				ImGui::SliderInt((std::string("offset-y##") + device->camera->serial).c_str(), &device->camera->shifty, -100, 100);
+
 				ImGui::SliderFloat((std::string("clip-z##") + device->camera->serial).c_str(), &device->camera->farPlane, 0.5f, 15.0f);
 				ImGui::SameLine();
 				ImGui::Checkbox((std::string("OpencvWindow##") + device->camera->serial).c_str(), &(device->camera->opencvImshow));
