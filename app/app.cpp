@@ -150,13 +150,18 @@ class PointcloudApp :public ImguiOpeGL3App {
 	GLuint shader_program;
 	GLuint axisVao, axisVbo;
 	
+	// mesh reconstruct 
 	GLuint meshVao, meshVbo, meshibo;
 	GLfloat* vertices = nullptr;
 	int verticesCount = 0;
 	unsigned int *indices = nullptr;
 	int indicesCount = 0;
 	bool wireframe = false;
-	bool renderMesh = true;
+	bool renderMesh = false;
+	long time = 0;
+	float searchRadius = 0.1;
+	int maximumNearestNeighbors = 30;
+	float maximumSurfaceAngle = M_PI / 4;
 
 	int pointcloudDensity = 1;
 
@@ -192,7 +197,14 @@ public:
 	void addGui() override {
 		{
 			ImGui::Begin("Reconstruct: ");
+			ImGui::Text("Reconstruct Time : %d",time);
+			ImGui::Text("Vetices : %d",verticesCount);
+			ImGui::Text("Faces : %d",indicesCount/3);
+
 			ImGui::SliderInt("PointcloudDecimate", &pointcloudDensity, 1,10);
+			ImGui::SliderFloat("Radius", &searchRadius, 0,1);
+			ImGui::SliderInt("maxNeighbor", &maximumNearestNeighbors, 5,100);
+			ImGui::SliderFloat("maxSurfaceAngle", &maximumSurfaceAngle, 0,M_PI*2);
 
 			for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
 				ImGui::Checkbox((device->camera->serial+ std::string("##recon")).c_str(), &(device->use2createMesh));
@@ -227,12 +239,15 @@ public:
 				indices = fast_triangulation_of_unordered_pcd(
 					vertices,
 					verticesCount,
-					indicesCount
+					indicesCount,
+					searchRadius,
+					maximumNearestNeighbors,
+					maximumSurfaceAngle
 				);
 
 				clock_t end_t = clock();
-				printf("End of the Triangulation, t = %ld, vertices: %d, faces: %d",
-					end_t-start,verticesCount,indicesCount/3);
+				time = end_t - start;
+				renderMesh = true;
 			}
 			ImGui::Checkbox("wireframe", &wireframe);
 			ImGui::Checkbox("renderMesh", &renderMesh);
@@ -496,6 +511,7 @@ public:
 			ImguiOpeGL3App::setTrianglesVAOIBO(meshVao, meshVao, meshibo, vertices, verticesCount, indices, indicesCount);
 			ImguiOpeGL3App::renderElements(mvp, pointsize, shader_program, meshVao, indicesCount,
 				wireframe? GL_LINE: GL_FILL);
+			return;
 		}
 
 		// render realsense Info

@@ -21,4 +21,9 @@
 void pcl_rigid_transform_from_correspondPoints();
 
 glm::mat4 pcl_pointset_rigid_calibrate(int size, std::vector<glm::vec3> srcPoint,std::vector<glm::vec3> dstPoints);
-unsigned int* fast_triangulation_of_unordered_pcd(float* points, int count, int& indicesCount);
+unsigned int* fast_triangulation_of_unordered_pcd(
+	float* points, int count, int& indicesCount,
+	float searchRadius=0.1,
+	int maximumNearestNeighbors=30,
+	float maximumSurfaceAngle = M_PI/4
+);

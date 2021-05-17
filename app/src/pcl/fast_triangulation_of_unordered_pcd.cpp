@@ -1,7 +1,12 @@
 ﻿#include "examples-pcl.h"
 
 
-unsigned int* fast_triangulation_of_unordered_pcd(float* points,int count, int& indicesCount) {
+unsigned int* fast_triangulation_of_unordered_pcd(
+	float* points,int count, int& indicesCount,
+	float searchRadius,
+	int maximumNearestNeighbors,
+	float maximumSurfaceAngle
+) {
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
 	
 	cloud->width = count;
@@ -39,10 +44,10 @@ unsigned int* fast_triangulation_of_unordered_pcd(float* points,int count, int& 
 	pcl::GreedyProjectionTriangulation<pcl::PointNormal> gp3;
 	pcl::PolygonMesh triangles;
 
-	gp3.setSearchRadius(0.1);
+	gp3.setSearchRadius(searchRadius);
 	gp3.setMu(2.5);
-	gp3.setMaximumNearestNeighbors(30);
-	gp3.setMaximumSurfaceAngle(M_PI / 4);
+	gp3.setMaximumNearestNeighbors(maximumNearestNeighbors);
+	gp3.setMaximumSurfaceAngle(M_PI / 2);
 	gp3.setMinimumAngle(M_PI / 18);
 	gp3.setMaximumAngle(2 * M_PI / 3);
 	gp3.setNormalConsistency(false);
