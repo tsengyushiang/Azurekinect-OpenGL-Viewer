@@ -573,6 +573,163 @@ public:
 		return result;
 	}
 
+	void renderVirtualCameras() {
+		glm::mat4 mvp = Projection * View * Model;
+
+		// render virtual camera		
+		for (auto virtualcam : virtualcams) {
+			glm::mat4 devicemvp = mvp * virtualcam->getModelMat();
+
+			// project pointcloud to image
+			memset(virtualcam->p_color_frame, 0, 3 * virtualcam->w * virtualcam->h * sizeof(uchar));
+			memset(virtualcam->p_depth_color_frame, 0, 3 * virtualcam->w * virtualcam->h * sizeof(uchar));
+			memset(virtualcam->p_depth_frame, UINT16_MAX, virtualcam->w * virtualcam->h * sizeof(uint16_t));
+			for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
+				for (int i = 0; i < device->camera->vaildVeticesCount; i++) {
+					glm::vec4 worldPos = glm::vec4(
+						device->camera->vertexData[i * 6 + 0],
+						device->camera->vertexData[i * 6 + 1],
+						device->camera->vertexData[i * 6 + 2],
+						1.0
+					);
+
+					glm::vec4 uv = glm::inverse(virtualcam->getModelMat()) * worldPos;
+					uv.x = uv.x / uv.z * virtualcam->fx + virtualcam->ppx;
+					uv.y = uv.y / uv.z * virtualcam->fy + virtualcam->ppy;
+					
+					int w = int(uv.x);
+					int h = int(uv.y);
+					if (w>0 && h>0 && w < virtualcam->w && h < virtualcam->h) {
+						int index = h * virtualcam->w + w;
+						// depth test
+
+						if (virtualcam->p_depth_frame[index] > uv.z) {
+							virtualcam->p_depth_frame[index] = uv.z;
+
+							virtualcam->p_color_frame[index * 3 + 2] = device->camera->vertexData[i * 6 + 3] * 255;
+							virtualcam->p_color_frame[index * 3 + 1] = device->camera->vertexData[i * 6 + 4] * 255;
+							virtualcam->p_color_frame[index * 3 + 0] = device->camera->vertexData[i * 6 + 5] * 255;
+
+							uchar R = 0;
+							uchar G = 0;
+							uchar B = 0;
+							RealsenseDevice::HSVtoRGB((uv.z / 5.0) * 360, 100, 100, R, G, B);
+							virtualcam->p_depth_color_frame[index * 3 + 0] = R;
+							virtualcam->p_depth_color_frame[index * 3 + 1] = G;
+							virtualcam->p_depth_color_frame[index * 3 + 2] = B;
+						}
+					}
+				}
+			}
+
+			ImguiOpeGL3App::setTexture(virtualcam->image, virtualcam->p_color_frame, virtualcam->w, virtualcam->h);
+			ImguiOpeGL3App::setTexture(virtualcam->depthImage, virtualcam->p_depth_color_frame, virtualcam->w, virtualcam->h);
+
+			// render camera frustum
+			ImguiOpeGL3App::genCameraHelper(
+				virtualcam->camIconVao, virtualcam->camIconVbo,
+				virtualcam->w, virtualcam->h,
+				virtualcam->ppx, virtualcam->ppy, virtualcam->fx, virtualcam->fy,
+				glm::vec3(1.0, 1.0, 0), 0.2, false
+			);
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			ImguiOpeGL3App::render(devicemvp, pointsize, shader_program, virtualcam->camIconVao, 3 * 4, GL_TRIANGLES);
+
+			ImguiOpeGL3App::genCameraHelper(
+				virtualcam->camIconVao, virtualcam->camIconVbo,
+				virtualcam->w, virtualcam->h,
+				virtualcam->ppx, virtualcam->ppy, virtualcam->fx, virtualcam->fy,
+				glm::vec3(1.0, 1.0, 0), 0.2, true
+			);
+
+			std::string uniformNames[] = { "color" ,"depth" };
+			GLuint textureId[] = { virtualcam->image,virtualcam->depthImage };
+			ImguiOpeGL3App::activateTextures(texture_shader_program, uniformNames, textureId, 2);
+			ImguiOpeGL3App::render(devicemvp, pointsize, texture_shader_program, virtualcam->camIconVao, 3 * 4, GL_TRIANGLES);
+		}		
+	}
+
+	void renderRealsenses() {
+		glm::mat4 mvp = Projection * View * Model;
+		// render realsense		
+		for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
+			glm::mat4 deviceMVP = mvp * device->camera->modelMat;
+
+			if (device->ready2Delete) {
+				removeDevice(device);
+				device--;
+				continue;
+			}
+			else if (!device->camera->visible) {
+				continue;
+			}
+
+			device->camera->fetchframes(pointcloudDensity);
+
+			glm::vec3 camhelper = glm::vec3(1, 1, 1);
+			bool isCalibratingCamer = false;
+			if (calibrator != nullptr) {
+				if (device->camera->serial == calibrator->sourcecam->serial) {
+					camhelper = glm::vec3(1, 0, 0);
+					isCalibratingCamer = true;
+					calibrator->render(mvp, shader_program);
+				}
+				if (device->camera->serial == calibrator->targetcam->serial) {
+					camhelper = glm::vec3(0, 1, 0);
+					isCalibratingCamer = true;
+					calibrator->render(mvp, shader_program);
+				}
+			}
+			else {
+				if (device->camera->calibrated) {
+					camhelper = glm::vec3(0, 0, 1);
+				}
+			}
+
+			// render pointcloud
+			ImguiOpeGL3App::setPointsVAO(device->vao, device->vbo, device->camera->vertexData, device->camera->vertexCount);
+			ImguiOpeGL3App::setTexture(device->image, device->camera->p_color_frame, device->camera->width, device->camera->height);
+			ImguiOpeGL3App::setTexture(device->depthImage, device->camera->p_depth_color_frame, device->camera->width, device->camera->height);
+			ImguiOpeGL3App::render(mvp, pointsize, shader_program, device->vao, device->camera->vaildVeticesCount, GL_POINTS);
+
+			// render camera frustum
+			ImguiOpeGL3App::genCameraHelper(
+				device->camIconVao, device->camIconVbo,
+				device->camera->width, device->camera->height,
+				device->camera->intri.ppx, device->camera->intri.ppy, device->camera->intri.fx, device->camera->intri.fy,
+				camhelper, 0.2, false
+			);
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			ImguiOpeGL3App::render(deviceMVP, pointsize, shader_program, device->camIconVao, 3 * 4, GL_TRIANGLES);
+
+			ImguiOpeGL3App::genCameraHelper(
+				device->camIconVao, device->camIconVbo,
+				device->camera->width, device->camera->height,
+				device->camera->intri.ppx, device->camera->intri.ppy, device->camera->intri.fx, device->camera->intri.fy,
+				camhelper, 0.2, true
+			);
+
+			std::string uniformNames[] = { "color" ,"depth" };
+			GLuint textureId[] = { device->image,device->depthImage };
+			ImguiOpeGL3App::activateTextures(texture_shader_program, uniformNames, textureId, 2);
+			ImguiOpeGL3App::render(deviceMVP, pointsize, texture_shader_program, device->camIconVao, 3 * 4, GL_TRIANGLES);
+
+			if (device == realsenses.begin()) {
+				device->camera->calibrated = true;
+				device->camera->modelMat = glm::mat4(1.0);
+			}
+			else if (!device->camera->calibrated) {
+
+				if (calibrator == nullptr) {
+					alignDevice2calibratedDevice(device->camera);
+				}
+				else {
+					collectCalibratePoints();
+				}
+			}
+		}		
+	}
+
 	void mainloop() override {
 
 		glm::mat4 mvp = Projection * View * Model;
@@ -590,117 +747,9 @@ public:
 			return;
 		}
 		
-		// render virtual camera
-		{
-			for (auto virtualcam : virtualcams) {
-				glm::mat4 devicemvp = mvp * virtualcam->getModelMat();
 
-				ImguiOpeGL3App::setTexture(virtualcam->image, virtualcam->p_color_frame, virtualcam->w, virtualcam->h);
-				ImguiOpeGL3App::setTexture(virtualcam->depthImage, virtualcam->p_depth_color_frame, virtualcam->w, virtualcam->h);
-
-				// render camera frustum
-				ImguiOpeGL3App::genCameraHelper(
-					virtualcam->camIconVao, virtualcam->camIconVbo,
-					virtualcam->w, virtualcam->h,
-					virtualcam->ppx, virtualcam->ppy, virtualcam->fx, virtualcam->fy,
-					glm::vec3(1.0, 1.0, 0), 0.2, false
-				);
-				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-				ImguiOpeGL3App::render(devicemvp, pointsize, shader_program, virtualcam->camIconVao, 3 * 4, GL_TRIANGLES);
-
-				ImguiOpeGL3App::genCameraHelper(
-					virtualcam->camIconVao, virtualcam->camIconVbo,
-					virtualcam->w, virtualcam->h,
-					virtualcam->ppx, virtualcam->ppy, virtualcam->fx, virtualcam->fy,
-					glm::vec3(1.0, 1.0, 0), 0.2, true
-				);
-
-				std::string uniformNames[] = { "color" ,"depth" };
-				GLuint textureId[] = { virtualcam->image,virtualcam->depthImage };
-				ImguiOpeGL3App::activateTextures(texture_shader_program, uniformNames, textureId, 2);
-				ImguiOpeGL3App::render(devicemvp, pointsize, texture_shader_program, virtualcam->camIconVao, 3 * 4, GL_TRIANGLES);
-			}
-		}
-		
-		// render realsense
-		{
-			for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
-				glm::mat4 deviceMVP = mvp * device->camera->modelMat;
-
-				if (device->ready2Delete) {
-					removeDevice(device);
-					device--;
-					continue;
-				}
-				else if (!device->camera->visible) {
-					continue;
-				}
-
-				device->camera->fetchframes(pointcloudDensity);
-
-				glm::vec3 camhelper = glm::vec3(1, 1, 1);
-				bool isCalibratingCamer = false;
-				if (calibrator != nullptr) {
-					if (device->camera->serial == calibrator->sourcecam->serial) {
-						camhelper = glm::vec3(1, 0, 0);
-						isCalibratingCamer = true;
-						calibrator->render(mvp, shader_program);
-					}
-					if (device->camera->serial == calibrator->targetcam->serial) {
-						camhelper = glm::vec3(0, 1, 0);
-						isCalibratingCamer = true;
-						calibrator->render(mvp, shader_program);
-					}
-				}
-				else {
-					if (device->camera->calibrated) {
-						camhelper = glm::vec3(0, 0, 1);
-					}
-				}
-
-				// render pointcloud
-				ImguiOpeGL3App::setPointsVAO(device->vao, device->vbo, device->camera->vertexData, device->camera->vertexCount);
-				ImguiOpeGL3App::setTexture(device->image, device->camera->p_color_frame, device->camera->width, device->camera->height);
-				ImguiOpeGL3App::setTexture(device->depthImage, device->camera->p_depth_color_frame, device->camera->width, device->camera->height);
-				ImguiOpeGL3App::render(mvp, pointsize, shader_program, device->vao, device->camera->vaildVeticesCount, GL_POINTS);
-
-				// render camera frustum
-				ImguiOpeGL3App::genCameraHelper(
-					device->camIconVao, device->camIconVbo,
-					device->camera->width, device->camera->height,
-					device->camera->intri.ppx, device->camera->intri.ppy, device->camera->intri.fx, device->camera->intri.fy,
-					camhelper, 0.2, false
-				);
-				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-				ImguiOpeGL3App::render(deviceMVP, pointsize, shader_program, device->camIconVao, 3 * 4, GL_TRIANGLES);
-
-				ImguiOpeGL3App::genCameraHelper(
-					device->camIconVao, device->camIconVbo,
-					device->camera->width, device->camera->height,
-					device->camera->intri.ppx, device->camera->intri.ppy, device->camera->intri.fx, device->camera->intri.fy,
-					camhelper, 0.2, true
-				);
-
-				std::string uniformNames[] = { "color" ,"depth" };
-				GLuint textureId[] = { device->image,device->depthImage };
-				ImguiOpeGL3App::activateTextures(texture_shader_program, uniformNames, textureId, 2);
-				ImguiOpeGL3App::render(deviceMVP, pointsize, texture_shader_program, device->camIconVao, 3 * 4, GL_TRIANGLES);
-
-				if (device == realsenses.begin()) {
-					device->camera->calibrated = true;
-					device->camera->modelMat = glm::mat4(1.0);
-				}
-				else if (!device->camera->calibrated) {
-
-					if (calibrator == nullptr) {
-						alignDevice2calibratedDevice(device->camera);
-					}
-					else {
-						collectCalibratePoints();
-					}
-				}
-			}
-		}
+		renderVirtualCameras();
+		renderRealsenses();
 	}
 };
 

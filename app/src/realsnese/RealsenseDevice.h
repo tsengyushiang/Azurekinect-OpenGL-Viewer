@@ -69,5 +69,6 @@ public :
     glm::vec3 colorPixel2point(glm::vec2);
 
     static std::set<std::string> getAllDeviceSerialNumber(rs2::context& ctx);
+    static void HSVtoRGB(float H, float S, float V, uchar& R, uchar& G, uchar& B);
 };
 

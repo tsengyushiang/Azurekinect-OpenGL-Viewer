@@ -1,6 +1,6 @@
 #include "RealsenseDevice.h"
 
-void HSVtoRGB(float H, float S, float V,uchar& R,uchar& G,uchar& B) {
+void RealsenseDevice::HSVtoRGB(float H, float S, float V,uchar& R,uchar& G,uchar& B) {
     if (H > 360 || H < 0 || S>100 || S < 0 || V>100 || V < 0) {
         return;
     }
