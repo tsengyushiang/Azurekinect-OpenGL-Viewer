@@ -192,7 +192,7 @@ bool RealsenseDevice::fetchframes(int pointcloudStride) {
                     uchar R = 0;
                     uchar G = 0;
                     uchar B = 0;
-                    HSVtoRGB((localPoint.z / farPlane) * 180, 50, 50, R, G, B);
+                    HSVtoRGB((localPoint.z / farPlane) * 360, 100, 100, R, G, B);
                     p_depth_color_frame[index * 3 + 0] = R;
                     p_depth_color_frame[index * 3 + 1] = G;
                     p_depth_color_frame[index * 3 + 2] = B;

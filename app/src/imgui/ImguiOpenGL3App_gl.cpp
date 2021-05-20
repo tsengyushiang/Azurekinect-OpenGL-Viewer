@@ -21,10 +21,14 @@ void ImguiOpeGL3App::activateTextures(GLuint shader_program,std::string* uniform
         glUniform1i(glGetUniformLocation(shader_program, (uniformName+i)->c_str()), i);
         glActiveTexture(GL_TEXTURE0+i);
         glBindTexture(GL_TEXTURE_2D, *(textureId+i));
-     }
+    }
+
+    glUseProgram(0);
 }
 
 void ImguiOpeGL3App::render(glm::mat4& mvp,float psize,GLuint shader_program, GLuint vao, float size, int type) {
+
+    glUseProgram(shader_program);
 
     GLuint pointsize = glGetUniformLocation(shader_program, "pointsize");
     glUniform1f(pointsize, psize);
@@ -33,7 +37,6 @@ void ImguiOpeGL3App::render(glm::mat4& mvp,float psize,GLuint shader_program, GL
     glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &mvp[0][0]);
 
     // use the shader program
-    glUseProgram(shader_program);
     // bind the vao
     glBindVertexArray(vao);
     // draw
@@ -41,6 +44,8 @@ void ImguiOpeGL3App::render(glm::mat4& mvp,float psize,GLuint shader_program, GL
     glDrawArrays(type, 0, size);
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+    glUseProgram(0);
 }
 
 void ImguiOpeGL3App::setTexture(GLuint& image,const unsigned char* image_data, int width, int height) {
