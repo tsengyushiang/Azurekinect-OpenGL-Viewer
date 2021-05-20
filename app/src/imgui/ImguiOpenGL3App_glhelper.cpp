@@ -3,11 +3,19 @@
 void ImguiOpeGL3App::genCameraHelper(
 	GLuint& vao, GLuint& vbo,
 	float width,float height,float ppx, float ppy, float fx, float fy, // camera intrinsic,extrinsic 
-	glm::ivec3 color,float size // size and color
+	glm::ivec3 color,float size,bool isPlane // size and color
 	) 
 {
+	std::vector<glm::vec2> uv = {
+		glm::vec2(0.5,0.5),
+		glm::vec2(0.0,0.0),
+		glm::vec2(1.0,0.0),
+		glm::vec2(1.0,1.0),
+		glm::vec2(0.0,1.0)
+	};
+
 	std::vector<glm::vec4> points = {
-		glm::vec4(ppx,ppy,0.0,1.0),
+		glm::vec4(ppx,ppy,isPlane? 1.0:0.0,1.0),
 		glm::vec4(0,0,1.0,1.0),
 		glm::vec4(width,0,1.0,1.0),
 		glm::vec4(width,height,1.0,1.0),
@@ -35,25 +43,48 @@ void ImguiOpeGL3App::genCameraHelper(
 		frustum[6 * 3 * (i - 1) + 1] = points[index1].y;
 		frustum[6 * 3 * (i - 1) + 2] = points[index1].z;
 
-		frustum[6 * 3 * (i - 1) + 3] = color.x;
-		frustum[6 * 3 * (i - 1) + 4] = color.y;
-		frustum[6 * 3 * (i - 1) + 5] = color.z;
+		if (isPlane) {
+			frustum[6 * 3 * (i - 1) + 3] = uv[index1].x;
+			frustum[6 * 3 * (i - 1) + 4] = uv[index1].y;
+			frustum[6 * 3 * (i - 1) + 5] = 1.0;
+		}
+		else {
+			frustum[6 * 3 * (i - 1) + 3] = color.x;
+			frustum[6 * 3 * (i - 1) + 4] = color.y;
+			frustum[6 * 3 * (i - 1) + 5] = color.z;
+		}
+
 
 		frustum[6 * 3 * (i - 1) + 6] = points[index2].x;
 		frustum[6 * 3 * (i - 1) + 7] = points[index2].y;
 		frustum[6 * 3 * (i - 1) + 8] = points[index2].z;
 
-		frustum[6 * 3 * (i - 1) + 9] = color.x;
-		frustum[6 * 3 * (i - 1) + 10] = color.y;
-		frustum[6 * 3 * (i - 1) + 11] = color.z;
+		if (isPlane) {
+			frustum[6 * 3 * (i - 1) + 9] = uv[index2].x;
+			frustum[6 * 3 * (i - 1) + 10] = uv[index2].y;
+			frustum[6 * 3 * (i - 1) + 11] = 1.0;
+		}
+		else {
+			frustum[6 * 3 * (i - 1) + 9] = color.x;
+			frustum[6 * 3 * (i - 1) + 10] = color.y;
+			frustum[6 * 3 * (i - 1) + 11] = color.z;
+		}
+
 
 		frustum[6 * 3 * (i - 1) + 12] = points[index3].x;
 		frustum[6 * 3 * (i - 1) + 13] = points[index3].y;
 		frustum[6 * 3 * (i - 1) + 14] = points[index3].z;
 
-		frustum[6 * 3 * (i - 1) + 15] = color.x;
-		frustum[6 * 3 * (i - 1) + 16] = color.y;
-		frustum[6 * 3 * (i - 1) + 17] = color.z;
+		if (isPlane) {
+			frustum[6 * 3 * (i - 1) + 15] = uv[index3].x;
+			frustum[6 * 3 * (i - 1) + 16] = uv[index3].y;
+			frustum[6 * 3 * (i - 1) + 17] = 1.0;
+		}
+		else {
+			frustum[6 * 3 * (i - 1) + 15] = color.x;
+			frustum[6 * 3 * (i - 1) + 16] = color.y;
+			frustum[6 * 3 * (i - 1) + 17] = color.z;
+		}
 	}
 
 	ImguiOpeGL3App::setPointsVAO(vao, vbo, frustum, 6 * 3 * 4);

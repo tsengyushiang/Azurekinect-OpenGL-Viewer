@@ -56,6 +56,7 @@ public:
 
 	// opengl render pointcloud 
 	static GLuint genPointcloudShader(GLFWwindow* window);
+	static GLuint genTextureShader(GLFWwindow* window);
 	static void setTexture(GLuint& image,const unsigned char* vertexData, int width, int height);
 	
 	static void setTrianglesVAOIBO(GLuint& vao, GLuint& vbo, GLuint& ibo, GLfloat* vertexData, int vertexSize,unsigned int* indices,int indicesSize);
@@ -63,11 +64,14 @@ public:
 
 	static void setPointsVAO(GLuint& vao, GLuint& vbo,GLfloat* vertexData, float size);
 	static void render(glm::mat4& mvp, float pointsize,GLuint shader_program, GLuint vao, float size, int type);
+	static void activateTextures(GLuint shader_program, std::string* uniformName, GLuint* textureId, int textureCount);
 
 	//---------------------following method implement in ImguiOpeGL3App_glhelper.cpp
 
 	//helper shape
-	static void genCameraHelper(GLuint& vao, GLuint& vbo, float width, float height, float ppx, float ppy, float fx, float fy, glm::ivec3 color, float size);
+	static void genCameraHelper(GLuint& vao, GLuint& vbo, 
+		float width, float height, float ppx, float ppy, float fx, float fy, 
+		glm::ivec3 color, float size,bool isPlane);
 	static void genOrigionAxis(GLuint& vao, GLuint& vbo);
 
 };

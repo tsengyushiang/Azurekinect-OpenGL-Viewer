@@ -55,6 +55,7 @@ public :
     int dheight = 480;
 
     const uint16_t* p_depth_frame;
+    uchar* p_depth_color_frame;
     const uchar* p_color_frame;
     float farPlane = 5.0;
 

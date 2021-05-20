@@ -125,7 +125,7 @@ public :
 	bool ready2Delete = false;
 	RealsenseDevice* camera;
 	// pointcloud datas {x1,y1,z1,r1,g1,b1,...}	
-	GLuint vao, vbo, image;
+	GLuint vao, vbo, image, depthImage;
 
 	//helper 
 	GLuint camIconVao, camIconVbo;
@@ -134,6 +134,7 @@ public :
 		glGenVertexArrays(1, &vao);
 		glGenBuffers(1, &vbo);
 		glGenTextures(1, &image);
+		glGenTextures(1, &depthImage);
 		glGenVertexArrays(1, &camIconVao);
 		glGenBuffers(1, &camIconVbo);
 	}
@@ -143,11 +144,12 @@ public :
 		glDeleteVertexArrays(1, &camIconVao);
 		glDeleteBuffers(1, &camIconVbo);
 		glDeleteTextures(1, &image);
+		glDeleteTextures(1, &depthImage);
 	}
 };
 
 class PointcloudApp :public ImguiOpeGL3App {
-	GLuint shader_program;
+	GLuint shader_program,texture_shader_program;
 	GLuint axisVao, axisVbo;
 	
 	// mesh reconstruct 
@@ -360,6 +362,7 @@ public:
 
 	void initGL() override {
 		shader_program = ImguiOpeGL3App::genPointcloudShader(this->window);
+		texture_shader_program = ImguiOpeGL3App::genTextureShader(this->window);
 		glGenVertexArrays(1, &axisVao);
 		glGenBuffers(1, &axisVbo);
 
@@ -553,6 +556,7 @@ public:
 				// render pointcloud
 				ImguiOpeGL3App::setPointsVAO(device->vao, device->vbo, device->camera->vertexData, device->camera->vertexCount);
 				ImguiOpeGL3App::setTexture(device->image, device->camera->p_color_frame, device->camera->width, device->camera->height);
+				ImguiOpeGL3App::setTexture(device->depthImage, device->camera->p_depth_color_frame, device->camera->width, device->camera->height);
 				ImguiOpeGL3App::render(mvp, pointsize, shader_program, device->vao, device->camera->vaildVeticesCount, GL_POINTS);
 			}
 
@@ -561,10 +565,22 @@ public:
 				device->camIconVao, device->camIconVbo,
 				device->camera->width, device->camera->height,
 				device->camera->intri.ppx, device->camera->intri.ppy, device->camera->intri.fx, device->camera->intri.fy,
-				camhelper, 0.2
+				camhelper, 0.2, false
 			);
 			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 			ImguiOpeGL3App::render(deviceMVP, pointsize, shader_program, device->camIconVao, 3*4, GL_TRIANGLES);
+
+			ImguiOpeGL3App::genCameraHelper(
+				device->camIconVao, device->camIconVbo,
+				device->camera->width, device->camera->height,
+				device->camera->intri.ppx, device->camera->intri.ppy, device->camera->intri.fx, device->camera->intri.fy,
+				camhelper, 0.2, true
+			);
+
+			std::string uniformNames[] = { "tex1" ,"tex2" };
+			GLuint textureId[] = { device->image,device->depthImage };
+			ImguiOpeGL3App::activateTextures(texture_shader_program,uniformNames,textureId,2);
+			ImguiOpeGL3App::render(deviceMVP, pointsize, texture_shader_program, device->camIconVao, 3 * 4, GL_TRIANGLES);
 
 			if (device == realsenses.begin()) {
 				device->camera->calibrated = true;

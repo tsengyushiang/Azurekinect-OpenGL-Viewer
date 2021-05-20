@@ -1,5 +1,38 @@
 #include "RealsenseDevice.h"
 
+void HSVtoRGB(float H, float S, float V,uchar& R,uchar& G,uchar& B) {
+    if (H > 360 || H < 0 || S>100 || S < 0 || V>100 || V < 0) {
+        return;
+    }
+    float s = S / 100;
+    float v = V / 100;
+    float C = s * v;
+    float X = C * (1 - abs(fmod(H / 60.0, 2) - 1));
+    float m = v - C;
+    float r, g, b;
+    if (H >= 0 && H < 60) {
+        r = C, g = X, b = 0;
+    }
+    else if (H >= 60 && H < 120) {
+        r = X, g = C, b = 0;
+    }
+    else if (H >= 120 && H < 180) {
+        r = 0, g = C, b = X;
+    }
+    else if (H >= 180 && H < 240) {
+        r = 0, g = X, b = C;
+    }
+    else if (H >= 240 && H < 300) {
+        r = X, g = 0, b = C;
+    }
+    else {
+        r = C, g = 0, b = X;
+    }
+    R = (r + m) * 255;
+    G = (g + m) * 255;
+    B = (b + m) * 255;
+}
+
 std::set<std::string> RealsenseDevice::getAllDeviceSerialNumber(rs2::context& ctx) {
     std::set<std::string>              serials;
     for (auto&& dev : ctx.query_devices())
@@ -33,6 +66,8 @@ RealsenseDevice::RealsenseDevice() {
 
     p_depth_frame = (uint16_t*)calloc(width * height, sizeof(uint16_t));
     p_color_frame = (uchar*)calloc(3 * width * height, sizeof(uchar));
+    p_depth_color_frame = (uchar*)calloc(3 * width * height, sizeof(uchar));
+
     vertexCount = width * height;
     vertexData = (float*)calloc(6 * vertexCount, sizeof(float)); // 6 represent xyzrgb
 
@@ -45,6 +80,7 @@ RealsenseDevice::RealsenseDevice() {
 RealsenseDevice::~RealsenseDevice() {
     free((void*)p_depth_frame);
     free((void*)p_color_frame);
+    free((void*)p_depth_color_frame);
     pipe->stop();
     cvDestroyWindow(serial.c_str());
     if (netdev!=nullptr)
@@ -152,7 +188,20 @@ bool RealsenseDevice::fetchframes(int pointcloudStride) {
                     vertexData[vaildVeticesCount * 6 + 4] = (float)p_color_frame[index * 3 + 1] / 255;
                     vertexData[vaildVeticesCount * 6 + 5] = (float)p_color_frame[index * 3 + 0] / 255;
                     vaildVeticesCount++;
-                }          
+
+                    uchar R = 0;
+                    uchar G = 0;
+                    uchar B = 0;
+                    HSVtoRGB((localPoint.z / farPlane) * 180, 50, 50, R, G, B);
+                    p_depth_color_frame[index * 3 + 0] = R;
+                    p_depth_color_frame[index * 3 + 1] = G;
+                    p_depth_color_frame[index * 3 + 2] = B;
+                }
+                else {
+                    p_depth_color_frame[index * 3 + 0] = 0;
+                    p_depth_color_frame[index * 3 + 1] = 0;
+                    p_depth_color_frame[index * 3 + 2] = 0;
+                }
             }
         }
 

@@ -187,6 +187,8 @@
     <ClInclude Include="src\realsnese\RealsenseDevice.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="src\imgui\shaders\texture.fs" />
+    <None Include="src\imgui\shaders\texture.vs" />
     <None Include="src\imgui\shaders\vertexcolor.fs" />
     <None Include="src\imgui\shaders\vertexcolor.vs" />
   </ItemGroup>

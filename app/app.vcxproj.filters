@@ -153,6 +153,12 @@
     <None Include="src\imgui\shaders\vertexcolor.vs">
       <Filter>來源檔案\imgui+opengl3\shaders</Filter>
     </None>
+    <None Include="src\imgui\shaders\texture.vs">
+      <Filter>來源檔案\imgui+opengl3\shaders</Filter>
+    </None>
+    <None Include="src\imgui\shaders\texture.fs">
+      <Filter>來源檔案\imgui+opengl3\shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="src\cuda\cudaUtils.cu">
