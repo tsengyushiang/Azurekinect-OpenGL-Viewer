@@ -2,15 +2,18 @@
 
 void ImguiOpeGL3App::renderElements(glm::mat4& mvp, float psize, GLuint shader_program, GLuint vao, int size,int type) {
 
+    glUseProgram(shader_program);
+
     GLuint MatrixID = glGetUniformLocation(shader_program, "MVP");
     glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &mvp[0][0]);
 
     // use the shader program
-    glUseProgram(shader_program);
     // bind the vao
     glBindVertexArray(vao);
     glPolygonMode(GL_FRONT_AND_BACK,type);
     glDrawElements(GL_TRIANGLES, size, GL_UNSIGNED_INT, nullptr);
+
+    glUseProgram(0);
 }
 
 void ImguiOpeGL3App::activateTextures(GLuint shader_program,std::string* uniformName, GLuint* textureId, int textureCount) {

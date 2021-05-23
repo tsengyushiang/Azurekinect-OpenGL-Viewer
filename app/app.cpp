@@ -3,6 +3,8 @@
 #include "src/realsnese//RealsenseDevice.h"
 #include "src/opencv/opecv-utils.h"
 #include "src/pcl/examples-pcl.h"
+#include "src/cuda/CudaOpenGLUtils.h"
+#include "src/cuda/cudaUtils.cuh"
 #include <ctime>
 
 class CorrespondPointCollector {
@@ -197,6 +199,12 @@ public :
 };
 
 class PointcloudApp :public ImguiOpeGL3App {
+
+	//cuda opengl
+	int* cudaIndicesCount = 0;
+	GLuint vao, vbo, ibo;
+	struct cudaGraphicsResource *cuda_vbo_resource, *cuda_ibo_resource;
+
 	GLuint shader_program,texture_shader_program;
 	GLuint axisVao, axisVbo;
 	
@@ -215,8 +223,8 @@ class PointcloudApp :public ImguiOpeGL3App {
 
 	int pointcloudDensity = 1;
 
-	int width = 640;
-	int height = 480;
+	int width = 8;
+	int height = 8;
 
 	std::vector<VirtualCam*> virtualcams;
 
@@ -244,6 +252,10 @@ public:
 		glDeleteVertexArrays(1, &meshVao);
 		glDeleteBuffers(1, &meshVbo);
 		glDeleteBuffers(1, &meshibo);
+
+		glDeleteVertexArrays(1, &vao);
+		CudaOpenGL::deleteVBO(&vbo, cuda_vbo_resource);
+		CudaOpenGL::deleteVBO(&ibo, cuda_ibo_resource);
 	}
 
 	void addGui() override {
@@ -442,6 +454,11 @@ public:
 		glGenVertexArrays(1, &meshVao);
 		glGenBuffers(1, &meshVbo);
 		glGenBuffers(1, &meshibo);
+
+		glGenVertexArrays(1, &vao);
+		CudaOpenGL::createBufferObject(&vbo, &cuda_vbo_resource, cudaGraphicsMapFlagsNone, width * height * 6 * sizeof(float), GL_ARRAY_BUFFER);
+		CudaOpenGL::createBufferObject(&ibo, &cuda_ibo_resource, cudaGraphicsMapFlagsNone, width * height * 2 * 3 * sizeof(sizeof(unsigned int)), GL_ELEMENT_ARRAY_BUFFER);
+		cudaMalloc((void**)&cudaIndicesCount, sizeof(int));
 	}
 
 	void collectCalibratePoints() {
@@ -730,6 +747,26 @@ public:
 		}		
 	}
 
+	void renderCuda() {
+		glm::mat4 mvp = Projection * View * Model;
+	
+		CudaAlogrithm::depthMap2point(&cuda_vbo_resource, width, height, 1.0);
+		CudaAlogrithm::depthMapTriangulate(&cuda_vbo_resource, &cuda_ibo_resource, width, height, cudaIndicesCount);
+
+		glBindVertexArray(vao);
+		// generate and bind the buffer object
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		// set up generic attrib pointers
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (char*)0 + 0 * sizeof(GLfloat));
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (char*)0 + 3 * sizeof(GLfloat));
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+		int count = 0;
+		cudaMemcpy(&count, cudaIndicesCount, sizeof(int), cudaMemcpyDeviceToHost);
+		ImguiOpeGL3App::renderElements(mvp, pointsize, shader_program, vao, count * 3, GL_FILL);
+	}
+
 	void mainloop() override {
 
 		glm::mat4 mvp = Projection * View * Model;
@@ -747,7 +784,7 @@ public:
 			return;
 		}
 		
-
+		renderCuda();
 		renderVirtualCameras();
 		renderRealsenses();
 	}

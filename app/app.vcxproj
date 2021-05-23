@@ -150,6 +150,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="app.cpp" />
+    <ClCompile Include="src\cuda\CudaOpenGLUtils.cpp" />
     <ClCompile Include="src\gl3w\gl3w.c" />
     <ClCompile Include="src\imgui\imgui.cpp" />
     <ClCompile Include="src\imgui\ImguiOpeGL3App.cpp" />
@@ -171,6 +172,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
+    <ClInclude Include="src\cuda\CudaOpenGLUtils.h" />
     <ClInclude Include="src\cuda\cudaUtils.cuh" />
     <ClInclude Include="src\gl3w\gl3w.h" />
     <ClInclude Include="src\gl3w\glcorearb.h" />
@@ -194,6 +196,8 @@
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="src\cuda\cudaUtils.cu" />
+    <CudaCompile Include="src\cuda\depthMap2pointcloud.cu" />
+    <CudaCompile Include="src\cuda\depthMapTriangulate.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
