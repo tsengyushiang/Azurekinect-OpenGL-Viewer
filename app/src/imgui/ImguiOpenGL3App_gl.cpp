@@ -10,7 +10,8 @@ void ImguiOpeGL3App::renderElements(glm::mat4& mvp, float psize, GLuint shader_p
     // use the shader program
     // bind the vao
     glBindVertexArray(vao);
-    glPolygonMode(GL_FRONT_AND_BACK,type);
+    glPolygonMode(GL_FRONT, type);
+    glPolygonMode(GL_BACK,GL_NONE);
     glDrawElements(GL_TRIANGLES, size, GL_UNSIGNED_INT, nullptr);
 
     glUseProgram(0);

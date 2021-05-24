@@ -151,6 +151,28 @@ glm::vec3 RealsenseDevice::colorPixel2point(glm::vec2 pixel) {
     return point;
 }
 
+bool RealsenseDevice::fetchframes(std::function<void(
+    const void* depthRaw, size_t depthSize,
+    const void* colorRaw, size_t colorSize)
+>callback) {
+    rs2::frameset frameset; // Wait for next set of frames from the camera
+    if (pipe->poll_for_frames(&frameset)) {
+        rs2::frameset data = align_to_color.process(frameset);
+
+        rs2::frame depth = data.get_depth_frame();
+        rs2::frame color = data.get_color_frame();
+
+        memcpy((void*)p_color_frame, color.get_data(), 3 * width * height * sizeof(uchar));
+        memcpy((void*)p_depth_color_frame, color.get_data(), 3 * width * height * sizeof(uchar));
+
+        callback(
+            depth.get_data(), width * height * sizeof(uint16_t),
+            color.get_data(), 3 * width * height * sizeof(uchar));
+        
+        return true;
+    }
+    return false;
+}
 
 bool RealsenseDevice::fetchframes(int pointcloudStride) {
 

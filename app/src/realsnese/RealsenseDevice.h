@@ -66,6 +66,10 @@ public :
     std::string runNetworkDevice(std::string url, rs2::context ctx);
     void runDevice(std::string serial, rs2::context ctx);
     bool fetchframes(int pointcloudStride = 1);
+    bool fetchframes(std::function<void (
+        const void* depthRaw, size_t depthSize,
+        const void* colorRaw, size_t colorSize)
+    >callback);
     glm::vec3 colorPixel2point(glm::vec2);
 
     static std::set<std::string> getAllDeviceSerialNumber(rs2::context& ctx);
