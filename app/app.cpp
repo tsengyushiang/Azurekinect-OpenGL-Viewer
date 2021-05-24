@@ -776,7 +776,6 @@ public:
 			}
 		}		
 	}
-
 	void renderRealsenseCudaMesh(glm::mat4& mvp,GLuint& program) {
 		glBindVertexArray(vao);
 		// generate and bind the buffer object
@@ -791,7 +790,64 @@ public:
 		cudaMemcpy(&count, cudaIndicesCount, sizeof(int), cudaMemcpyDeviceToHost);
 		ImguiOpeGL3App::renderElements(mvp, pointsize, program, vao, count * 3, GL_FILL);
 	}
+	void renderRealsenseFrustum() {
+		glm::mat4 mvp = Projection * View * Model;
 
+		for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
+			glm::mat4 deviceMVP = mvp * device->camera->modelMat;
+
+			if (device->ready2Delete) {
+				removeDevice(device);
+				device--;
+				continue;
+			}
+			else if (!device->camera->visible) {
+				continue;
+			}
+
+			ImguiOpeGL3App::setTexture(device->image, device->camera->p_color_frame, device->camera->width, device->camera->height);
+			glm::vec3 camhelper = glm::vec3(1, 1, 1);
+			bool isCalibratingCamer = false;
+			if (calibrator != nullptr) {
+				if (device->camera->serial == calibrator->sourcecam->serial) {
+					camhelper = glm::vec3(1, 0, 0);
+					isCalibratingCamer = true;
+					calibrator->render(mvp, shader_program);
+				}
+				if (device->camera->serial == calibrator->targetcam->serial) {
+					camhelper = glm::vec3(0, 1, 0);
+					isCalibratingCamer = true;
+					calibrator->render(mvp, shader_program);
+				}
+			}
+			else {
+				if (device->camera->calibrated) {
+					camhelper = glm::vec3(0, 0, 1);
+				}
+			}
+			// render camera frustum
+			ImguiOpeGL3App::genCameraHelper(
+				device->camIconVao, device->camIconVbo,
+				device->camera->width, device->camera->height,
+				device->camera->intri.ppx, device->camera->intri.ppy, device->camera->intri.fx, device->camera->intri.fy,
+				camhelper, 0.2, false
+			);
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			ImguiOpeGL3App::render(deviceMVP, pointsize, shader_program, device->camIconVao, 3 * 4, GL_TRIANGLES);
+
+			ImguiOpeGL3App::genCameraHelper(
+				device->camIconVao, device->camIconVbo,
+				device->camera->width, device->camera->height,
+				device->camera->intri.ppx, device->camera->intri.ppy, device->camera->intri.fx, device->camera->intri.fy,
+				camhelper, 0.2, true
+			);
+
+			std::string uniformNames[] = { "color" ,"depth" };
+			GLuint textureId[] = { device->image,device->depthImage };
+			ImguiOpeGL3App::activateTextures(texture_shader_program, uniformNames, textureId, 2);
+			ImguiOpeGL3App::render(deviceMVP, pointsize, texture_shader_program, device->camIconVao, 3 * 4, GL_TRIANGLES);
+		}
+	}
 	void updateRealsenseCuda() {
 		glm::mat4 mvp = Projection * View * Model;
 		// render realsense		
@@ -823,47 +879,6 @@ public:
 			CudaAlogrithm::depthMapTriangulate(&cuda_vbo_resource, &cuda_ibo_resource, width, height, cudaIndicesCount);
 
 			renderRealsenseCudaMesh(mvp,shader_program);
-
-			ImguiOpeGL3App::setTexture(device->image, device->camera->p_color_frame, device->camera->width, device->camera->height);
-			glm::vec3 camhelper = glm::vec3(1, 1, 1);
-			bool isCalibratingCamer = false;
-			if (calibrator != nullptr) {
-				if (device->camera->serial == calibrator->sourcecam->serial) {
-					camhelper = glm::vec3(1, 0, 0);
-					isCalibratingCamer = true;
-					calibrator->render(mvp, shader_program);
-				}
-				if (device->camera->serial == calibrator->targetcam->serial) {
-					camhelper = glm::vec3(0, 1, 0);
-					isCalibratingCamer = true;
-					calibrator->render(mvp, shader_program);
-				}
-			}
-			else {
-				if (device->camera->calibrated) {
-					camhelper = glm::vec3(0, 0, 1);
-				}
-			}
-			// render camera frustum
-			ImguiOpeGL3App::genCameraHelper(
-				device->camIconVao, device->camIconVbo,
-				device->camera->width, device->camera->height,
-				device->camera->intri.ppx, device->camera->intri.ppy, device->camera->intri.fx, device->camera->intri.fy,
-				camhelper, 0.2, false
-			);
-			ImguiOpeGL3App::render(deviceMVP, pointsize, shader_program, device->camIconVao, 3 * 4, GL_POINT);
-
-			ImguiOpeGL3App::genCameraHelper(
-				device->camIconVao, device->camIconVbo,
-				device->camera->width, device->camera->height,
-				device->camera->intri.ppx, device->camera->intri.ppy, device->camera->intri.fx, device->camera->intri.fy,
-				camhelper, 0.2, true
-			);
-
-			std::string uniformNames[] = { "color" ,"depth" };
-			GLuint textureId[] = { device->image,device->depthImage };
-			ImguiOpeGL3App::activateTextures(texture_shader_program, uniformNames, textureId, 2);
-			ImguiOpeGL3App::render(deviceMVP, pointsize, texture_shader_program, device->camIconVao, 3 * 4, GL_TRIANGLES);
 		}
 	}
 	void framebufferRender() override {
@@ -920,6 +935,7 @@ public:
 		}
 		
 		renderRealsenseCudaMesh(mvp, shader_program);
+		renderRealsenseFrustum();
 		renderVirtualCameras();
 		//renderRealsenses();
 	}
