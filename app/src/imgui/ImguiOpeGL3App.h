@@ -25,6 +25,7 @@ public:
 	void initImguiOpenGL3(int width = 1280, int height = 720);
 	virtual void initGL();
 	virtual void mainloop();
+	virtual void framebufferRender();
 	virtual void addGui();
 	virtual void mousedrag(float,float);
 	static void glfw_error_callback(int error, const char* description);
@@ -55,8 +56,14 @@ public:
 	static bool check_program_link_status(GLuint obj);
 
 	// opengl render pointcloud 
+	static GLuint compileAndLink(
+		std::string vertex_source, std::string fragment_source,
+		GLuint& shader_program, GLuint& vertex_shader, GLuint& fragment_shader, GLFWwindow* window);
+
 	static GLuint genPointcloudShader(GLFWwindow* window);
 	static GLuint genTextureShader(GLFWwindow* window);
+	static GLuint genprojectShader(GLFWwindow* window);
+
 	static void setTexture(GLuint& image,const unsigned char* vertexData, int width, int height);
 	
 	static void setTrianglesVAOIBO(GLuint& vao, GLuint& vbo, GLuint& ibo, GLfloat* vertexData, int vertexSize,unsigned int* indices,int indicesSize);
@@ -65,7 +72,7 @@ public:
 	static void setPointsVAO(GLuint& vao, GLuint& vbo,GLfloat* vertexData, float size);
 	static void render(glm::mat4& mvp, float pointsize,GLuint shader_program, GLuint vao, float size, int type);
 	static void activateTextures(GLuint shader_program, std::string* uniformName, GLuint* textureId, int textureCount);
-
+	static void setUniformFloats(GLuint shader_program, std::string* uniformName, float* values, int count);
 	//---------------------following method implement in ImguiOpeGL3App_glhelper.cpp
 
 	//helper shape

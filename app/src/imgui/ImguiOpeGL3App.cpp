@@ -8,7 +8,9 @@ void ImguiOpeGL3App::glfw_error_callback(int error, const char* description)
 {
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
+void ImguiOpeGL3App::framebufferRender() {
 
+}
 void ImguiOpeGL3App::mainloop() {
     std::cout << "Inheritance public:mainloop() to render your objects." << std::endl;
 }
@@ -120,16 +122,16 @@ void ImguiOpeGL3App::initImguiOpenGL3(int width, int height) {
     // Main loop
     while (!glfwWindowShouldClose(window))
     {
-        glfwGetFramebufferSize(window, &width, &height);
-        glViewport(0, 0, width, height);
-        setcamera(width, height);
+        framebufferRender();
 
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
         
         int display_w, display_h;
         glfwGetFramebufferSize(window, &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
+        setcamera(display_w, display_h);
 
         mainloop();
 

@@ -17,6 +17,18 @@ void ImguiOpeGL3App::renderElements(glm::mat4& mvp, float psize, GLuint shader_p
     glUseProgram(0);
 }
 
+void ImguiOpeGL3App::setUniformFloats(GLuint shader_program, std::string* uniformName, float* values, int count) {
+
+    glUseProgram(shader_program);
+
+    for (int i = 0; i < count; i++) {
+        GLuint uniform = glGetUniformLocation(shader_program, (uniformName + i)->c_str());
+        glUniform1f(uniform, values[i]);
+    }
+
+    glUseProgram(0);
+}
+
 void ImguiOpeGL3App::activateTextures(GLuint shader_program,std::string* uniformName, GLuint* textureId, int textureCount) {
 
     glUseProgram(shader_program);
@@ -114,19 +126,11 @@ void ImguiOpeGL3App::setPointsVAO(GLuint& vao, GLuint& vbo,GLfloat* vertexData,f
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (char*)0 + 3 * sizeof(GLfloat));
 }
 
-GLuint ImguiOpeGL3App::genTextureShader(GLFWwindow* window) {
-    // shader source code
-    std::string vertex_source =
-#include "shaders/texture.vs"
-        ;
+//genProjectShader
 
-    std::string fragment_source =
-#include "shaders/texture.fs"
-        ;
-
-    // program and shader handles
-    GLuint shader_program, vertex_shader, fragment_shader;
-
+GLuint ImguiOpeGL3App::compileAndLink(
+    std::string vertex_source, std::string fragment_source,
+    GLuint& shader_program, GLuint& vertex_shader, GLuint& fragment_shader, GLFWwindow* window) {
     // we need these to properly pass the strings
     const char* source;
     int length;
@@ -152,7 +156,7 @@ GLuint ImguiOpeGL3App::genTextureShader(GLFWwindow* window) {
     if (!check_shader_compile_status(fragment_shader)) {
         glfwDestroyWindow(window);
         glfwTerminate();
-        return 1;
+        return -1;
     }
 
     // create program
@@ -167,16 +171,41 @@ GLuint ImguiOpeGL3App::genTextureShader(GLFWwindow* window) {
     if (!check_program_link_status(shader_program)) {
         glfwDestroyWindow(window);
         glfwTerminate();
-        return 1;
+        return -1;
     }
 
-    //glDetachShader(shader_program, vertex_shader);
-    //glDetachShader(shader_program, fragment_shader);
-    //glDeleteShader(vertex_shader);
-    //glDeleteShader(fragment_shader);
-    //glDeleteProgram(shader_program);
-
     return shader_program;
+}
+
+GLuint ImguiOpeGL3App::genprojectShader(GLFWwindow* window) {
+    std::string vertex_source =
+#include "shaders/projectPointcloud.vs"
+        ;
+
+    std::string fragment_source =
+#include "shaders/projectPointcloud.fs"
+        ;
+
+    // program and shader handles
+    GLuint shader_program, vertex_shader, fragment_shader;
+
+    return compileAndLink(vertex_source, fragment_source, shader_program, vertex_shader, fragment_shader, window);
+}
+
+GLuint ImguiOpeGL3App::genTextureShader(GLFWwindow* window) {
+    // shader source code
+    std::string vertex_source =
+#include "shaders/texture.vs"
+        ;
+
+    std::string fragment_source =
+#include "shaders/texture.fs"
+        ;
+
+    // program and shader handles
+    GLuint shader_program, vertex_shader, fragment_shader;
+
+    return compileAndLink(vertex_source, fragment_source, shader_program, vertex_shader, fragment_shader, window);
 }
 
 GLuint ImguiOpeGL3App::genPointcloudShader(GLFWwindow* window) {
@@ -192,56 +221,7 @@ GLuint ImguiOpeGL3App::genPointcloudShader(GLFWwindow* window) {
     // program and shader handles
     GLuint shader_program, vertex_shader, fragment_shader;
 
-    // we need these to properly pass the strings
-    const char* source;
-    int length;
-
-    // create and compiler vertex shader
-    vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-    source = vertex_source.c_str();
-    length = vertex_source.size();
-    glShaderSource(vertex_shader, 1, &source, &length);
-    glCompileShader(vertex_shader);
-    if (!check_shader_compile_status(vertex_shader)) {
-        glfwDestroyWindow(window);
-        glfwTerminate();
-        return -1;
-    }
-
-    // create and compiler fragment shader
-    fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    source = fragment_source.c_str();
-    length = fragment_source.size();
-    glShaderSource(fragment_shader, 1, &source, &length);
-    glCompileShader(fragment_shader);
-    if (!check_shader_compile_status(fragment_shader)) {
-        glfwDestroyWindow(window);
-        glfwTerminate();
-        return 1;
-    }
-
-    // create program
-    shader_program = glCreateProgram();
-
-    // attach shaders
-    glAttachShader(shader_program, vertex_shader);
-    glAttachShader(shader_program, fragment_shader);
-
-    // link the program and check for errors
-    glLinkProgram(shader_program);
-    if (!check_program_link_status(shader_program)) {
-        glfwDestroyWindow(window);
-        glfwTerminate();
-        return 1;
-    }
-
-    //glDetachShader(shader_program, vertex_shader);
-    //glDetachShader(shader_program, fragment_shader);
-    //glDeleteShader(vertex_shader);
-    //glDeleteShader(fragment_shader);
-    //glDeleteProgram(shader_program);
-
-    return shader_program;
+    return compileAndLink(vertex_source, fragment_source, shader_program, vertex_shader, fragment_shader, window);
 }
 
 // helper to check and display for shader compiler errors

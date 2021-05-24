@@ -135,6 +135,10 @@ public :
 	GLuint image, depthImage;
 	//helper 
 	GLuint camIconVao, camIconVbo;
+	
+	unsigned int framebuffer;
+	unsigned int texColorBuffer;
+	unsigned int rbo;
 
 	glm::mat4 getModelMat() {
 		
@@ -156,6 +160,28 @@ public :
 		p_depth_color_frame = (uchar*)calloc(3 * width * height, sizeof(uchar));
 		position = glm::vec3(0.452, 0, 0.186);
 		rotate = glm::vec3(0, 5.448, 0);
+
+		glGenFramebuffers(1, &framebuffer);
+		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+		glGenTextures(1, &texColorBuffer);
+		glBindTexture(GL_TEXTURE_2D, texColorBuffer);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glBindTexture(GL_TEXTURE_2D, 0);
+
+		// attach it to currently bound framebuffer object
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texColorBuffer, 0);
+
+		glGenRenderbuffers(1, &rbo);
+		glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, w, h);
+		glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+			std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
 	~VirtualCam() {
 		glDeleteVertexArrays(1, &camIconVao);
@@ -209,7 +235,7 @@ class PointcloudApp :public ImguiOpeGL3App {
 	int width = 1280;
 	int height = 720;
 
-	GLuint shader_program,texture_shader_program;
+	GLuint shader_program,texture_shader_program,project_shader_program;
 	GLuint axisVao, axisVbo;
 	
 	// mesh reconstruct 
@@ -449,6 +475,7 @@ public:
 	void initGL() override {
 		shader_program = ImguiOpeGL3App::genPointcloudShader(this->window);
 		texture_shader_program = ImguiOpeGL3App::genTextureShader(this->window);
+		project_shader_program = ImguiOpeGL3App::genprojectShader(this->window);
 		glGenVertexArrays(1, &axisVao);
 		glGenBuffers(1, &axisVbo);
 
@@ -663,7 +690,7 @@ public:
 			);
 
 			std::string uniformNames[] = { "color" ,"depth" };
-			GLuint textureId[] = { virtualcam->image,virtualcam->depthImage };
+			GLuint textureId[] = { virtualcam->texColorBuffer,virtualcam->depthImage };
 			ImguiOpeGL3App::activateTextures(texture_shader_program, uniformNames, textureId, 2);
 			ImguiOpeGL3App::render(devicemvp, pointsize, texture_shader_program, virtualcam->camIconVao, 3 * 4, GL_TRIANGLES);
 		}		
@@ -750,7 +777,22 @@ public:
 		}		
 	}
 
-	void renderRealsenseCuda() {
+	void renderRealsenseCudaMesh(glm::mat4& mvp,GLuint& program) {
+		glBindVertexArray(vao);
+		// generate and bind the buffer object
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		// set up generic attrib pointers
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (char*)0 + 0 * sizeof(GLfloat));
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (char*)0 + 3 * sizeof(GLfloat));
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+		int count = 0;
+		cudaMemcpy(&count, cudaIndicesCount, sizeof(int), cudaMemcpyDeviceToHost);
+		ImguiOpeGL3App::renderElements(mvp, pointsize, program, vao, count * 3, GL_FILL);
+	}
+
+	void updateRealsenseCuda() {
 		glm::mat4 mvp = Projection * View * Model;
 		// render realsense		
 		for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
@@ -780,19 +822,9 @@ public:
 			
 			CudaAlogrithm::depthMapTriangulate(&cuda_vbo_resource, &cuda_ibo_resource, width, height, cudaIndicesCount);
 
-			glBindVertexArray(vao);
-			// generate and bind the buffer object
-			glBindBuffer(GL_ARRAY_BUFFER, vbo);
-			// set up generic attrib pointers
-			glEnableVertexAttribArray(0);
-			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (char*)0 + 0 * sizeof(GLfloat));
-			glEnableVertexAttribArray(1);
-			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (char*)0 + 3 * sizeof(GLfloat));
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-			int count = 0;
-			cudaMemcpy(&count, cudaIndicesCount, sizeof(int), cudaMemcpyDeviceToHost);
-			ImguiOpeGL3App::renderElements(mvp, pointsize, shader_program, vao, count * 3, GL_FILL);
+			renderRealsenseCudaMesh(mvp,shader_program);
 
+			ImguiOpeGL3App::setTexture(device->image, device->camera->p_color_frame, device->camera->width, device->camera->height);
 			glm::vec3 camhelper = glm::vec3(1, 1, 1);
 			bool isCalibratingCamer = false;
 			if (calibrator != nullptr) {
@@ -819,8 +851,7 @@ public:
 				device->camera->intri.ppx, device->camera->intri.ppy, device->camera->intri.fx, device->camera->intri.fy,
 				camhelper, 0.2, false
 			);
-			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-			ImguiOpeGL3App::render(deviceMVP, pointsize, shader_program, device->camIconVao, 3 * 4, GL_TRIANGLES);
+			ImguiOpeGL3App::render(deviceMVP, pointsize, shader_program, device->camIconVao, 3 * 4, GL_POINT);
 
 			ImguiOpeGL3App::genCameraHelper(
 				device->camIconVao, device->camIconVbo,
@@ -835,7 +866,42 @@ public:
 			ImguiOpeGL3App::render(deviceMVP, pointsize, texture_shader_program, device->camIconVao, 3 * 4, GL_TRIANGLES);
 		}
 	}
+	void framebufferRender() override {
+		updateRealsenseCuda();
 
+		for (auto virtualcam : virtualcams) {
+			glBindFramebuffer(GL_FRAMEBUFFER, virtualcam->framebuffer);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // we're not using the stencil buffer now
+			glViewport(0, 0, virtualcam->w, virtualcam->h);
+			glEnable(GL_DEPTH_TEST);
+			
+			glm::mat4 m = glm::inverse(virtualcam->getModelMat());
+			std::string uniformNames[] = { 
+				"w",
+				"h",
+				"fx",
+				"fy",
+				"ppx",
+				"ppy",
+				"near",
+				"far",
+			};
+			float values[] = {
+				virtualcam->w,
+				virtualcam->h,
+				virtualcam->fx,
+				virtualcam->fy,
+				virtualcam->ppx,
+				virtualcam->ppy,
+				0,
+				5
+			};
+			ImguiOpeGL3App::setUniformFloats(project_shader_program, uniformNames, values,8);
+			renderRealsenseCudaMesh(m, project_shader_program);
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		}
+	}
+	
 	void mainloop() override {
 
 		glm::mat4 mvp = Projection * View * Model;
@@ -853,7 +919,7 @@ public:
 			return;
 		}
 		
-		renderRealsenseCuda();
+		renderRealsenseCudaMesh(mvp, shader_program);
 		renderVirtualCameras();
 		//renderRealsenses();
 	}
