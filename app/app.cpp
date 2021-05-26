@@ -10,8 +10,7 @@
 class CorrespondPointCollector {
 
 public :
-	GLuint srcVao, srcVbo;
-	GLuint trgVao, trgVbo;
+	GLuint vao, vbo;
 
 	RealsenseDevice* sourcecam;
 	RealsenseDevice* targetcam;
@@ -32,10 +31,8 @@ public :
 		source = (float*)calloc(size * 3 * 2, sizeof(float));
 		target = (float*)calloc(size * 3 * 2, sizeof(float));
 		result = (float*)calloc(size * 3 * 2, sizeof(float));
-		glGenVertexArrays(1, &srcVao);
-		glGenBuffers(1, &srcVbo);
-		glGenVertexArrays(1, &trgVao);
-		glGenBuffers(1, &trgVbo);
+		glGenVertexArrays(1, &vao);
+		glGenBuffers(1, &vbo);
 
 		//sourcecam->opencvImshow = true;
 		//targetcam->opencvImshow = true;
@@ -44,21 +41,19 @@ public :
 		free(source);
 		free(target);
 		free(result);
-		glDeleteVertexArrays(1, &srcVao);
-		glDeleteBuffers(1, &srcVbo);
-		glDeleteVertexArrays(1, &trgVao);
-		glDeleteBuffers(1, &trgVbo);
+		glDeleteVertexArrays(1, &vao);
+		glDeleteBuffers(1, &vbo);
 
 		//sourcecam->opencvImshow = false;
 		//targetcam->opencvImshow = false;
 	}
 
 	void render(glm::mat4 mvp,GLuint shader_program) {
-		ImguiOpeGL3App::setPointsVAO(srcVao, srcVao, source, size);
-		ImguiOpeGL3App::setPointsVAO(trgVao,trgVbo, target, size);
+		ImguiOpeGL3App::setPointsVAO(vao, vbo, source, size);
+		ImguiOpeGL3App::render(mvp, 10, shader_program, vao, size, GL_POINTS);
 
-		ImguiOpeGL3App::render(mvp, 10, shader_program, srcVao, size, GL_POINTS);
-		ImguiOpeGL3App::render(mvp, 10, shader_program,trgVao, size, GL_POINTS);
+		ImguiOpeGL3App::setPointsVAO(vao, vbo, target, size);
+		ImguiOpeGL3App::render(mvp, 10, shader_program, vao, size, GL_POINTS);
 	}
 
 	bool pushCorrepondPoint(glm::vec3 src, glm::vec3 trg) {
@@ -555,8 +550,6 @@ public:
 				);
 			}
 		}
-
-		//calibrator->sourcecam->calibrated = true;
 	}
 
 	void alignDevice2calibratedDevice(RealsenseDevice* uncalibratedCam) {
@@ -576,8 +569,7 @@ public:
 		if (baseCamera) {
 			CalibrateResult c = putAruco2Origion(uncalibratedCam);
 			if (c.success) {
-				uncalibratedCam->modelMat = baseCamera->modelMat*glm::inverse(baseCam2Markerorigion)* c.calibMat;
-				
+				uncalibratedCam->modelMat = baseCamera->modelMat*glm::inverse(baseCam2Markerorigion)* c.calibMat;				
 				calibrator = new CorrespondPointCollector(uncalibratedCam,baseCamera,collectPointCout, collectthreshold);
 			}
 		}
@@ -691,17 +683,15 @@ public:
 
 		ImguiOpeGL3App::setTexture(device->image, device->camera->p_color_frame, device->camera->width, device->camera->height);
 		glm::vec3 camhelper = glm::vec3(1, 1, 1);
-		bool isCalibratingCamer = false;
+		bool isCalibratingCamera = false;
 		if (calibrator != nullptr) {
 			if (device->camera->serial == calibrator->sourcecam->serial) {
 				camhelper = glm::vec3(1, 0, 0);
-				isCalibratingCamer = true;
-				calibrator->render(mvp, shader_program);
+				isCalibratingCamera = true;
 			}
 			if (device->camera->serial == calibrator->targetcam->serial) {
 				camhelper = glm::vec3(0, 1, 0);
-				isCalibratingCamer = true;
-				calibrator->render(mvp, shader_program);
+				isCalibratingCamera = true;
 			}
 		}
 		else {
@@ -803,6 +793,10 @@ public:
 
 		for (auto virtualcam : virtualcams) {
 			renderVirtualCamera(virtualcam);
+		}
+
+		if (calibrator != nullptr) {
+			calibrator->render(mvp, shader_program);
 		}
 	}
 };
