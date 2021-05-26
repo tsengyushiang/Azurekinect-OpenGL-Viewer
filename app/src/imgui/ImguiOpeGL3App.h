@@ -50,6 +50,7 @@ public:
 	glm::mat4 Model;
 
 	//---------------------following method implement in ImguiOpeGL3App_gl.cpp
+	static void createFrameBuffer(GLuint* framebuffer, GLuint* texColorBuffer, GLuint* rbo,int w, int h);
 
 	// opengl functions
 	static bool check_shader_compile_status(GLuint obj);

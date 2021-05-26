@@ -161,27 +161,7 @@ public :
 		position = glm::vec3(0.452, 0, 0.186);
 		rotate = glm::vec3(0, 5.448, 0);
 
-		glGenFramebuffers(1, &framebuffer);
-		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-		glGenTextures(1, &texColorBuffer);
-		glBindTexture(GL_TEXTURE_2D, texColorBuffer);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glBindTexture(GL_TEXTURE_2D, 0);
-
-		// attach it to currently bound framebuffer object
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texColorBuffer, 0);
-
-		glGenRenderbuffers(1, &rbo);
-		glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, w, h);
-		glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
-		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
-		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-			std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		ImguiOpeGL3App::createFrameBuffer(&framebuffer, &texColorBuffer, &rbo, w, h);
 	}
 	~VirtualCam() {
 		glDeleteVertexArrays(1, &camIconVao);
@@ -278,7 +258,7 @@ public :
 		int count = 0;
 		cudaMemcpy(&count, cudaIndicesCount, sizeof(int), cudaMemcpyDeviceToHost);
 		glm::mat4 m = mvp * camera->modelMat;
-		ImguiOpeGL3App::renderElements(m, 0, program, vao, count * 3, GL_FILL);
+		ImguiOpeGL3App::renderElements(m, 0, program, vao, count * 3, GL_FILL);	
 	}
 
 };

@@ -163,6 +163,7 @@ bool RealsenseDevice::fetchframes(std::function<void(
         rs2::frame color = data.get_color_frame();
 
         memcpy((void*)p_color_frame, color.get_data(), 3 * width * height * sizeof(uchar));
+        memcpy((void*)p_depth_frame, depth.get_data(), width * height * sizeof(uint16_t));
         memcpy((void*)p_depth_color_frame, color.get_data(), 3 * width * height * sizeof(uchar));
 
         callback(
