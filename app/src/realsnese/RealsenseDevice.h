@@ -51,8 +51,8 @@ public :
     // resolution for color/depth
     int cwidth=1280;
     int cheight=720;
-    int dwidth = 640;
-    int dheight = 480;
+    int dwidth = 1280;
+    int dheight = 720;
 
     const uint16_t* p_depth_frame;
     uchar* p_depth_color_frame;

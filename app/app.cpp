@@ -6,6 +6,7 @@
 #include "src/cuda/CudaOpenGLUtils.h"
 #include "src/cuda/cudaUtils.cuh"
 #include <ctime>
+#include "src/json/jsonUtils.h"
 
 class CorrespondPointCollector {
 
@@ -256,6 +257,22 @@ public :
 		ImguiOpeGL3App::renderElements(m, 0, program, vao, count * 3, GL_FILL);	
 	}
 
+	void save() {
+		std::vector<float> extrinsic = {
+			camera->modelMat[0][0],camera->modelMat[1][0],camera->modelMat[2][0],camera->modelMat[3][0],
+			camera->modelMat[0][1],camera->modelMat[1][1],camera->modelMat[2][1],camera->modelMat[3][1],
+			camera->modelMat[0][2],camera->modelMat[1][2],camera->modelMat[2][2],camera->modelMat[3][2],
+			camera->modelMat[0][3],camera->modelMat[1][3],camera->modelMat[2][3],camera->modelMat[3][3]
+		};
+		JsonUtils::saveRealsenseJson(
+			camera->serial,
+			camera->width,camera->height,
+			camera->intri.fx, camera->intri.fy, camera->intri.ppx, camera->intri.ppy,
+			camera->intri.depth_scale,camera->p_depth_frame,camera->p_color_frame,
+			extrinsic			
+		);
+	}
+
 };
 
 class PointcloudApp :public ImguiOpeGL3App {
@@ -423,6 +440,7 @@ public:
 			ImGui::SameLine();
 			ImGui::Text("Realsense device :");
 
+
 			// waiting active device
 			for (std::string serial : serials) {
 				bool alreadyStart = false;
@@ -440,6 +458,12 @@ public:
 				}
 			}
 
+			if (ImGui::Button("snapshot all")) {
+				for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
+					device->save();
+				}
+			}
+			ImGui::SameLine();
 			// Running device
 			ImGui::Text("Running Realsense device :");
 			for (auto device = realsenses.begin(); device != realsenses.end(); device++) {				

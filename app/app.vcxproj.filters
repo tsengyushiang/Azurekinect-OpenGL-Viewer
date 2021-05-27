@@ -39,6 +39,9 @@
     <Filter Include="來源檔案\cuda">
       <UniqueIdentifier>{da7ef0ca-6541-46ad-a42d-ca36a1a86fe0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="來源檔案\json">
+      <UniqueIdentifier>{e7cf0324-de5a-4dd3-9594-1ff786bdf9b1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="app.cpp">
@@ -101,6 +104,9 @@
     <ClCompile Include="src\cuda\CudaOpenGLUtils.cpp">
       <Filter>來源檔案\cuda</Filter>
     </ClCompile>
+    <ClCompile Include="src\json\jsonUtils.cpp">
+      <Filter>來源檔案\json</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -150,6 +156,9 @@
     </ClInclude>
     <ClInclude Include="src\cuda\CudaOpenGLUtils.h">
       <Filter>來源檔案\cuda</Filter>
+    </ClInclude>
+    <ClInclude Include="src\json\jsonUtils.h">
+      <Filter>來源檔案\json</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

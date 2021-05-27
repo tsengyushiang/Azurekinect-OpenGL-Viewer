@@ -164,6 +164,7 @@
     <ClCompile Include="src\imgui\imgui_widgets.cpp" />
     <ClCompile Include="src\imgui\official-example.cpp" />
     <ClCompile Include="src\imgui\shader-example.cpp" />
+    <ClCompile Include="src\json\jsonUtils.cpp" />
     <ClCompile Include="src\opencv\opencv-aruco.cpp" />
     <ClCompile Include="src\pcl\fast_triangulation_of_unordered_pcd.cpp" />
     <ClCompile Include="src\pcl\rigid-transforrm-from-points.cpp" />
@@ -183,6 +184,7 @@
     <ClInclude Include="src\imgui\imgui_impl_glfw.h" />
     <ClInclude Include="src\imgui\imgui_impl_opengl3.h" />
     <ClInclude Include="src\imgui\imgui_internal.h" />
+    <ClInclude Include="src\json\jsonUtils.h" />
     <ClInclude Include="src\opencv\opecv-utils.h" />
     <ClInclude Include="src\pcl\examples-pcl.h" />
     <ClInclude Include="src\realsnese\example-realsense.h" />
