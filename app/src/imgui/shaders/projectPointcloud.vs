@@ -21,7 +21,7 @@ void main() {
     vec4 uv = MVP * vposition;
     uv.x = (uv.x / uv.z * fx + ppx) / w * 2.0 - 1.0;
     uv.y = (uv.y / uv.z * fy + ppy) / h * 2.0 - 1.0;
-    uv.z /= far * 2.0 - 1.0;
+    uv.z = uv.z/far * 2.0 - 1.0;
 
     fcolor = vcolor;
     gl_Position =  uv;

@@ -134,6 +134,7 @@ public :
 	
 	unsigned int framebuffer;
 	unsigned int texColorBuffer;
+	unsigned int depthBuffer;
 	unsigned int rbo;
 
 	glm::mat4 getModelMat() {
@@ -157,7 +158,7 @@ public :
 		position = glm::vec3(0.452, 0, 0.186);
 		rotate = glm::vec3(0, 5.448, 0);
 
-		ImguiOpeGL3App::createFrameBuffer(&framebuffer, &texColorBuffer, &rbo, w, h);
+		ImguiOpeGL3App::createFrameBuffer(&framebuffer, &texColorBuffer, &depthBuffer, &rbo, w, h);
 	}
 	~VirtualCam() {
 		glDeleteVertexArrays(1, &camIconVao);
@@ -324,8 +325,34 @@ public:
 	}
 
 	void addGui() override {
+		//virtual camera params
 		{
 			ImGui::Begin("Virtual cameras: ");
+			if (ImGui::Button("save virtual view")) {
+				for (auto vitualcam : virtualcams) {
+					GLubyte* pixels = new GLubyte[vitualcam->w * vitualcam->h * 3];
+					glBindTexture(GL_TEXTURE_2D, vitualcam->texColorBuffer);
+					glGetTexImage(GL_TEXTURE_2D, 0, GL_BGR, GL_UNSIGNED_BYTE, pixels);
+					cv::Mat image(cv::Size(vitualcam->w, vitualcam->h), CV_8UC3, (void*)pixels, cv::Mat::AUTO_STEP);
+					cv::imshow("virtualview", image);
+
+					float* dpixels = new float[vitualcam->w * vitualcam->h];
+					glBindTexture(GL_TEXTURE_2D, vitualcam->depthBuffer);
+					glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_FLOAT, dpixels);
+					GLubyte* dpixelscolor = new GLubyte[vitualcam->w * vitualcam->h * 3];
+
+					for (int i = 0; i < vitualcam->w * vitualcam->h; i++) {
+						dpixelscolor[i * 3 + 0] = dpixels[i]*255;
+						dpixelscolor[i * 3 + 1] = dpixels[i] * 255;
+						dpixelscolor[i * 3 + 2] = dpixels[i] * 255;
+					}
+					cv::Mat src(cv::Size(vitualcam->w, vitualcam->h), CV_8UC3, (void*)dpixelscolor, cv::Mat::AUTO_STEP);
+					cv::Mat dst;
+					cv::cvtColor(src, src, cv::COLOR_BGR2GRAY);
+					cv::equalizeHist(src, dst);
+					cv::imshow("virtualview-depth", dst);
+				}
+			}
 			if (ImGui::Button("Add virtual camera")) {
 				if (realsenses.size()) {
 					int w = realsenses.begin()->camera->width;
@@ -347,6 +374,8 @@ public:
 			}
 			ImGui::End();
 		}
+
+		//reconstruct params
 		/*{
 			ImGui::Begin("Reconstruct: ");
 			ImGui::Text("Reconstruct Time : %d",time);
@@ -406,6 +435,8 @@ public:
 
 			ImGui::End();
 		}*/
+		
+		//aruco calibrate feature point collector params
 		{
 			ImGui::Begin("Aruco calibrate: ");
 			ImGui::SliderFloat("Threshold", &collectthreshold, 0.05f, 0.3f);
@@ -419,6 +450,7 @@ public:
 			ImGui::End();
 		}
 
+		// realsense ui
 		{
 			ImGui::Begin("Realsense pointcloud viewer: ");                          // Create a window called "Hello, world!" and append into it.
 			
