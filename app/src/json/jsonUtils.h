@@ -16,5 +16,11 @@ public:
 		float fx,float fy,float ppx,float py,
 		float depthscale, const unsigned short* depthmap,const unsigned char* colormap,
 		std::vector<float> extrinsic4x4
+	);static void saveRealsenseJson(
+		std::string filename, 
+		int width,int height,
+		float fx,float fy,float ppx,float py,
+		float depthscale, float* depthmap,unsigned char* colormap,
+		std::vector<float> extrinsic4x4
 	);
 };

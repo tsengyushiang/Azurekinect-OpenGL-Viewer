@@ -123,6 +123,8 @@ public :
 	
 	glm::vec3 position;
 	glm::vec3 rotate;
+	float farplane=5;
+	float nearplane=0;
 
 	uint16_t* p_depth_frame;
 	uchar* p_depth_color_frame;
@@ -168,6 +170,53 @@ public :
 		free((void*)p_depth_frame);
 		free((void*)p_color_frame);
 		free((void*)p_depth_color_frame);
+	}
+	void save(std::string filename) {
+		glm::mat4 modelMat = getModelMat();
+
+		GLubyte* pixels = new GLubyte[w * h * 3];
+		glBindTexture(GL_TEXTURE_2D, texColorBuffer);
+		glGetTexImage(GL_TEXTURE_2D, 0, GL_BGR, GL_UNSIGNED_BYTE, pixels);
+
+		float* dpixels = new float[w * h];
+		glBindTexture(GL_TEXTURE_2D, depthBuffer);
+		glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_FLOAT, dpixels);
+
+		for (int i = 0; i < w * h; i++) {
+			if (dpixels[i] > 0.9999) {
+				dpixels[i] = 0;
+			}
+		}
+
+		std::vector<float> extrinsic = {
+			modelMat[0][0],modelMat[1][0],modelMat[2][0],modelMat[3][0],
+			modelMat[0][1],modelMat[1][1],modelMat[2][1],modelMat[3][1],
+			modelMat[0][2],modelMat[1][2],modelMat[2][2],modelMat[3][2],
+			modelMat[0][3],modelMat[1][3],modelMat[2][3],modelMat[3][3]
+		};
+
+		JsonUtils::saveRealsenseJson(filename,
+			w, h,
+			fx, fy, ppx, ppy, farplane,
+			dpixels, pixels, extrinsic
+		);
+
+		// colorize and visualize
+		cv::Mat image(cv::Size(w, h), CV_8UC3, (void*)pixels, cv::Mat::AUTO_STEP);
+		cv::imshow("virtualview", image);
+
+		// depthmap colorize
+		GLubyte* dpixelscolor = new GLubyte[w * h * 3];
+		for (int i = 0; i < w * h; i++) {
+			dpixelscolor[i * 3 + 0] = dpixels[i] * 255;
+			dpixelscolor[i * 3 + 1] = dpixels[i] * 255;
+			dpixelscolor[i * 3 + 2] = dpixels[i] * 255;
+		}
+		cv::Mat src(cv::Size(w, h), CV_8UC3, (void*)dpixelscolor, cv::Mat::AUTO_STEP);
+		cv::Mat dst;
+		cv::cvtColor(src, src, cv::COLOR_BGR2GRAY);
+		cv::equalizeHist(src, dst);
+		cv::imshow("virtualview-depth", dst);
 	}
 };
 
@@ -329,28 +378,9 @@ public:
 		{
 			ImGui::Begin("Virtual cameras: ");
 			if (ImGui::Button("save virtual view")) {
-				for (auto vitualcam : virtualcams) {
-					GLubyte* pixels = new GLubyte[vitualcam->w * vitualcam->h * 3];
-					glBindTexture(GL_TEXTURE_2D, vitualcam->texColorBuffer);
-					glGetTexImage(GL_TEXTURE_2D, 0, GL_BGR, GL_UNSIGNED_BYTE, pixels);
-					cv::Mat image(cv::Size(vitualcam->w, vitualcam->h), CV_8UC3, (void*)pixels, cv::Mat::AUTO_STEP);
-					cv::imshow("virtualview", image);
-
-					float* dpixels = new float[vitualcam->w * vitualcam->h];
-					glBindTexture(GL_TEXTURE_2D, vitualcam->depthBuffer);
-					glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_FLOAT, dpixels);
-					GLubyte* dpixelscolor = new GLubyte[vitualcam->w * vitualcam->h * 3];
-
-					for (int i = 0; i < vitualcam->w * vitualcam->h; i++) {
-						dpixelscolor[i * 3 + 0] = dpixels[i]*255;
-						dpixelscolor[i * 3 + 1] = dpixels[i] * 255;
-						dpixelscolor[i * 3 + 2] = dpixels[i] * 255;
-					}
-					cv::Mat src(cv::Size(vitualcam->w, vitualcam->h), CV_8UC3, (void*)dpixelscolor, cv::Mat::AUTO_STEP);
-					cv::Mat dst;
-					cv::cvtColor(src, src, cv::COLOR_BGR2GRAY);
-					cv::equalizeHist(src, dst);
-					cv::imshow("virtualview-depth", dst);
+				for (int i = 0; i < virtualcams.size(); i++) {
+					auto virtualcam = virtualcams[i];
+					virtualcam->save(std::string("virtualview") + std::to_string(i));
 				}
 			}
 			if (ImGui::Button("Add virtual camera")) {
@@ -371,6 +401,7 @@ public:
 				ImGui::SliderFloat((std::string("PosY##virtualPos") + std::to_string(i)).c_str(), &virtualcams[i]->position.y, -5.0, 5.0f);
 				ImGui::SliderFloat((std::string("PosZ##virtualPos") + std::to_string(i)).c_str(), &virtualcams[i]->position.z, -5.0, 5.0f);
 				ImGui::SliderFloat((std::string("RotateY##virtualRot") + std::to_string(i)).c_str(), &virtualcams[i]->rotate.y, 0, M_PI*2);
+				ImGui::SliderFloat((std::string("farplane##farplane") + std::to_string(i)).c_str(), &virtualcams[i]->farplane, 0, 10);
 			}
 			ImGui::End();
 		}
@@ -813,8 +844,8 @@ public:
 				virtualcam->fy,
 				virtualcam->ppx,
 				virtualcam->ppy,
-				0,
-				5
+				virtualcam->nearplane,
+				virtualcam->farplane
 			};
 			ImguiOpeGL3App::setUniformFloats(project_shader_program, uniformNames, values,8);
 			for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
