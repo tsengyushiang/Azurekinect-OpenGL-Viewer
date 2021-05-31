@@ -107,6 +107,9 @@
     <ClCompile Include="src\json\jsonUtils.cpp">
       <Filter>來源檔案\json</Filter>
     </ClCompile>
+    <ClCompile Include="src\cuda\CudaGLDepth2PlaneMesh.cpp">
+      <Filter>來源檔案\cuda</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">

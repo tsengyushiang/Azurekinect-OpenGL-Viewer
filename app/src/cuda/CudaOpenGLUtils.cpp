@@ -1,5 +1,9 @@
 #include "CudaOpenGLUtils.h"
 
+void CudaOpenGL::bindGLTexture2Cuda(GLuint* tex_screen, struct cudaGraphicsResource* cuda_tex_screen_resource) {
+    cudaGraphicsGLRegisterImage(&cuda_tex_screen_resource, *tex_screen, GL_TEXTURE_2D, cudaGraphicsMapFlagsReadOnly);
+}
+
 void CudaOpenGL::createBufferObject(GLuint* vbo, struct cudaGraphicsResource** vbo_res,
     unsigned int vbo_res_flags, unsigned int size,int type)
 {

@@ -150,6 +150,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="app.cpp" />
+    <ClCompile Include="src\cuda\CudaGLDepth2PlaneMesh.cpp" />
     <ClCompile Include="src\cuda\CudaOpenGLUtils.cpp" />
     <ClCompile Include="src\gl3w\gl3w.c" />
     <ClCompile Include="src\imgui\imgui.cpp" />

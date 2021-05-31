@@ -232,29 +232,15 @@ public :
 	//helper 
 	GLuint camIconVao, camIconVbo;
 
-	//cuda opengl
-	int* cudaIndicesCount = 0;
-	uint16_t* cudaDepthData = 0;
-	uchar* cudaColorData = 0;
-	GLuint vao, vbo, ibo;
-	struct cudaGraphicsResource* cuda_vbo_resource, * cuda_ibo_resource;
-	int width = 1280;
-	int height = 720;
+	CudaGLDepth2PlaneMesh planemesh;
 
-	RealsenseGL() {
+	RealsenseGL():planemesh(1280,720) {
 		camera = new RealsenseDevice();
 
 		glGenTextures(1, &image);
 		glGenTextures(1, &depthImage);
 		glGenVertexArrays(1, &camIconVao);
 		glGenBuffers(1, &camIconVbo);
-
-		glGenVertexArrays(1, &vao);
-		CudaOpenGL::createBufferObject(&vbo, &cuda_vbo_resource, cudaGraphicsMapFlagsNone, width * height * 6 * sizeof(float), GL_ARRAY_BUFFER);
-		CudaOpenGL::createBufferObject(&ibo, &cuda_ibo_resource, cudaGraphicsMapFlagsNone, width * height * 2 * 3 * sizeof(sizeof(unsigned int)), GL_ELEMENT_ARRAY_BUFFER);
-		cudaMalloc((void**)&cudaIndicesCount, sizeof(int));
-		cudaMalloc((void**)&cudaDepthData, width * height * sizeof(uint16_t));
-		cudaMalloc((void**)&cudaColorData, width * height * 3 * sizeof(uchar));
 	}
 	void destory() {
 		glDeleteVertexArrays(1, &camIconVao);
@@ -262,49 +248,43 @@ public :
 		glDeleteTextures(1, &image);
 		glDeleteTextures(1, &depthImage);
 
-		glDeleteVertexArrays(1, &vao);
-		CudaOpenGL::deleteVBO(&vbo, cuda_vbo_resource);
-		CudaOpenGL::deleteVBO(&ibo, cuda_ibo_resource);
-		cudaFree(cudaIndicesCount);
-		cudaFree(cudaDepthData);
-		cudaFree(cudaColorData);
+		planemesh.destory();
 	}
 
 	// pass realsense data to cuda and compute plane mesh and point cloud
 	void updateMeshwithCUDA() {
 		auto copyHost2Device = [this](const void* depthRaw, size_t depthSize, const void* colorRaw, size_t colorSize) {
-			cudaMemcpy(cudaDepthData, depthRaw, depthSize, cudaMemcpyHostToDevice);
-			cudaMemcpy(cudaColorData, colorRaw, colorSize, cudaMemcpyHostToDevice);
+			cudaMemcpy(planemesh.cudaDepthData, depthRaw, depthSize, cudaMemcpyHostToDevice);
+			cudaMemcpy(planemesh.cudaColorData, colorRaw, colorSize, cudaMemcpyHostToDevice);
 		};
 		camera->fetchframes(copyHost2Device);
 
 		CudaAlogrithm::depthMap2point(
-			&cuda_vbo_resource,
-			cudaDepthData, cudaColorData,
-			width, height,
+			&planemesh.cuda_vbo_resource,
+			planemesh.cudaDepthData, planemesh.cudaColorData,
+			planemesh.width, planemesh.height,
 			camera->intri.fx, camera->intri.fy, camera->intri.ppx, camera->intri.ppy,
 			camera->intri.depth_scale, camera->farPlane);
 
-		CudaAlogrithm::depthMapTriangulate(&cuda_vbo_resource, &cuda_ibo_resource, width, height, cudaIndicesCount);
+		CudaAlogrithm::depthMapTriangulate(
+			&planemesh.cuda_vbo_resource, 
+			&planemesh.cuda_ibo_resource, 
+			planemesh.width, 
+			planemesh.height, 
+			planemesh.cudaIndicesCount
+		);
 	}
 
 	// render single realsense mesh
 	void renderRealsenseCudaMesh(glm::mat4& mvp, GLuint& program) {
 		if (!camera->visible)return;
 		
-		glBindVertexArray(vao);
-		// generate and bind the buffer object
-		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		// set up generic attrib pointers
-		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (char*)0 + 0 * sizeof(GLfloat));
-		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (char*)0 + 3 * sizeof(GLfloat));
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-		int count = 0;
-		cudaMemcpy(&count, cudaIndicesCount, sizeof(int), cudaMemcpyDeviceToHost);
-		glm::mat4 m = mvp * camera->modelMat;
-		ImguiOpeGL3App::renderElements(m, 0, program, vao, count * 3, GL_FILL);	
+		auto render = [this, mvp, program](GLuint& vao, int& count) {
+			glm::mat4 m = mvp * camera->modelMat;
+			ImguiOpeGL3App::renderElements(m, 0, program, vao, count * 3, GL_FILL);
+		};
+
+		planemesh.render(render);		
 	}
 
 	void save() {
