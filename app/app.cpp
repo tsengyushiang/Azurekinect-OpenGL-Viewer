@@ -121,9 +121,9 @@ public :
 	int w, h;
 	float ppx, ppy, fx, fy;
 
-	float distance = 3;
+	float distance = 1;
 	float PolarAngle = 1.57;
-	float AzimuthAngle = 0.1;
+	float AzimuthAngle = 4;
 	float farplane=5;
 	float nearplane=0;
 
@@ -140,6 +140,9 @@ public :
 	unsigned int depthBuffer;
 	unsigned int rbo;
 
+	bool visible = true;
+	CudaGLDepth2PlaneMesh planemesh;
+
 	glm::mat4 getModelMat(glm::vec3 lookAtPoint) {
 
 		glm::mat4 rt = glm::lookAt(
@@ -153,7 +156,7 @@ public :
 		return glm::scale(glm::inverse(rt),glm::vec3(1,-1,-1));
 	}
 
-	VirtualCam(int width,int height) {
+	VirtualCam(int width,int height):planemesh(1280,720){
 		w = width;
 		h = height;
 		glGenTextures(1, &image);
@@ -178,6 +181,7 @@ public :
 	void save(std::string filename, glm::vec3 lookAtPoint) {
 		glm::mat4 modelMat = getModelMat(lookAtPoint);
 
+		updateMeshwithCUDA();
 		GLubyte* pixels = new GLubyte[w * h * 3];
 		glBindTexture(GL_TEXTURE_2D, texColorBuffer);
 		glGetTexImage(GL_TEXTURE_2D, 0, GL_BGR, GL_UNSIGNED_BYTE, pixels);
@@ -222,6 +226,54 @@ public :
 		cv::equalizeHist(src, dst);
 		cv::imshow("virtualview-depth", dst);
 	}
+	// pass realsense data to cuda and compute plane mesh and point cloud
+	void updateMeshwithCUDA() {
+
+		uchar* colorRaw = new uchar[w * h * 3];
+		glBindTexture(GL_TEXTURE_2D, texColorBuffer);
+		glGetTexImage(GL_TEXTURE_2D, 0, GL_BGR, GL_UNSIGNED_BYTE, colorRaw);
+
+		float* depthRaw = new float[w * h];
+		glBindTexture(GL_TEXTURE_2D, depthBuffer);
+		glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_FLOAT, depthRaw);
+
+		int scale = 10000;
+		uint16_t* depthintRaw = new uint16_t[w * h];
+		for (int i = 0; i < w * h; i++) {
+			depthintRaw[i] = uint16_t(depthRaw[i] * 10000);
+		}
+
+		cudaMemcpy(planemesh.cudaDepthData, depthintRaw, w * h * sizeof(uint16_t), cudaMemcpyHostToDevice);
+		cudaMemcpy(planemesh.cudaColorData, colorRaw, 3 * w * h * sizeof(uchar), cudaMemcpyHostToDevice);
+
+		CudaAlogrithm::depthMap2point(
+			&planemesh.cuda_vbo_resource,
+			planemesh.cudaDepthData, planemesh.cudaColorData,
+			planemesh.width, planemesh.height,
+			fx, fy, ppx, ppy, farplane/ 10000, farplane);
+
+		CudaAlogrithm::depthMapTriangulate(
+			&planemesh.cuda_vbo_resource,
+			&planemesh.cuda_ibo_resource,
+			planemesh.width,
+			planemesh.height,
+			planemesh.cudaIndicesCount,
+			1
+		);
+	}
+
+	// render single realsense mesh
+	void renderRealsenseCudaMesh(glm::mat4& mvp, GLuint& program) {
+		if (!visible)return;
+
+		auto render = [this, mvp, program](GLuint& vao, int& count) {
+			glm::mat4 m = mvp;
+			ImguiOpeGL3App::renderElements(m, 0, program, vao, count * 3, GL_FILL);
+		};
+
+		planemesh.render(render);
+	}
+
 };
 
 class RealsenseGL {
@@ -746,6 +798,8 @@ public:
 		GLuint textureId[] = { virtualcam->texColorBuffer,virtualcam->depthImage };
 		ImguiOpeGL3App::activateTextures(texture_shader_program, uniformNames, textureId, 2);
 		ImguiOpeGL3App::render(devicemvp, pointsize, texture_shader_program, virtualcam->camIconVao, 3 * 4, GL_TRIANGLES);
+
+		virtualcam->renderRealsenseCudaMesh(devicemvp, shader_program);
 	}
 	
 	// detect aruco to calibrate unregisted camera
