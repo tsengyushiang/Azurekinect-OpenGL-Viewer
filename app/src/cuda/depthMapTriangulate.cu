@@ -3,7 +3,7 @@
 
 __global__ void depthMapTriangulate_kernel(
     float* pos, unsigned int* indices,
-    unsigned int width, unsigned int height, int* counter)
+    unsigned int width, unsigned int height, int* counter, float degree)
 {
     unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
     unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -36,7 +36,7 @@ __global__ void depthMapTriangulate_kernel(
         pos[index3 * 6 + 2]
     );
 
-    float threshold = 3.1415926 / 16.0;
+    float threshold = degree/180 * 3.1415926;
     glm::vec3 da, db;
     float angle0, angle1, angle2;
 
@@ -79,17 +79,17 @@ __global__ void depthMapTriangulate_kernel(
 }
 
 void launch_kernel(float* pos, unsigned int* indices,
-    unsigned int mesh_width, unsigned int mesh_height, int* count)
+    unsigned int mesh_width, unsigned int mesh_height, int* count, float degree)
 {
     // execute the kernel
     dim3 block(8, 8, 1);
     dim3 grid(mesh_width / block.x, mesh_height / block.y, 1);
-    depthMapTriangulate_kernel << < grid, block >> > (pos, indices, mesh_width, mesh_height, count);
+    depthMapTriangulate_kernel << < grid, block >> > (pos, indices, mesh_width, mesh_height, count, degree);
 }
 
 void CudaAlogrithm::depthMapTriangulate(
     struct cudaGraphicsResource** vbo_resource, struct cudaGraphicsResource** ibo_resource,
-    unsigned int w, unsigned int h, int* count)
+    unsigned int w, unsigned int h, int* count, float degree)
 {
     // map OpenGL buffer object for writing from CUDA
     float* dptr;
@@ -104,7 +104,7 @@ void CudaAlogrithm::depthMapTriangulate(
     cudaGraphicsResourceGetMappedPointer((void**)&dptr2, &num_bytes2, *ibo_resource);
 
     cudaMemset(count, 0, sizeof(int));
-    launch_kernel(dptr, dptr2, w, h, count);
+    launch_kernel(dptr, dptr2, w, h, count, degree);
 
     // unmap buffer object
     cudaGraphicsUnmapResources(1, ibo_resource, 0);

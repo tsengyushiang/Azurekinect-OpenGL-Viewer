@@ -122,6 +122,7 @@ void ImguiOpeGL3App::initImguiOpenGL3(int width, int height) {
     // Main loop
     while (!glfwWindowShouldClose(window))
     {
+        time = glfwGetTime();
         framebufferRender();
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -151,16 +152,17 @@ void ImguiOpeGL3App::initImguiOpenGL3(int width, int height) {
             static float f = 0.0f;
             static int counter = 0;
 
-            ImGui::Begin("OpenGL : ");                          // Create a window called "Hello, world!" and append into it.
+            ImGui::Begin("ImguiOpeGL3App : ");                          // Create a window called "Hello, world!" and append into it.
 
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
             ImGui::ColorEdit3("background color", (float*)&clear_color); // Edit 3 floats representing a color
 
+            ImGui::Text("Time : %d", time);
             ImGui::Text("Camera parameters : ");
             ImGui::Checkbox("isVertical", &camVertical);
             ImGui::SliderFloat("fov", &fov, 30.0f,80.0f); 
-            ImGui::SliderFloat("distance", &distance, 0.0f, 5.0f);  
+            ImGui::SliderFloat("distance", &distance, distancemin, distanceMax);  
             ImGui::SliderFloat("lookAt-X", &lookAtPoint.x, -10.0f, 10.0f);
             ImGui::SliderFloat("lookAt-Y", &lookAtPoint.y, -10.0f, 10.0f);
             ImGui::SliderFloat("lookAt-Z", &lookAtPoint.z, -10.0f, 10.0f);            

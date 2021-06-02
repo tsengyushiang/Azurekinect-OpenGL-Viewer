@@ -120,9 +120,10 @@ class VirtualCam {
 public :
 	int w, h;
 	float ppx, ppy, fx, fy;
-	
-	glm::vec3 position;
-	glm::vec3 rotate;
+
+	float distance = 3;
+	float PolarAngle = 1.57;
+	float AzimuthAngle = 0.1;
 	float farplane=5;
 	float nearplane=0;
 
@@ -139,12 +140,17 @@ public :
 	unsigned int depthBuffer;
 	unsigned int rbo;
 
-	glm::mat4 getModelMat() {
-		
-		glm::mat4 identity = glm::mat4(1.0);
-		glm::mat4 r = glm::translate(identity, position);
-		glm::mat4 rt = glm::rotate(r, rotate.y, glm::vec3(0, 1.0, 0.0));
-		return rt;
+	glm::mat4 getModelMat(glm::vec3 lookAtPoint) {
+
+		glm::mat4 rt = glm::lookAt(
+			glm::vec3(
+				distance * sin(PolarAngle) * cos(AzimuthAngle) + lookAtPoint.x,
+				distance * cos(PolarAngle) + lookAtPoint.y,
+				distance * sin(PolarAngle) * sin(AzimuthAngle) + lookAtPoint.z), // Camera is at (4,3,3), in World Space
+			lookAtPoint, // and looks at the origin
+			glm::vec3(0, -1, 0)  // Head is up (set to 0,-1,0 to look upside-down)
+		);
+		return glm::scale(glm::inverse(rt),glm::vec3(1,-1,-1));
 	}
 
 	VirtualCam(int width,int height) {
@@ -157,8 +163,6 @@ public :
 		p_depth_frame = (uint16_t*)calloc(width * height, sizeof(uint16_t));
 		p_color_frame = (uchar*)calloc(3 * width * height, sizeof(uchar));
 		p_depth_color_frame = (uchar*)calloc(3 * width * height, sizeof(uchar));
-		position = glm::vec3(0.452, 0, 0.186);
-		rotate = glm::vec3(0, 5.448, 0);
 
 		ImguiOpeGL3App::createFrameBuffer(&framebuffer, &texColorBuffer, &depthBuffer, &rbo, w, h);
 	}
@@ -171,8 +175,8 @@ public :
 		free((void*)p_color_frame);
 		free((void*)p_depth_color_frame);
 	}
-	void save(std::string filename) {
-		glm::mat4 modelMat = getModelMat();
+	void save(std::string filename, glm::vec3 lookAtPoint) {
+		glm::mat4 modelMat = getModelMat(lookAtPoint);
 
 		GLubyte* pixels = new GLubyte[w * h * 3];
 		glBindTexture(GL_TEXTURE_2D, texColorBuffer);
@@ -182,11 +186,11 @@ public :
 		glBindTexture(GL_TEXTURE_2D, depthBuffer);
 		glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_FLOAT, dpixels);
 
-		for (int i = 0; i < w * h; i++) {
-			if (dpixels[i] > 0.9999) {
-				dpixels[i] = 0;
-			}
-		}
+		//for (int i = 0; i < w * h; i++) {
+		//	if (dpixels[i] > 0.9999) {
+		//		dpixels[i] = 0;
+		//	}
+		//}
 
 		std::vector<float> extrinsic = {
 			modelMat[0][0],modelMat[1][0],modelMat[2][0],modelMat[3][0],
@@ -252,7 +256,7 @@ public :
 	}
 
 	// pass realsense data to cuda and compute plane mesh and point cloud
-	void updateMeshwithCUDA() {
+	void updateMeshwithCUDA(float planeMeshThreshold) {
 		auto copyHost2Device = [this](const void* depthRaw, size_t depthSize, const void* colorRaw, size_t colorSize) {
 			cudaMemcpy(planemesh.cudaDepthData, depthRaw, depthSize, cudaMemcpyHostToDevice);
 			cudaMemcpy(planemesh.cudaColorData, colorRaw, colorSize, cudaMemcpyHostToDevice);
@@ -271,7 +275,8 @@ public :
 			&planemesh.cuda_ibo_resource, 
 			planemesh.width, 
 			planemesh.height, 
-			planemesh.cudaIndicesCount
+			planemesh.cudaIndicesCount,
+			planeMeshThreshold
 		);
 	}
 
@@ -305,7 +310,7 @@ public :
 
 };
 
-class PointcloudApp :public ImguiOpeGL3App {
+class RealsenseDepthSythesisApp :public ImguiOpeGL3App {
 
 	GLuint shader_program,texture_shader_program,project_shader_program;
 	GLuint axisVao, axisVbo;
@@ -337,11 +342,13 @@ class PointcloudApp :public ImguiOpeGL3App {
 	int collectPointCout = 15;
 	float collectthreshold = 0.1f;
 
+	float planeMeshThreshold=15;
+
 public:
-	PointcloudApp():ImguiOpeGL3App(){
+	RealsenseDepthSythesisApp():ImguiOpeGL3App(){
 		serials = RealsenseDevice::getAllDeviceSerialNumber(ctx);
 	}
-	~PointcloudApp() {
+	~RealsenseDepthSythesisApp() {
 		for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
 			removeDevice(device);
 		}
@@ -360,28 +367,34 @@ public:
 			if (ImGui::Button("save virtual view")) {
 				for (int i = 0; i < virtualcams.size(); i++) {
 					auto virtualcam = virtualcams[i];
-					virtualcam->save(std::string("virtualview") + std::to_string(i));
+					virtualcam->save(std::string("virtualview") + std::to_string(i),lookAtPoint);
 				}
 			}
-			if (ImGui::Button("Add virtual camera")) {
-				if (realsenses.size()) {
-					int w = realsenses.begin()->camera->width;
-					int h = realsenses.begin()->camera->height;
-					VirtualCam* v = new VirtualCam(w, h);
-					v->fx = realsenses.begin()->camera->intri.fx;
-					v->fy = realsenses.begin()->camera->intri.fy;
-					v->ppx = realsenses.begin()->camera->intri.ppx;
-					v->ppy = realsenses.begin()->camera->intri.ppy;
-					virtualcams.push_back(v);
-				}
-			}
+			//if (ImGui::Button("Add virtual camera")) {
+			//	//if (realsenses.size()) {
+			//	//	int w = realsenses.begin()->camera->width;
+			//	//	int h = realsenses.begin()->camera->height;
+			//	//	VirtualCam* v = new VirtualCam(w, h);
+			//	//	v->fx = realsenses.begin()->camera->intri.fx;
+			//	//	v->fy = realsenses.begin()->camera->intri.fy;
+			//	//	v->ppx = realsenses.begin()->camera->intri.ppx;
+			//	//	v->ppy = realsenses.begin()->camera->intri.ppy;
+			//	//	virtualcams.push_back(v);
+			//	//}
+			//	
+			//	VirtualCam* v = new VirtualCam(1280, 720);
+			//	v->fx = 924.6023559570313;
+			//	v->fy = 922.5956420898438;
+			//	v->ppx = 632.439208984375;
+			//	v->ppy = 356.8707275390625;
+			//	virtualcams.push_back(v);
+			//}
 			for (int i = 0; i < virtualcams.size();i++) {
 				ImGui::Text((std::string("Virtual cam") + std::to_string(i)).c_str());
-				ImGui::SliderFloat((std::string("PosX##virtualPos") + std::to_string(i)).c_str(), &virtualcams[i]->position.x, -5.0, 5.0f);
-				ImGui::SliderFloat((std::string("PosY##virtualPos") + std::to_string(i)).c_str(), &virtualcams[i]->position.y, -5.0, 5.0f);
-				ImGui::SliderFloat((std::string("PosZ##virtualPos") + std::to_string(i)).c_str(), &virtualcams[i]->position.z, -5.0, 5.0f);
-				ImGui::SliderFloat((std::string("RotateY##virtualRot") + std::to_string(i)).c_str(), &virtualcams[i]->rotate.y, 0, M_PI*2);
 				ImGui::SliderFloat((std::string("farplane##farplane") + std::to_string(i)).c_str(), &virtualcams[i]->farplane, 0, 10);
+				ImGui::SliderFloat((std::string("AzimuthAngle##AzimuthAngle") + std::to_string(i)).c_str(), &virtualcams[i]->AzimuthAngle, AzimuthAnglemin, AzimuthAngleMax);
+				ImGui::SliderFloat((std::string("PolarAngle##PolarAngle") + std::to_string(i)).c_str(), &virtualcams[i]->PolarAngle, PolarAnglemin, PolarAngleMax);
+				ImGui::SliderFloat((std::string("distance##distance") + std::to_string(i)).c_str(), &virtualcams[i]->distance, distancemin, distanceMax);
 			}
 			ImGui::End();
 		}
@@ -500,13 +513,15 @@ public:
 					}
 				}
 			}
-
-			if (ImGui::Button("snapshot all")) {
-				for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
-					device->save();
+			{
+				ImGui::Text("Debug :");
+				if (ImGui::Button("snapshot all")) {
+					for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
+						device->save();
+					}
 				}
+				ImGui::SliderFloat("planeMeshThreshold", &planeMeshThreshold, 1.0f, 90.0f);
 			}
-			ImGui::SameLine();
 			// Running device
 			ImGui::Text("Running Realsense device :");
 			for (auto device = realsenses.begin(); device != realsenses.end(); device++) {				
@@ -565,6 +580,13 @@ public:
 		glGenVertexArrays(1, &meshVao);
 		glGenBuffers(1, &meshVbo);
 		glGenBuffers(1, &meshibo);
+
+		VirtualCam* v = new VirtualCam(1280, 720);
+		v->fx = 924.6023559570313;
+		v->fy = 922.5956420898438;
+		v->ppx = 632.439208984375;
+		v->ppy = 356.8707275390625;
+		virtualcams.push_back(v);
 	}
 
 	void collectCalibratePoints() {
@@ -698,7 +720,7 @@ public:
 		glm::mat4 mvp = Projection * View * Model;
 
 		// render virtual camera		
-		glm::mat4 devicemvp = mvp * virtualcam->getModelMat();
+		glm::mat4 devicemvp = mvp * virtualcam->getModelMat(lookAtPoint);
 			
 		ImguiOpeGL3App::setTexture(virtualcam->image, virtualcam->p_color_frame, virtualcam->w, virtualcam->h);
 		ImguiOpeGL3App::setTexture(virtualcam->depthImage, virtualcam->p_depth_color_frame, virtualcam->w, virtualcam->h);
@@ -797,7 +819,7 @@ public:
 				device--;
 				continue;
 			}
-			device->updateMeshwithCUDA();
+			device->updateMeshwithCUDA(planeMeshThreshold);
 		}
 
 		for (auto virtualcam : virtualcams) {
@@ -806,7 +828,7 @@ public:
 			glViewport(0, 0, virtualcam->w, virtualcam->h);
 			glEnable(GL_DEPTH_TEST);
 			
-			glm::mat4 m = glm::inverse(virtualcam->getModelMat());
+			glm::mat4 m = glm::inverse(virtualcam->getModelMat(lookAtPoint));
 			std::string uniformNames[] = { 
 				"w",
 				"h",
@@ -869,6 +891,6 @@ public:
 };
 
 int main() {
-	PointcloudApp pviewer;
-	pviewer.initImguiOpenGL3();
+	RealsenseDepthSythesisApp viewer;
+	viewer.initImguiOpenGL3();
 }

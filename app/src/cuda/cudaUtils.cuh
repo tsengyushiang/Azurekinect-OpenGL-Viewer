@@ -12,6 +12,6 @@ public:
 	);
 	static void depthMapTriangulate(
 		struct cudaGraphicsResource** vbo_resource, struct cudaGraphicsResource** ibo_resource,
-		unsigned int w, unsigned int h,int *count
+		unsigned int w, unsigned int h,int *count,float degree
 	);
 };

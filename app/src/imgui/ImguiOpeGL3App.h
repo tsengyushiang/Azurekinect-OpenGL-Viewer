@@ -30,10 +30,14 @@ public:
 	virtual void mousedrag(float,float);
 	static void glfw_error_callback(int error, const char* description);
 
+	float time = 0;
+
 	// opengl camera
 	void setcamera(float width, float height);
 	float fov = 60;
 	float distance = 3;
+	float distancemin = 0;
+	float distanceMax = 5;
 	float PolarAngle = 1.57;
 	float PolarAngleMax = 3.0;
 	float PolarAnglemin = 0.1;
