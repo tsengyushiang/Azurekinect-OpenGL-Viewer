@@ -124,7 +124,7 @@ public :
 	float distance = 1;
 	float PolarAngle = 1.57;
 	float AzimuthAngle = 4;
-	float farplane=5;
+	float farplane=1.5;
 	float nearplane=0;
 
 	uint16_t* p_depth_frame;
@@ -209,22 +209,22 @@ public :
 			dpixels, pixels, extrinsic
 		);
 
-		// colorize and visualize
-		cv::Mat image(cv::Size(w, h), CV_8UC3, (void*)pixels, cv::Mat::AUTO_STEP);
-		cv::imshow("virtualview", image);
+		//// colorize and visualize
+		//cv::Mat image(cv::Size(w, h), CV_8UC3, (void*)pixels, cv::Mat::AUTO_STEP);
+		//cv::imshow("virtualview", image);
 
-		// depthmap colorize
-		GLubyte* dpixelscolor = new GLubyte[w * h * 3];
-		for (int i = 0; i < w * h; i++) {
-			dpixelscolor[i * 3 + 0] = dpixels[i] * 255;
-			dpixelscolor[i * 3 + 1] = dpixels[i] * 255;
-			dpixelscolor[i * 3 + 2] = dpixels[i] * 255;
-		}
-		cv::Mat src(cv::Size(w, h), CV_8UC3, (void*)dpixelscolor, cv::Mat::AUTO_STEP);
-		cv::Mat dst;
-		cv::cvtColor(src, src, cv::COLOR_BGR2GRAY);
-		cv::equalizeHist(src, dst);
-		cv::imshow("virtualview-depth", dst);
+		//// depthmap colorize
+		//GLubyte* dpixelscolor = new GLubyte[w * h * 3];
+		//for (int i = 0; i < w * h; i++) {
+		//	dpixelscolor[i * 3 + 0] = dpixels[i] * 255;
+		//	dpixelscolor[i * 3 + 1] = dpixels[i] * 255;
+		//	dpixelscolor[i * 3 + 2] = dpixels[i] * 255;
+		//}
+		//cv::Mat src(cv::Size(w, h), CV_8UC3, (void*)dpixelscolor, cv::Mat::AUTO_STEP);
+		//cv::Mat dst;
+		//cv::cvtColor(src, src, cv::COLOR_BGR2GRAY);
+		//cv::equalizeHist(src, dst);
+		//cv::imshow("virtualview-depth", dst);
 	}
 	// pass realsense data to cuda and compute plane mesh and point cloud
 	void updateMeshwithCUDA() {
@@ -279,6 +279,7 @@ public :
 class RealsenseGL {
 
 public :
+	bool render2Virtualview = true;
 	bool use2createMesh = true;
 	bool ready2Delete = false;
 	RealsenseDevice* camera;
@@ -334,8 +335,6 @@ public :
 
 	// render single realsense mesh
 	void renderRealsenseCudaMesh(glm::mat4& mvp, GLuint& program) {
-		if (!camera->visible)return;
-		
 		auto render = [this, mvp, program](GLuint& vao, int& count) {
 			glm::mat4 m = mvp * camera->modelMat;
 			ImguiOpeGL3App::renderElements(m, 0, program, vao, count * 3, GL_FILL);
@@ -358,6 +357,21 @@ public :
 			camera->intri.depth_scale,camera->p_depth_frame,camera->p_color_frame,
 			extrinsic			
 		);
+	}
+
+	void addui() {
+		if (ImGui::Button((std::string("stop##") + camera->serial).c_str())) {
+			ready2Delete = true;
+		}
+		ImGui::SameLine();
+		ImGui::Text(camera->serial.c_str());
+		ImGui::Checkbox((std::string("visible##") + camera->serial).c_str(), &(camera->visible));
+		ImGui::SameLine();
+		ImGui::Checkbox((std::string("calibrated##") + camera->serial).c_str(), &(camera->calibrated));
+		ImGui::Checkbox((std::string("render2virutal##") + camera->serial).c_str(), &render2Virtualview);
+		ImGui::SliderFloat((std::string("clip-z##") + camera->serial).c_str(), &camera->farPlane, 0.5f, 15.0f);
+		//ImGui::SameLine();
+		//ImGui::Checkbox((std::string("OpencvWindow##") + device->camera->serial).c_str(), &(device->camera->opencvImshow));
 	}
 
 };
@@ -394,7 +408,7 @@ class RealsenseDepthSythesisApp :public ImguiOpeGL3App {
 	int collectPointCout = 15;
 	float collectthreshold = 0.1f;
 
-	float planeMeshThreshold=15;
+	float planeMeshThreshold=1;
 
 public:
 	RealsenseDepthSythesisApp():ImguiOpeGL3App(){
@@ -447,6 +461,7 @@ public:
 				ImGui::SliderFloat((std::string("AzimuthAngle##AzimuthAngle") + std::to_string(i)).c_str(), &virtualcams[i]->AzimuthAngle, AzimuthAnglemin, AzimuthAngleMax);
 				ImGui::SliderFloat((std::string("PolarAngle##PolarAngle") + std::to_string(i)).c_str(), &virtualcams[i]->PolarAngle, PolarAnglemin, PolarAngleMax);
 				ImGui::SliderFloat((std::string("distance##distance") + std::to_string(i)).c_str(), &virtualcams[i]->distance, distancemin, distanceMax);
+				ImGui::Checkbox((std::string("visible##visible") + std::to_string(i)).c_str(), &virtualcams[i]->visible);
 			}
 			ImGui::End();
 		}
@@ -577,20 +592,7 @@ public:
 			// Running device
 			ImGui::Text("Running Realsense device :");
 			for (auto device = realsenses.begin(); device != realsenses.end(); device++) {				
-				
-				if (ImGui::Button((std::string("stop##") + device->camera->serial).c_str())) {
-					device->ready2Delete = true;
-				}
-				ImGui::SameLine();
-				ImGui::Text(device->camera->serial.c_str());
-				ImGui::SameLine();
-				ImGui::Checkbox((std::string("visible##") + device->camera->serial).c_str(), &(device->camera->visible));
-				ImGui::SameLine();
-				ImGui::Checkbox((std::string("calibrated##") + device->camera->serial).c_str(), &(device->camera->calibrated));
-
-				ImGui::SliderFloat((std::string("clip-z##") + device->camera->serial).c_str(), &device->camera->farPlane, 0.5f, 15.0f);
-				//ImGui::SameLine();
-				//ImGui::Checkbox((std::string("OpencvWindow##") + device->camera->serial).c_str(), &(device->camera->opencvImshow));
+				device->addui();
 			}
 			ImGui::End();
 		}		
@@ -773,31 +775,46 @@ public:
 
 		// render virtual camera		
 		glm::mat4 devicemvp = mvp * virtualcam->getModelMat(lookAtPoint);
-			
-		ImguiOpeGL3App::setTexture(virtualcam->image, virtualcam->p_color_frame, virtualcam->w, virtualcam->h);
-		ImguiOpeGL3App::setTexture(virtualcam->depthImage, virtualcam->p_depth_color_frame, virtualcam->w, virtualcam->h);
 
 		// render camera frustum
 		ImguiOpeGL3App::genCameraHelper(
 			virtualcam->camIconVao, virtualcam->camIconVbo,
 			virtualcam->w, virtualcam->h,
 			virtualcam->ppx, virtualcam->ppy, virtualcam->fx, virtualcam->fy,
-			glm::vec3(1.0, 1.0, 0), 0.2, false
+			glm::vec3(1.0, 1.0, 0), virtualcam->farplane, false
 		);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		ImguiOpeGL3App::render(devicemvp, pointsize, shader_program, virtualcam->camIconVao, 3 * 4, GL_TRIANGLES);
 
 		ImguiOpeGL3App::genCameraHelper(
 			virtualcam->camIconVao, virtualcam->camIconVbo,
-			virtualcam->w, virtualcam->h,
-			virtualcam->ppx, virtualcam->ppy, virtualcam->fx, virtualcam->fy,
-			glm::vec3(1.0, 1.0, 0), 0.2, true
+			1, 1, 0.5, 0.5, 0.5, 0.5, glm::vec3(1,1, 0), 1.0, true
 		);
 
-		std::string uniformNames[] = { "color" ,"depth" };
-		GLuint textureId[] = { virtualcam->texColorBuffer,virtualcam->depthImage };
-		ImguiOpeGL3App::activateTextures(texture_shader_program, uniformNames, textureId, 2);
-		ImguiOpeGL3App::render(devicemvp, pointsize, texture_shader_program, virtualcam->camIconVao, 3 * 4, GL_TRIANGLES);
+		std::string uniformNames[] = { "color" };
+		GLuint texturedepth[] = { virtualcam->depthBuffer};
+		ImguiOpeGL3App::activateTextures(texture_shader_program, uniformNames, texturedepth, 1);
+		glm::mat4 screenDepthMVP =
+			glm::scale(
+				glm::translate(
+					glm::mat4(1.0), 
+					glm::vec3(0.75, -0.75, 0.0)
+				),
+				glm::vec3(0.25, -0.25, 1e-3)
+			);
+		ImguiOpeGL3App::render(screenDepthMVP, pointsize, texture_shader_program, virtualcam->camIconVao, 3 * 4, GL_TRIANGLES);
+
+		GLuint texturecolor[] = { virtualcam->texColorBuffer};
+		ImguiOpeGL3App::activateTextures(texture_shader_program, uniformNames, texturecolor, 1);
+		glm::mat4 screencolorMVP =
+			glm::scale(
+				glm::translate(
+					glm::mat4(1.0),
+					glm::vec3(0.25, -0.75, 0.0)
+				),
+				glm::vec3(0.25, -0.25, 1e-3)
+			);		
+		ImguiOpeGL3App::render(screencolorMVP, pointsize, texture_shader_program, virtualcam->camIconVao, 3 * 4, GL_TRIANGLES);
 
 		virtualcam->renderRealsenseCudaMesh(devicemvp, shader_program);
 	}
@@ -905,7 +922,9 @@ public:
 			};
 			ImguiOpeGL3App::setUniformFloats(project_shader_program, uniformNames, values,8);
 			for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
-				device->renderRealsenseCudaMesh(m, project_shader_program);
+				if (device->render2Virtualview) {
+					device->renderRealsenseCudaMesh(m, project_shader_program);
+				}
 			}
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		}
@@ -930,7 +949,9 @@ public:
 		
 		for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
 			renderRealsenseFrustum(device);
-			device->renderRealsenseCudaMesh(mvp, shader_program);
+			if (device->camera->visible) {
+				device->renderRealsenseCudaMesh(mvp, shader_program);
+			}
 			waitCalibrateCamera(device);
 		}
 
