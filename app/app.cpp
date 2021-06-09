@@ -143,6 +143,10 @@ public :
 	bool visible = true;
 	CudaGLDepth2PlaneMesh planemesh;
 
+	uchar* colorRaw;
+	float* depthRaw;
+	uint16_t* depthintRaw;
+
 	glm::mat4 getModelMat(glm::vec3 lookAtPoint) {
 
 		glm::mat4 rt = glm::lookAt(
@@ -159,6 +163,9 @@ public :
 	VirtualCam(int width,int height):planemesh(1280,720){
 		w = width;
 		h = height;
+		colorRaw = new uchar[w * h * 3];
+		depthRaw = new float[w * h];
+		depthintRaw = new uint16_t[w * h];
 		glGenTextures(1, &image);
 		glGenTextures(1, &depthImage);
 		glGenVertexArrays(1, &camIconVao);
@@ -182,13 +189,6 @@ public :
 		glm::mat4 modelMat = getModelMat(lookAtPoint);
 
 		updateMeshwithCUDA();
-		GLubyte* pixels = new GLubyte[w * h * 3];
-		glBindTexture(GL_TEXTURE_2D, texColorBuffer);
-		glGetTexImage(GL_TEXTURE_2D, 0, GL_BGR, GL_UNSIGNED_BYTE, pixels);
-
-		float* dpixels = new float[w * h];
-		glBindTexture(GL_TEXTURE_2D, depthBuffer);
-		glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_FLOAT, dpixels);
 
 		//for (int i = 0; i < w * h; i++) {
 		//	if (dpixels[i] > 0.9999) {
@@ -206,7 +206,7 @@ public :
 		JsonUtils::saveRealsenseJson(filename,
 			w, h,
 			fx, fy, ppx, ppy, farplane,
-			dpixels, pixels, extrinsic
+			depthRaw, colorRaw, extrinsic
 		);
 
 		//// colorize and visualize
@@ -229,16 +229,12 @@ public :
 	// pass realsense data to cuda and compute plane mesh and point cloud
 	void updateMeshwithCUDA() {
 
-		uchar* colorRaw = new uchar[w * h * 3];
 		glBindTexture(GL_TEXTURE_2D, texColorBuffer);
 		glGetTexImage(GL_TEXTURE_2D, 0, GL_BGR, GL_UNSIGNED_BYTE, colorRaw);
-
-		float* depthRaw = new float[w * h];
 		glBindTexture(GL_TEXTURE_2D, depthBuffer);
 		glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_FLOAT, depthRaw);
 
 		int scale = 10000;
-		uint16_t* depthintRaw = new uint16_t[w * h];
 		for (int i = 0; i < w * h; i++) {
 			depthintRaw[i] = uint16_t(depthRaw[i] * 10000);
 		}
@@ -265,7 +261,7 @@ public :
 	// render single realsense mesh
 	void renderRealsenseCudaMesh(glm::mat4& mvp, GLuint& program) {
 		if (!visible)return;
-
+		updateMeshwithCUDA();
 		auto render = [this, mvp, program](GLuint& vao, int& count) {
 			glm::mat4 m = mvp;
 			ImguiOpeGL3App::renderElements(m, 0, program, vao, count * 3, GL_FILL);
