@@ -525,14 +525,46 @@ public:
 		
 		//aruco calibrate feature point collector params
 		{
-			ImGui::Begin("Aruco calibrate: ");
-			ImGui::SliderFloat("Threshold", &collectthreshold, 0.05f, 0.3f);
+			ImGui::Begin("Calibrate: ");
+			if (ImGui::Button("load camera pose")) {
+				std::map<std::string, glm::mat4> poses;
+				std::vector<Jsonformat::CamPose> setting;
+				JsonUtils::loadCameraPoses(setting);
+				for (auto cam : setting) {
+					poses[cam.id] = glm::mat4(
+						cam.extrinsic[0], cam.extrinsic[4], cam.extrinsic[8], cam.extrinsic[12],
+						cam.extrinsic[1], cam.extrinsic[5], cam.extrinsic[9], cam.extrinsic[13],
+						cam.extrinsic[2], cam.extrinsic[6], cam.extrinsic[10], cam.extrinsic[14],
+						cam.extrinsic[3], cam.extrinsic[7], cam.extrinsic[11], cam.extrinsic[15]
+					);
+				}
+				for (auto device : realsenses) {
+					device.camera->calibrated = true;
+					device.camera->modelMat = poses[device.camera->serial];
+				}
+			}
+			ImGui::SliderFloat("Distance Threshold", &collectthreshold, 0.05f, 0.3f);
 			ImGui::SliderInt("ExpectCollect Point Count", &collectPointCout, 3, 50);
 			if (calibrator != nullptr) {
 				if (ImGui::Button("cancel calibrate")) {
 					delete calibrator;
 					calibrator = nullptr;
 				}
+			}
+			if (ImGui::Button("save camera pose")) {
+				std::vector<Jsonformat::CamPose> setting;
+				for (auto device : realsenses) {
+					glm::mat4 modelMat = device.camera->modelMat;
+					std::vector<float> extrinsic = {
+						modelMat[0][0],modelMat[1][0],modelMat[2][0],modelMat[3][0],
+						modelMat[0][1],modelMat[1][1],modelMat[2][1],modelMat[3][1],
+						modelMat[0][2],modelMat[1][2],modelMat[2][2],modelMat[3][2],
+						modelMat[0][3],modelMat[1][3],modelMat[2][3],modelMat[3][3]
+					};
+					Jsonformat::CamPose c = { device.camera->serial ,extrinsic };
+					setting.push_back(c);
+				}
+				JsonUtils::saveCameraPoses(setting);
 			}
 			ImGui::End();
 		}
@@ -819,7 +851,6 @@ public:
 	void waitCalibrateCamera(std::vector<RealsenseGL>::iterator device) {
 		if (device == realsenses.begin()) {
 			device->camera->calibrated = true;
-			device->camera->modelMat = glm::mat4(1.0);
 		}
 		else if (!device->camera->calibrated) {
 

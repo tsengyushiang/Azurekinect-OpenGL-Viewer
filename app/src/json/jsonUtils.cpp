@@ -1,5 +1,46 @@
 #include "./jsonUtils.h"
 
+template<typename T>
+void Jsonformat::to_json(json& j, const T& p) {
+	j = json{ {"id", p.id}, {"extrinsic", p.extrinsic}};
+}
+
+template<typename T>
+void Jsonformat::from_json(const json& j, T& p) {
+	j.at("id").get_to(p.id);
+	j.at("extrinsic").get_to(p.extrinsic);
+}
+
+std::string JsonUtils::cameraPoseFilename = "CameraExtrinsics";
+void JsonUtils::loadCameraPoses(
+	std::vector<Jsonformat::CamPose>& poses
+) {
+	// write prettified JSON to another file
+	std::ifstream i(cameraPoseFilename + ".json");
+	json j;
+	i >> j;
+
+	for (json cam : j) {
+		poses.push_back(cam);
+	}
+
+	i.close();
+}
+
+void JsonUtils::saveCameraPoses(
+	std::vector<Jsonformat::CamPose>& poses
+) {
+	json j;
+	for (Jsonformat::CamPose p : poses) {
+		j.push_back(p);
+	}
+
+	// write prettified JSON to another file
+	std::ofstream o(cameraPoseFilename + ".json");
+	o << std::setw(4) << j << std::endl;
+	o.close();
+}
+
 void JsonUtils::saveRealsenseJson(
 	std::string filename,
 	int width, int height,
