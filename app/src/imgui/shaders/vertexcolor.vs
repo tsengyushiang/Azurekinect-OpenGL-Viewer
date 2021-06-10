@@ -8,10 +8,12 @@ uniform mat4 MVP;
 uniform float pointsize;
 
 out vec4 fcolor;
+out vec4 pos;
 
 void main() {
     gl_PointSize = pointsize;
     fcolor = vcolor;
+    pos = vposition;
     gl_Position =  MVP * vposition;
 };
 

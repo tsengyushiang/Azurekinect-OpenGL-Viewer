@@ -382,6 +382,7 @@ public :
 class RealsenseDepthSythesisApp :public ImguiOpeGL3App {
 
 	GLuint shader_program,texture_shader_program,project_shader_program;
+	GLuint projectTextre_shader_program;
 	GLuint axisVao, axisVbo;
 	
 	// mesh reconstruct 
@@ -663,6 +664,7 @@ public:
 		shader_program = ImguiOpeGL3App::genPointcloudShader(this->window);
 		texture_shader_program = ImguiOpeGL3App::genTextureShader(this->window);
 		project_shader_program = ImguiOpeGL3App::genprojectShader(this->window);
+		projectTextre_shader_program = ImguiOpeGL3App::genprojectTextureShader(this->window);
 		glGenVertexArrays(1, &axisVao);
 		glGenBuffers(1, &axisVbo);
 
@@ -872,7 +874,43 @@ public:
 			);		
 		ImguiOpeGL3App::render(screencolorMVP, pointsize, texture_shader_program, virtualcam->camIconVao, 3 * 4, GL_TRIANGLES);
 
-		virtualcam->renderRealsenseCudaMesh(devicemvp, shader_program);
+		// project textre;
+		if (realsenses.size()>0) {
+			auto device = realsenses.begin();
+			std::string texNames[] = { "color","depthtest" };
+			GLuint texturs[] = { device->image,device->depthBuffer };
+			ImguiOpeGL3App::activateTextures(projectTextre_shader_program, texNames, texturs, 2);
+
+			glUseProgram(projectTextre_shader_program);
+			GLuint MatrixID = glGetUniformLocation(projectTextre_shader_program, "extrinsic");
+			glm::mat4 model = glm::inverse(device->camera->modelMat) *virtualcam->getModelMat(lookAtPoint);
+			glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &model[0][0]);
+			glUseProgram(0);
+
+			std::string floatnames[] = {
+					"w",
+					"h",
+					"fx",
+					"fy",
+					"ppx",
+					"ppy",
+					"near",
+					"far",
+			};
+			float values[] = {
+				device->camera->width,
+				device->camera->height,
+				device->camera->intri.fx,
+				device->camera->intri.fy,
+				device->camera->intri.ppx,
+				device->camera->intri.ppy,
+				0,
+				device->camera->farPlane
+			};
+			ImguiOpeGL3App::setUniformFloats(projectTextre_shader_program, floatnames, values, 8);
+			virtualcam->renderRealsenseCudaMesh(devicemvp, projectTextre_shader_program);
+		}
+		
 	}
 	
 	// detect aruco to calibrate unregisted camera

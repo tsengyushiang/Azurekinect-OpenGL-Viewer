@@ -68,6 +68,7 @@ public:
 	static GLuint genPointcloudShader(GLFWwindow* window);
 	static GLuint genTextureShader(GLFWwindow* window);
 	static GLuint genprojectShader(GLFWwindow* window);
+	static GLuint genprojectTextureShader(GLFWwindow* window);
 
 	static void setTexture(GLuint& image,const unsigned char* vertexData, int width, int height);
 	

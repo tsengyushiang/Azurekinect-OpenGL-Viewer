@@ -214,6 +214,21 @@ GLuint ImguiOpeGL3App::compileAndLink(
     return shader_program;
 }
 
+GLuint ImguiOpeGL3App::genprojectTextureShader(GLFWwindow* window) {
+    std::string vertex_source =
+#include "shaders/vertexcolor.vs"
+        ;
+
+    std::string fragment_source =
+#include "shaders/projectTexture.fs"
+        ;
+
+    // program and shader handles
+    GLuint shader_program, vertex_shader, fragment_shader;
+
+    return compileAndLink(vertex_source, fragment_source, shader_program, vertex_shader, fragment_shader, window);
+}
+
 GLuint ImguiOpeGL3App::genprojectShader(GLFWwindow* window) {
     std::string vertex_source =
 #include "shaders/projectPointcloud.vs"
