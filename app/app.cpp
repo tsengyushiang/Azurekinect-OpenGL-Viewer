@@ -261,7 +261,7 @@ public :
 	// render single realsense mesh
 	void renderRealsenseCudaMesh(glm::mat4& mvp, GLuint& program) {
 		if (!visible)return;
-		updateMeshwithCUDA();
+
 		auto render = [this, mvp, program](GLuint& vao, int& count) {
 			glm::mat4 m = mvp;
 			ImguiOpeGL3App::renderElements(m, 0, program, vao, count * 3, GL_FILL);
@@ -287,6 +287,12 @@ public :
 
 	CudaGLDepth2PlaneMesh planemesh;
 
+	// project depthbuffer
+	unsigned int framebuffer;
+	unsigned int texColorBuffer;
+	unsigned int depthBuffer;
+	unsigned int rbo;
+
 	RealsenseGL():planemesh(1280,720) {
 		camera = new RealsenseDevice();
 
@@ -294,6 +300,7 @@ public :
 		glGenTextures(1, &depthImage);
 		glGenVertexArrays(1, &camIconVao);
 		glGenBuffers(1, &camIconVbo);
+		ImguiOpeGL3App::createFrameBuffer(&framebuffer, &texColorBuffer, &depthBuffer, &rbo, camera->width, camera->height);
 	}
 	void destory() {
 		glDeleteVertexArrays(1, &camIconVao);
@@ -797,6 +804,27 @@ public:
 		return result;
 	}
 
+	// virtual mesh project depth to real camera (prepared for projective texture)
+	void renderPorjectDepth(std::vector<RealsenseGL>::iterator device, glm::vec2 offset) {
+		ImguiOpeGL3App::genCameraHelper(
+			device->camIconVao, device->camIconVbo,
+			1, 1, 0.5, 0.5, 0.5, 0.5, glm::vec3(1, 1, 0), 1.0, true
+		);
+
+		std::string uniformNames[] = { "color" };
+		GLuint texturedepth[] = { device->depthBuffer };
+		ImguiOpeGL3App::activateTextures(texture_shader_program, uniformNames, texturedepth, 1);
+		glm::mat4 screenDepthMVP =
+			glm::scale(
+				glm::translate(
+					glm::mat4(1.0),
+					glm::vec3(offset.x, offset.y, 0.0)
+				),
+				glm::vec3(0.25, -0.25, 1e-3)
+			);
+		ImguiOpeGL3App::render(screenDepthMVP, pointsize, texture_shader_program, device->camIconVao, 3 * 4, GL_TRIANGLES);
+	}
+
 	// virtual view frustum and image(framebuffer)
 	void renderVirtualCamera(VirtualCam* virtualcam) {
 		glm::mat4 mvp = Projection * View * Model;
@@ -826,7 +854,7 @@ public:
 			glm::scale(
 				glm::translate(
 					glm::mat4(1.0), 
-					glm::vec3(0.75, -0.75, 0.0)
+					glm::vec3(-0.75, -0.75, 0.0)
 				),
 				glm::vec3(0.25, -0.25, 1e-3)
 			);
@@ -838,7 +866,7 @@ public:
 			glm::scale(
 				glm::translate(
 					glm::mat4(1.0),
-					glm::vec3(0.25, -0.75, 0.0)
+					glm::vec3(-0.25, -0.75, 0.0)
 				),
 				glm::vec3(0.25, -0.25, 1e-3)
 			);		
@@ -953,6 +981,44 @@ public:
 					device->renderRealsenseCudaMesh(m, project_shader_program);
 				}
 			}
+			virtualcam->updateMeshwithCUDA();
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		}
+
+		//render project depth
+		for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
+			glBindFramebuffer(GL_FRAMEBUFFER, device->framebuffer);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // we're not using the stencil buffer now
+			glViewport(0, 0, device->camera->width, device->camera->height);
+			glEnable(GL_DEPTH_TEST);
+
+			std::string uniformNames[] = {
+				"w",
+				"h",
+				"fx",
+				"fy",
+				"ppx",
+				"ppy",
+				"near",
+				"far",
+			};
+			float values[] = {
+				device->camera->width,
+				device->camera->height,
+				device->camera->intri.fx,
+				device->camera->intri.fy,
+				device->camera->intri.ppx,
+				device->camera->intri.ppy,
+				0,
+				device->camera->farPlane
+			};
+			ImguiOpeGL3App::setUniformFloats(project_shader_program, uniformNames, values, 8);
+			
+			for (auto virtualcam : virtualcams) {
+				glm::mat4 m = glm::inverse(device->camera->modelMat)* virtualcam->getModelMat(lookAtPoint);
+
+				virtualcam->renderRealsenseCudaMesh(m, project_shader_program);
+			}
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		}
 	}
@@ -974,8 +1040,14 @@ public:
 			return;
 		}
 		
+		std::vector<glm::vec2> windows = {
+			glm::vec2(0.25,0.75),
+			glm::vec2(0.75,0.75),
+		};
+		int deviceIndex = 0;
 		for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
 			renderRealsenseFrustum(device);
+			renderPorjectDepth(device, windows[deviceIndex++]);
 			if (device->camera->visible) {
 				device->renderRealsenseCudaMesh(mvp, shader_program);
 			}
