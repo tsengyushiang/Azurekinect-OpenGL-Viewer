@@ -169,6 +169,7 @@
     <ClCompile Include="src\opencv\opencv-aruco.cpp" />
     <ClCompile Include="src\pcl\fast_triangulation_of_unordered_pcd.cpp" />
     <ClCompile Include="src\pcl\rigid-transforrm-from-points.cpp" />
+    <ClCompile Include="src\realsnese\JsonRealsenseDevice.cpp" />
     <ClCompile Include="src\realsnese\realsense-net-opencv.cpp" />
     <ClCompile Include="src\realsnese\RealsenseDevice.cpp" />
   </ItemGroup>
@@ -189,6 +190,7 @@
     <ClInclude Include="src\opencv\opecv-utils.h" />
     <ClInclude Include="src\pcl\examples-pcl.h" />
     <ClInclude Include="src\realsnese\example-realsense.h" />
+    <ClInclude Include="src\realsnese\JsonRealsenseDevice.h" />
     <ClInclude Include="src\realsnese\RealsenseDevice.h" />
   </ItemGroup>
   <ItemGroup>

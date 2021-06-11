@@ -1,12 +1,15 @@
 
 #include "src/imgui/ImguiOpeGL3App.h"
 #include "src/realsnese//RealsenseDevice.h"
+#include "src/realsnese/JsonRealsenseDevice.h"
 #include "src/opencv/opecv-utils.h"
 #include "src/pcl/examples-pcl.h"
 #include "src/cuda/CudaOpenGLUtils.h"
 #include "src/cuda/cudaUtils.cuh"
 #include <ctime>
 #include "src/json/jsonUtils.h"
+
+#define MAXTEXTURE 5
 
 class CorrespondPointCollector {
 
@@ -160,7 +163,7 @@ public :
 		return glm::scale(glm::inverse(rt),glm::vec3(1,-1,-1));
 	}
 
-	VirtualCam(int width,int height):planemesh(1280,720){
+	VirtualCam(int width,int height):planemesh(width, height){
 		w = width;
 		h = height;
 		colorRaw = new uchar[w * h * 3];
@@ -295,7 +298,6 @@ public :
 
 	RealsenseGL():planemesh(1280,720) {
 		camera = new RealsenseDevice();
-
 		glGenTextures(1, &image);
 		glGenTextures(1, &depthImage);
 		glGenVertexArrays(1, &camIconVao);
@@ -322,15 +324,15 @@ public :
 		CudaAlogrithm::depthMap2point(
 			&planemesh.cuda_vbo_resource,
 			planemesh.cudaDepthData, planemesh.cudaColorData,
-			planemesh.width, planemesh.height,
+			camera->width, camera->height,
 			camera->intri.fx, camera->intri.fy, camera->intri.ppx, camera->intri.ppy,
 			camera->intri.depth_scale, camera->farPlane);
 
 		CudaAlogrithm::depthMapTriangulate(
 			&planemesh.cuda_vbo_resource, 
 			&planemesh.cuda_ibo_resource, 
-			planemesh.width, 
-			planemesh.height, 
+			camera->width,
+			camera->height,
 			planemesh.cudaIndicesCount,
 			planeMeshThreshold
 		);
@@ -347,18 +349,11 @@ public :
 	}
 
 	void save() {
-		std::vector<float> extrinsic = {
-			camera->modelMat[0][0],camera->modelMat[1][0],camera->modelMat[2][0],camera->modelMat[3][0],
-			camera->modelMat[0][1],camera->modelMat[1][1],camera->modelMat[2][1],camera->modelMat[3][1],
-			camera->modelMat[0][2],camera->modelMat[1][2],camera->modelMat[2][2],camera->modelMat[3][2],
-			camera->modelMat[0][3],camera->modelMat[1][3],camera->modelMat[2][3],camera->modelMat[3][3]
-		};
 		JsonUtils::saveRealsenseJson(
 			camera->serial,
 			camera->width,camera->height,
 			camera->intri.fx, camera->intri.fy, camera->intri.ppx, camera->intri.ppy,
-			camera->intri.depth_scale,camera->p_depth_frame,camera->p_color_frame,
-			extrinsic			
+			camera->intri.depth_scale,camera->p_depth_frame,camera->p_color_frame
 		);
 	}
 
@@ -414,6 +409,8 @@ class RealsenseDepthSythesisApp :public ImguiOpeGL3App {
 
 	float planeMeshThreshold=1;
 
+	float projectiveTextureIndex = 0;
+	float projectDepthBias = 5e-3;
 public:
 	RealsenseDepthSythesisApp():ImguiOpeGL3App(){
 		serials = RealsenseDevice::getAllDeviceSerialNumber(ctx);
@@ -470,6 +467,12 @@ public:
 			ImGui::End();
 		}
 
+		{
+			ImGui::Begin("Projective Texture index");			
+			ImGui::SliderFloat("projectiveTextureIndex", &projectiveTextureIndex, 0, realsenses.size());
+			ImGui::SliderFloat("projectDepthBias", &projectDepthBias, 1e-3, 10e-3);
+			ImGui::End();
+		}
 		//reconstruct params
 		/*{
 			ImGui::Begin("Reconstruct: ");
@@ -583,6 +586,15 @@ public:
 			
 			ImGui::SliderFloat("Point size", &pointsize, 0.5f, 50.0f);
 
+			static char jsonfilename[20] = "932122060549";
+			ImGui::Text("jsonfilename: ");
+			ImGui::SameLine();
+			if (ImGui::Button("add##jsonfilename")) {
+				addJsonDevice(jsonfilename);
+			}
+			ImGui::SameLine();
+			ImGui::InputText("##jsonfilenameurlInput", jsonfilename, 20);
+
 			// input url for network device
 			static char url[20] = "192.168.0.106";
 			ImGui::Text("Network device Ip: ");
@@ -652,6 +664,28 @@ public:
 	catch (const rs2::error& e)
 	{
 		std::cerr << "RealSense error calling " << e.get_failed_function() << "(" << e.get_failed_args() << "):\n    " << e.what() << std::endl;
+	}
+
+	void addJsonDevice(std::string serial) {
+		RealsenseGL device;
+
+		device.camera = new JsonRealsenseDevice();
+		JsonUtils::loadRealsenseJson(serial,
+			device.camera->width, 
+			device.camera->height, 
+			device.camera->intri.fx, 
+			device.camera->intri.fy, 
+			device.camera->intri.ppx, 
+			device.camera->intri.ppy, 
+			device.camera->intri.depth_scale, 
+			&device.camera->p_depth_frame, 
+			&device.camera->p_color_frame);
+		device.camera->serial = serial;
+
+		std::cout << device.camera->p_color_frame[0]<<std::endl;
+		std::cout << device.camera->p_color_frame[1]<<std::endl;
+		std::cout << device.camera->p_color_frame[2]<<std::endl;
+		realsenses.push_back(device);
 	}
 
 	void addDevice(std::string serial) {
@@ -875,27 +909,39 @@ public:
 		ImguiOpeGL3App::render(screencolorMVP, pointsize, texture_shader_program, virtualcam->camIconVao, 3 * 4, GL_TRIANGLES);
 
 		// project textre;
-		if (realsenses.size()>0) {
-			auto device = realsenses.begin();
-			std::string texNames[] = { "color","depthtest" };
-			GLuint texturs[] = { device->image,device->depthBuffer };
-			ImguiOpeGL3App::activateTextures(projectTextre_shader_program, texNames, texturs, 2);
+		int deviceIndex = 0;
+
+		std::string texNames[MAXTEXTURE];
+		GLuint texturs[MAXTEXTURE];
+
+		auto indexTostring = [=](int x) mutable throw() -> std::string
+		{
+			return std::string("[")+std::to_string(x)+std::string("]");
+		};
+
+		for (auto device = realsenses.begin(); device != realsenses.end(); device++) 
+		{
+			texNames[deviceIndex*2] = "color" + indexTostring(deviceIndex);
+			texNames[deviceIndex*2+1] = "depthtest" + indexTostring(deviceIndex);
+
+			texturs[deviceIndex * 2] = device->image;
+			texturs[deviceIndex * 2 + 1] = device->depthBuffer;
 
 			glUseProgram(projectTextre_shader_program);
-			GLuint MatrixID = glGetUniformLocation(projectTextre_shader_program, "extrinsic");
-			glm::mat4 model = glm::inverse(device->camera->modelMat) *virtualcam->getModelMat(lookAtPoint);
+			GLuint MatrixID = glGetUniformLocation(projectTextre_shader_program, (std::string("extrinsic") + indexTostring(deviceIndex)).c_str());
+			glm::mat4 model = glm::inverse(device->camera->modelMat) * virtualcam->getModelMat(lookAtPoint);
 			glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &model[0][0]);
 			glUseProgram(0);
 
 			std::string floatnames[] = {
-					"w",
-					"h",
-					"fx",
-					"fy",
-					"ppx",
-					"ppy",
-					"near",
-					"far",
+					"w" + indexTostring(deviceIndex),
+					"h" + indexTostring(deviceIndex),
+					"fx" + indexTostring(deviceIndex),
+					"fy" + indexTostring(deviceIndex),
+					"ppx" + indexTostring(deviceIndex),
+					"ppy" + indexTostring(deviceIndex),
+					"near" + indexTostring(deviceIndex),
+					"far" + indexTostring(deviceIndex),
 			};
 			float values[] = {
 				device->camera->width,
@@ -908,9 +954,13 @@ public:
 				device->camera->farPlane
 			};
 			ImguiOpeGL3App::setUniformFloats(projectTextre_shader_program, floatnames, values, 8);
-			virtualcam->renderRealsenseCudaMesh(devicemvp, projectTextre_shader_program);
+			deviceIndex++;
 		}
-		
+		ImguiOpeGL3App::activateTextures(projectTextre_shader_program, texNames, texturs, deviceIndex*2);
+		std::string indexName[] = { "index","bias" };
+		float idx[] = { projectiveTextureIndex,projectDepthBias };
+		ImguiOpeGL3App::setUniformFloats(projectTextre_shader_program, indexName, idx,2);
+		virtualcam->renderRealsenseCudaMesh(devicemvp, projectTextre_shader_program);					
 	}
 	
 	// detect aruco to calibrate unregisted camera

@@ -24,15 +24,22 @@ public:
 	static void saveRealsenseJson(
 		std::string filename, 
 		int width,int height,
-		float fx,float fy,float ppx,float py,
-		float depthscale, const unsigned short* depthmap,const unsigned char* colormap,
-		std::vector<float> extrinsic4x4
-	);static void saveRealsenseJson(
+		float fx,float fy,float ppx,float ppy,
+		float depthscale, const unsigned short* depthmap,const unsigned char* colormap
+	);
+	static void saveRealsenseJson(
 		std::string filename, 
 		int width,int height,
-		float fx,float fy,float ppx,float py,
+		float fx,float fy,float ppx,float ppy,
 		float depthscale, float* depthmap,unsigned char* colormap,
 		std::vector<float> extrinsic4x4
+	);
+
+	static void loadRealsenseJson(
+		std::string filename,
+		int& width, int& height,
+		float& fx, float& fy, float& ppx, float& ppy,
+		float& depthscale, uint16_t** depthmap, unsigned char** colormap
 	);
 
 	static std::string cameraPoseFilename;

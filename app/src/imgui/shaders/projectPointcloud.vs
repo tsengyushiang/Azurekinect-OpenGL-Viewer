@@ -21,8 +21,9 @@ void main() {
     vec4 uv = MVP * vposition;
 
     //uv.w = 1.0;
-    //uv.x = (uv.x / uv.z * fx + ppx) / w * 2.0 - 1.0;
-    //uv.y = (uv.y / uv.z * fy + ppy) / h * 2.0 - 1.0;
+    //uv.x = (camCoord.x / camCoord.z * fx + ppx) / w * 2.0 - 1.0;
+    //uv.y = (camCoord.y / camCoord.z * fy + ppy) / h * 2.0 - 1.0;
+    //uv.z = (camCoord.z/far*2.0-1.0);
 
     uv.w = uv.z;
     uv.x = (uv.x * (2.0 / w * fx) + (ppx * 2.0 / w - 1.0) * uv.z);

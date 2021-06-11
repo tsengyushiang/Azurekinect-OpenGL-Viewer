@@ -6,17 +6,20 @@ in vec4 pos;
 
 layout(location = 0) out vec4 FragColor;
 
-uniform mat4 extrinsic;
-uniform float w;
-uniform float h;
-uniform float fx;
-uniform float fy;
-uniform float ppx;
-uniform float ppy;
-uniform float near;
-uniform float far;
-uniform sampler2D color;
-uniform sampler2D depthtest;
+uniform mat4 extrinsic[5];
+uniform float w[5];
+uniform float h[5];
+uniform float fx[5];
+uniform float fy[5];
+uniform float ppx[5];
+uniform float ppy[5];
+uniform float near[5];
+uniform float far[5];
+uniform sampler2D color[5];
+uniform sampler2D depthtest[5];
+
+uniform float index;
+uniform float bias;
 
 vec3 projectUv(
     mat4 inverModelMat,vec4 vposition,
@@ -38,22 +41,22 @@ vec3 projectUv(
 
 void main() {
     vec3 uv = projectUv(
-        extrinsic,
+        extrinsic[int(index)],
         pos,
-        w,
-        h,
-        fx,
-        fy,
-        ppx,
-        ppy,
-        near,
-        far
+        w[int(index)],
+        h[int(index)],
+        fx[int(index)],
+        fy[int(index)],
+        ppx[int(index)],
+        ppy[int(index)],
+        near[int(index)],
+        far[int(index)]
     );
-    float depth = texture(depthtest, uv.xy).x * far;
-    if((uv.z-depth)>1e-3){
+    float depth = texture(depthtest[int(index)], uv.xy).x * far[int(index)];
+    if((uv.z-depth)>bias){
         FragColor = vec4(1.0,0.0,0.0,1.0);
     }else{
-        FragColor = texture(color, uv.xy);
+        FragColor = texture(color[int(index)], uv.xy);
     }
 }
 

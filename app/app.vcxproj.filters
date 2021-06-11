@@ -110,6 +110,9 @@
     <ClCompile Include="src\cuda\CudaGLDepth2PlaneMesh.cpp">
       <Filter>來源檔案\cuda</Filter>
     </ClCompile>
+    <ClCompile Include="src\realsnese\JsonRealsenseDevice.cpp">
+      <Filter>來源檔案\realsense</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -162,6 +165,9 @@
     </ClInclude>
     <ClInclude Include="src\json\jsonUtils.h">
       <Filter>來源檔案\json</Filter>
+    </ClInclude>
+    <ClInclude Include="src\realsnese\JsonRealsenseDevice.h">
+      <Filter>來源檔案\realsense</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

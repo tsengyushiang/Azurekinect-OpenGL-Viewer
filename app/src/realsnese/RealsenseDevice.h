@@ -54,9 +54,9 @@ public :
     int dwidth = 1280;
     int dheight = 720;
 
-    const uint16_t* p_depth_frame;
+    uint16_t* p_depth_frame;
     uchar* p_depth_color_frame;
-    const uchar* p_color_frame;
+    uchar* p_color_frame;
     float farPlane = 5.0;
 
     int vaildVeticesCount = 0;
@@ -64,9 +64,9 @@ public :
     float* vertexData = nullptr;
 
     std::string runNetworkDevice(std::string url, rs2::context ctx);
-    void runDevice(std::string serial, rs2::context ctx);
+    virtual void runDevice(std::string serial, rs2::context ctx);
     bool fetchframes(int pointcloudStride = 1);
-    bool fetchframes(std::function<void (
+    virtual bool fetchframes(std::function<void (
         const void* depthRaw, size_t depthSize,
         const void* colorRaw, size_t colorSize)
     >callback);
