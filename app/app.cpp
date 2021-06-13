@@ -138,10 +138,7 @@ public :
 	//helper 
 	GLuint camIconVao, camIconVbo;
 	
-	unsigned int framebuffer;
-	unsigned int texColorBuffer;
-	unsigned int depthBuffer;
-	unsigned int rbo;
+	GLFrameBuffer framebuffer;
 
 	bool visible = true;
 	CudaGLDepth2PlaneMesh planemesh;
@@ -163,7 +160,7 @@ public :
 		return glm::scale(glm::inverse(rt),glm::vec3(1,-1,-1));
 	}
 
-	VirtualCam(int width,int height):planemesh(width, height){
+	VirtualCam(int width,int height):planemesh(width, height),framebuffer(width, height){
 		w = width;
 		h = height;
 		colorRaw = new uchar[w * h * 3];
@@ -176,8 +173,6 @@ public :
 		p_depth_frame = (uint16_t*)calloc(width * height, sizeof(uint16_t));
 		p_color_frame = (uchar*)calloc(3 * width * height, sizeof(uchar));
 		p_depth_color_frame = (uchar*)calloc(3 * width * height, sizeof(uchar));
-
-		ImguiOpeGL3App::createFrameBuffer(&framebuffer, &texColorBuffer, &depthBuffer, &rbo, w, h);
 	}
 	~VirtualCam() {
 		glDeleteVertexArrays(1, &camIconVao);
@@ -232,10 +227,7 @@ public :
 	// pass realsense data to cuda and compute plane mesh and point cloud
 	void updateMeshwithCUDA() {
 
-		glBindTexture(GL_TEXTURE_2D, texColorBuffer);
-		glGetTexImage(GL_TEXTURE_2D, 0, GL_BGR, GL_UNSIGNED_BYTE, colorRaw);
-		glBindTexture(GL_TEXTURE_2D, depthBuffer);
-		glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_FLOAT, depthRaw);
+		framebuffer.getRawData(colorRaw, depthRaw);
 
 		int scale = 10000;
 		for (int i = 0; i < w * h; i++) {
@@ -291,18 +283,14 @@ public :
 	CudaGLDepth2PlaneMesh planemesh;
 
 	// project depthbuffer
-	unsigned int framebuffer;
-	unsigned int texColorBuffer;
-	unsigned int depthBuffer;
-	unsigned int rbo;
+	GLFrameBuffer framebuffer;
 
-	RealsenseGL():planemesh(1280,720) {
+	RealsenseGL():planemesh(1280,720), framebuffer(1280,720){
 		camera = new RealsenseDevice();
 		glGenTextures(1, &image);
 		glGenTextures(1, &depthImage);
 		glGenVertexArrays(1, &camIconVao);
 		glGenBuffers(1, &camIconVbo);
-		ImguiOpeGL3App::createFrameBuffer(&framebuffer, &texColorBuffer, &depthBuffer, &rbo, camera->width, camera->height);
 	}
 	void destory() {
 		glDeleteVertexArrays(1, &camIconVao);
@@ -376,8 +364,9 @@ public :
 
 class RealsenseDepthSythesisApp :public ImguiOpeGL3App {
 
-	GLuint shader_program,texture_shader_program,project_shader_program;
-	GLuint projectTextre_shader_program;
+	GLuint shader_program, texture_shader_program;
+	GLuint project_shader_program;
+	GLuint projectTextre_shader_program, screen_projectTextre_shader_program;
 	GLuint axisVao, axisVbo;
 	
 	// mesh reconstruct 
@@ -682,9 +671,6 @@ public:
 			&device.camera->p_color_frame);
 		device.camera->serial = serial;
 
-		std::cout << device.camera->p_color_frame[0]<<std::endl;
-		std::cout << device.camera->p_color_frame[1]<<std::endl;
-		std::cout << device.camera->p_color_frame[2]<<std::endl;
 		realsenses.push_back(device);
 	}
 
@@ -698,7 +684,8 @@ public:
 		shader_program = ImguiOpeGL3App::genPointcloudShader(this->window);
 		texture_shader_program = ImguiOpeGL3App::genTextureShader(this->window);
 		project_shader_program = ImguiOpeGL3App::genprojectShader(this->window);
-		projectTextre_shader_program = ImguiOpeGL3App::genprojectTextureShader(this->window);
+		projectTextre_shader_program = ImguiOpeGL3App::genprojectTextureShader(this->window,true);
+		screen_projectTextre_shader_program = ImguiOpeGL3App::genprojectTextureShader(this->window,false);
 		glGenVertexArrays(1, &axisVao);
 		glGenBuffers(1, &axisVbo);
 
@@ -848,7 +835,7 @@ public:
 		);
 
 		std::string uniformNames[] = { "color" };
-		GLuint texturedepth[] = { device->depthBuffer };
+		GLuint texturedepth[] = { device->framebuffer.depthBuffer };
 		ImguiOpeGL3App::activateTextures(texture_shader_program, uniformNames, texturedepth, 1);
 		glm::mat4 screenDepthMVP =
 			glm::scale(
@@ -884,7 +871,7 @@ public:
 		);
 
 		std::string uniformNames[] = { "color" };
-		GLuint texturedepth[] = { virtualcam->depthBuffer};
+		GLuint texturedepth[] = { virtualcam->framebuffer.depthBuffer};
 		ImguiOpeGL3App::activateTextures(texture_shader_program, uniformNames, texturedepth, 1);
 		glm::mat4 screenDepthMVP =
 			glm::scale(
@@ -896,7 +883,7 @@ public:
 			);
 		ImguiOpeGL3App::render(screenDepthMVP, pointsize, texture_shader_program, virtualcam->camIconVao, 3 * 4, GL_TRIANGLES);
 
-		GLuint texturecolor[] = { virtualcam->texColorBuffer};
+		GLuint texturecolor[] = { virtualcam->framebuffer.texColorBuffer};
 		ImguiOpeGL3App::activateTextures(texture_shader_program, uniformNames, texturecolor, 1);
 		glm::mat4 screencolorMVP =
 			glm::scale(
@@ -907,28 +894,64 @@ public:
 				glm::vec3(0.25, -0.25, 1e-3)
 			);		
 		ImguiOpeGL3App::render(screencolorMVP, pointsize, texture_shader_program, virtualcam->camIconVao, 3 * 4, GL_TRIANGLES);
+		
+		rendervirtualMesh(virtualcam,false);
+	}
+
+	// render virtual mesh with projective textures
+	void rendervirtualMesh(VirtualCam* virtualcam,bool renderOnScreen) {
+		glm::mat4 mvp = Projection * View * Model;
+		// render virtual camera		
+		glm::mat4 devicemvp = mvp * virtualcam->getModelMat(lookAtPoint);
 
 		// project textre;
 		int deviceIndex = 0;
+		GLuint shader = projectTextre_shader_program;
+
+		if (renderOnScreen) {
+			shader = screen_projectTextre_shader_program;
+			std::string uniformNames[] = {
+				"p_w",
+				"p_h",
+				"p_fx",
+				"p_fy",
+				"p_ppx",
+				"p_ppy",
+				"p_near",
+				"p_far",
+			};
+			float values[] = {
+				virtualcam->w,
+				virtualcam->h,
+				virtualcam->fx,
+				virtualcam->fy,
+				virtualcam->ppx,
+				virtualcam->ppy,
+				virtualcam->nearplane,
+				virtualcam->farplane
+			};
+			ImguiOpeGL3App::setUniformFloats(shader, uniformNames, values, 8);
+			devicemvp = glm::mat4(1.0);
+		}
 
 		std::string texNames[MAXTEXTURE];
 		GLuint texturs[MAXTEXTURE];
 
 		auto indexTostring = [=](int x) mutable throw() -> std::string
 		{
-			return std::string("[")+std::to_string(x)+std::string("]");
+			return std::string("[") + std::to_string(x) + std::string("]");
 		};
 
-		for (auto device = realsenses.begin(); device != realsenses.end(); device++) 
+		for (auto device = realsenses.begin(); device != realsenses.end(); device++)
 		{
-			texNames[deviceIndex*2] = "color" + indexTostring(deviceIndex);
-			texNames[deviceIndex*2+1] = "depthtest" + indexTostring(deviceIndex);
+			texNames[deviceIndex * 2] = "color" + indexTostring(deviceIndex);
+			texNames[deviceIndex * 2 + 1] = "depthtest" + indexTostring(deviceIndex);
 
 			texturs[deviceIndex * 2] = device->image;
-			texturs[deviceIndex * 2 + 1] = device->depthBuffer;
+			texturs[deviceIndex * 2 + 1] = device->framebuffer.depthBuffer;
 
-			glUseProgram(projectTextre_shader_program);
-			GLuint MatrixID = glGetUniformLocation(projectTextre_shader_program, (std::string("extrinsic") + indexTostring(deviceIndex)).c_str());
+			glUseProgram(shader);
+			GLuint MatrixID = glGetUniformLocation(shader, (std::string("extrinsic") + indexTostring(deviceIndex)).c_str());
 			glm::mat4 model = glm::inverse(device->camera->modelMat) * virtualcam->getModelMat(lookAtPoint);
 			glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &model[0][0]);
 			glUseProgram(0);
@@ -953,14 +976,14 @@ public:
 				0,
 				device->camera->farPlane
 			};
-			ImguiOpeGL3App::setUniformFloats(projectTextre_shader_program, floatnames, values, 8);
+			ImguiOpeGL3App::setUniformFloats(shader, floatnames, values, 8);
 			deviceIndex++;
 		}
-		ImguiOpeGL3App::activateTextures(projectTextre_shader_program, texNames, texturs, deviceIndex*2);
+		ImguiOpeGL3App::activateTextures(shader, texNames, texturs, deviceIndex * 2);
 		std::string indexName[] = { "index","bias" };
 		float idx[] = { projectiveTextureIndex,projectDepthBias };
-		ImguiOpeGL3App::setUniformFloats(projectTextre_shader_program, indexName, idx,2);
-		virtualcam->renderRealsenseCudaMesh(devicemvp, projectTextre_shader_program);					
+		ImguiOpeGL3App::setUniformFloats(shader, indexName, idx, 2);
+		virtualcam->renderRealsenseCudaMesh(devicemvp, shader);
 	}
 	
 	// detect aruco to calibrate unregisted camera
@@ -1037,50 +1060,43 @@ public:
 		}
 
 		for (auto virtualcam : virtualcams) {
-			glBindFramebuffer(GL_FRAMEBUFFER, virtualcam->framebuffer);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // we're not using the stencil buffer now
-			glViewport(0, 0, virtualcam->w, virtualcam->h);
-			glEnable(GL_DEPTH_TEST);
-			
-			glm::mat4 m = glm::inverse(virtualcam->getModelMat(lookAtPoint));
-			std::string uniformNames[] = { 
-				"w",
-				"h",
-				"fx",
-				"fy",
-				"ppx",
-				"ppy",
-				"near",
-				"far",
-			};
-			float values[] = {
-				virtualcam->w,
-				virtualcam->h,
-				virtualcam->fx,
-				virtualcam->fy,
-				virtualcam->ppx,
-				virtualcam->ppy,
-				virtualcam->nearplane,
-				virtualcam->farplane
-			};
-			ImguiOpeGL3App::setUniformFloats(project_shader_program, uniformNames, values,8);
-			for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
-				if (device->render2Virtualview) {
-					device->renderRealsenseCudaMesh(m, project_shader_program);
+			auto renderForwardWarppedDepth = [virtualcam,this]() {
+				glm::mat4 m = glm::inverse(virtualcam->getModelMat(lookAtPoint));
+				std::string uniformNames[] = {
+					"w",
+					"h",
+					"fx",
+					"fy",
+					"ppx",
+					"ppy",
+					"near",
+					"far",
+				};
+				float values[] = {
+					virtualcam->w,
+					virtualcam->h,
+					virtualcam->fx,
+					virtualcam->fy,
+					virtualcam->ppx,
+					virtualcam->ppy,
+					virtualcam->nearplane,
+					virtualcam->farplane
+				};
+				ImguiOpeGL3App::setUniformFloats(project_shader_program, uniformNames, values, 8);
+				for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
+					if (device->render2Virtualview) {
+						device->renderRealsenseCudaMesh(m, project_shader_program);
+					}
 				}
-			}
-			virtualcam->updateMeshwithCUDA();
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+				virtualcam->updateMeshwithCUDA();
+			};
+			virtualcam->framebuffer.render(renderForwardWarppedDepth);
 		}
 
 		//render project depth
 		for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
-			glBindFramebuffer(GL_FRAMEBUFFER, device->framebuffer);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // we're not using the stencil buffer now
-			glViewport(0, 0, device->camera->width, device->camera->height);
-			glEnable(GL_DEPTH_TEST);
-
-			std::string uniformNames[] = {
+			auto renderVirtualMeshProjectDepth = [device,this]() {
+				std::string uniformNames[] = {
 				"w",
 				"h",
 				"fx",
@@ -1089,25 +1105,27 @@ public:
 				"ppy",
 				"near",
 				"far",
-			};
-			float values[] = {
-				device->camera->width,
-				device->camera->height,
-				device->camera->intri.fx,
-				device->camera->intri.fy,
-				device->camera->intri.ppx,
-				device->camera->intri.ppy,
-				0,
-				device->camera->farPlane
-			};
-			ImguiOpeGL3App::setUniformFloats(project_shader_program, uniformNames, values, 8);
-			
-			for (auto virtualcam : virtualcams) {
-				glm::mat4 m = glm::inverse(device->camera->modelMat)* virtualcam->getModelMat(lookAtPoint);
+				};
+				float values[] = {
+					device->camera->width,
+					device->camera->height,
+					device->camera->intri.fx,
+					device->camera->intri.fy,
+					device->camera->intri.ppx,
+					device->camera->intri.ppy,
+					0,
+					device->camera->farPlane
+				};
+				ImguiOpeGL3App::setUniformFloats(project_shader_program, uniformNames, values, 8);
 
-				virtualcam->renderRealsenseCudaMesh(m, project_shader_program);
-			}
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+				for (auto virtualcam : virtualcams) {
+					glm::mat4 m = glm::inverse(device->camera->modelMat) * virtualcam->getModelMat(lookAtPoint);
+
+					virtualcam->renderRealsenseCudaMesh(m, project_shader_program);
+				}
+				glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			};
+			device->framebuffer.render(renderVirtualMeshProjectDepth);
 		}
 	}
 	

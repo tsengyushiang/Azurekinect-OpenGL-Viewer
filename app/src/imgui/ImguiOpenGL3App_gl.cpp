@@ -1,42 +1,5 @@
 #include "ImguiOpeGL3App.h"
 
-void ImguiOpeGL3App::createFrameBuffer(
-    GLuint *framebuffer, 
-    GLuint *texColorBuffer, GLuint* depthBuffer, GLuint* rbo,
-    int w,int h
-) {
-    glGenFramebuffers(1, framebuffer);
-    glBindFramebuffer(GL_FRAMEBUFFER, *framebuffer);
-
-    glGenTextures(1, texColorBuffer);
-    glBindTexture(GL_TEXTURE_2D, *texColorBuffer);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, *texColorBuffer, 0);
-
-    glGenTextures(1, depthBuffer);
-    glBindTexture(GL_TEXTURE_2D, *depthBuffer);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, w, h, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, *depthBuffer, 0);
-
-    //glGenRenderbuffers(1, rbo);
-    //glBindRenderbuffer(GL_RENDERBUFFER, *rbo);
-    //glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, w, h);
-    //glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
-    //glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, *rbo);
-
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-}
-
-
 void ImguiOpeGL3App::renderElements(glm::mat4& mvp, float psize, GLuint shader_program, GLuint vao, int size,int type) {
 
     glUseProgram(shader_program);
@@ -214,10 +177,19 @@ GLuint ImguiOpeGL3App::compileAndLink(
     return shader_program;
 }
 
-GLuint ImguiOpeGL3App::genprojectTextureShader(GLFWwindow* window) {
-    std::string vertex_source =
+GLuint ImguiOpeGL3App::genprojectTextureShader(GLFWwindow* window, bool renderInworld) {
+
+    std::string vertex_source;
+    if (renderInworld) {
+        vertex_source =
 #include "shaders/vertexcolor.vs"
-        ;
+            ;
+    }
+    else {
+        vertex_source =
+#include "shaders/projectOnScreen.vs"
+            ;
+    }
 
     std::string fragment_source =
 #include "shaders/projectTexture.fs"

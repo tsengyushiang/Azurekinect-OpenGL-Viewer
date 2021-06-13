@@ -14,6 +14,24 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <functional>
+
+class GLFrameBuffer {
+
+	int width, height;
+	unsigned int framebuffer;
+	unsigned int rbo;
+
+public :
+	static void createFrameBuffer(GLuint* framebuffer, GLuint* texColorBuffer, GLuint* depthBuffer, GLuint* rbo, int w, int h);
+
+	unsigned int texColorBuffer;
+	unsigned int depthBuffer;
+
+	GLFrameBuffer(int w, int h);
+	void render(std::function<void()> callback);
+	void getRawData(unsigned char* colorRaw, float* depthRaw);
+};
 
 class ImguiOpeGL3App
 {
@@ -54,7 +72,6 @@ public:
 	glm::mat4 Model;
 
 	//---------------------following method implement in ImguiOpeGL3App_gl.cpp
-	static void createFrameBuffer(GLuint* framebuffer, GLuint* texColorBuffer, GLuint* depthBuffer, GLuint* rbo,int w, int h);
 
 	// opengl functions
 	static bool check_shader_compile_status(GLuint obj);
@@ -68,7 +85,7 @@ public:
 	static GLuint genPointcloudShader(GLFWwindow* window);
 	static GLuint genTextureShader(GLFWwindow* window);
 	static GLuint genprojectShader(GLFWwindow* window);
-	static GLuint genprojectTextureShader(GLFWwindow* window);
+	static GLuint genprojectTextureShader(GLFWwindow* window, bool renderInworld);
 
 	static void setTexture(GLuint& image,const unsigned char* vertexData, int width, int height);
 	

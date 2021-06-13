@@ -113,6 +113,9 @@
     <ClCompile Include="src\realsnese\JsonRealsenseDevice.cpp">
       <Filter>來源檔案\realsense</Filter>
     </ClCompile>
+    <ClCompile Include="src\imgui\GLFrameBuffer.cpp">
+      <Filter>來源檔案\imgui+opengl3</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -190,6 +193,9 @@
       <Filter>來源檔案\imgui+opengl3\shaders</Filter>
     </None>
     <None Include="src\imgui\shaders\projectTexture.fs">
+      <Filter>來源檔案\imgui+opengl3\shaders</Filter>
+    </None>
+    <None Include="src\imgui\shaders\projectOnScreen.vs">
       <Filter>來源檔案\imgui+opengl3\shaders</Filter>
     </None>
   </ItemGroup>

@@ -153,6 +153,7 @@
     <ClCompile Include="src\cuda\CudaGLDepth2PlaneMesh.cpp" />
     <ClCompile Include="src\cuda\CudaOpenGLUtils.cpp" />
     <ClCompile Include="src\gl3w\gl3w.c" />
+    <ClCompile Include="src\imgui\GLFrameBuffer.cpp" />
     <ClCompile Include="src\imgui\imgui.cpp" />
     <ClCompile Include="src\imgui\ImguiOpeGL3App.cpp" />
     <ClCompile Include="src\imgui\ImguiOpenGL3App_gl.cpp" />
@@ -194,6 +195,7 @@
     <ClInclude Include="src\realsnese\RealsenseDevice.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="src\imgui\shaders\projectOnScreen.vs" />
     <None Include="src\imgui\shaders\projectPointcloud.fs" />
     <None Include="src\imgui\shaders\projectPointcloud.vs" />
     <None Include="src\imgui\shaders\projectTexture.fs" />
