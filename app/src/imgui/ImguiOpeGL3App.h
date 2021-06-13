@@ -15,6 +15,24 @@
 #include <string>
 #include <vector>
 #include <functional>
+#include <map>
+
+class GLShader {
+
+	static bool check_shader_compile_status(GLuint obj);
+	static bool check_program_link_status(GLuint obj);
+
+	static GLuint compileAndLink(
+		std::string vertex_source, std::string fragment_source,
+		GLuint& shader_program, GLuint& vertex_shader, GLuint& fragment_shader, GLFWwindow* window);
+
+	static void loadshaders();
+	static std::map<std::string, std::string> shaderLibs;
+
+public:
+
+	static GLuint genShaderProgram(GLFWwindow* window, std::string vertexshader, std::string fragmentshdaer);
+};
 
 class GLFrameBuffer {
 
@@ -72,20 +90,6 @@ public:
 	glm::mat4 Model;
 
 	//---------------------following method implement in ImguiOpeGL3App_gl.cpp
-
-	// opengl functions
-	static bool check_shader_compile_status(GLuint obj);
-	static bool check_program_link_status(GLuint obj);
-
-	// opengl render pointcloud 
-	static GLuint compileAndLink(
-		std::string vertex_source, std::string fragment_source,
-		GLuint& shader_program, GLuint& vertex_shader, GLuint& fragment_shader, GLFWwindow* window);
-
-	static GLuint genPointcloudShader(GLFWwindow* window);
-	static GLuint genTextureShader(GLFWwindow* window);
-	static GLuint genprojectShader(GLFWwindow* window);
-	static GLuint genprojectTextureShader(GLFWwindow* window, bool renderInworld);
 
 	static void setTexture(GLuint& image,const unsigned char* vertexData, int width, int height);
 	

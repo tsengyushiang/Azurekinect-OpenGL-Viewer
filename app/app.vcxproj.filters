@@ -116,6 +116,9 @@
     <ClCompile Include="src\imgui\GLFrameBuffer.cpp">
       <Filter>來源檔案\imgui+opengl3</Filter>
     </ClCompile>
+    <ClCompile Include="src\imgui\GLShader.cpp">
+      <Filter>來源檔案\imgui+opengl3</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">

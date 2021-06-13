@@ -681,11 +681,11 @@ public:
 	}
 
 	void initGL() override {
-		shader_program = ImguiOpeGL3App::genPointcloudShader(this->window);
-		texture_shader_program = ImguiOpeGL3App::genTextureShader(this->window);
-		project_shader_program = ImguiOpeGL3App::genprojectShader(this->window);
-		projectTextre_shader_program = ImguiOpeGL3App::genprojectTextureShader(this->window,true);
-		screen_projectTextre_shader_program = ImguiOpeGL3App::genprojectTextureShader(this->window,false);
+		shader_program = GLShader::genShaderProgram(this->window, "vertexcolor.vs", "vertexcolor.fs");
+		texture_shader_program = GLShader::genShaderProgram(this->window, "texture.vs", "texture.fs");
+		project_shader_program = GLShader::genShaderProgram(this->window,"projectPointcloud.vs", "projectPointcloud.fs");
+		projectTextre_shader_program = GLShader::genShaderProgram(this->window,"vertexcolor.vs","projectTexture.fs");
+		screen_projectTextre_shader_program = GLShader::genShaderProgram(this->window,"projectOnScreen.vs","projectTexture.fs");
 		glGenVertexArrays(1, &axisVao);
 		glGenBuffers(1, &axisVbo);
 
