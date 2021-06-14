@@ -21,7 +21,7 @@ uniform sampler2D color[MAXCAM];
 uniform sampler2D depthtest[MAXCAM];
 uniform float count;
 
-uniform float index;
+uniform float overlapWeights[MAXCAM];
 uniform float bias;
 
 vec3 projectUv(
@@ -43,7 +43,8 @@ vec3 projectUv(
 }
 
 void main() {
-    vec4 accumColor = vec4(0,0,0,1.0);
+    vec4 potentialColor[MAXCAM];
+    int visibleIndex[MAXCAM];
     int visibleCount = 0 ;
 
     for(int i=0;i<count;i++){
@@ -61,16 +62,29 @@ void main() {
         );
         float depth = texture(depthtest[i], uv.xy).x * far[i];
         if((uv.z-depth)>bias){
-            //FragColor = vec4(0.0,0.0,0.0,1.0);
+            
         }else{
-            accumColor += texture(color[i], uv.xy);
-            visibleCount++;
+            potentialColor[i] = texture(color[i], uv.xy);
+            visibleIndex[visibleCount++] = i;
         }
     }
-    if(visibleCount>0){
-        FragColor = accumColor/visibleCount;
-    }else{
+    if(visibleCount==0){
+        // invisible area to all camera
         FragColor = vec4(0.0,0.0,0.0,1.0);
+    }else {
+        // apply weights to blend texture
+        
+        vec4 accumColor = vec4(0.0,0.0,0.0,0.0);
+        float weightTotal = 0;
+        for(int i=0;i<visibleCount;i++){
+            int index = visibleIndex[i];
+            float weight = overlapWeights[index];
+
+            accumColor += potentialColor[index]*weight;
+            weightTotal += weight;
+        }
+
+        FragColor = accumColor/weightTotal;
     }
 }
 

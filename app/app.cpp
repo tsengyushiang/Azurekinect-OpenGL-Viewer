@@ -246,6 +246,9 @@ public :
 
 	CudaGLDepth2PlaneMesh planemesh;
 
+	// project texture weight
+	float weight = 1.0;
+
 	// project depthbuffer
 	GLFrameBuffer framebuffer;
 
@@ -353,11 +356,13 @@ class RealsenseDepthSythesisApp :public ImguiOpeGL3App {
 
 	float planeMeshThreshold=1;
 
-	float projectiveTextureIndex = 0;
 	float projectDepthBias = 5e-3;
+	bool calculatDeviceWeights=false;
 
 	GLFrameBuffer* virtualmeshview;
 	GLFrameBuffer* virtualmeshview2;
+	GLFrameBuffer* virtualmeshview3;
+
 public:
 	RealsenseDepthSythesisApp():ImguiOpeGL3App(){
 		serials = RealsenseDevice::getAllDeviceSerialNumber(ctx);
@@ -390,8 +395,18 @@ public:
 
 		// projective texture params
 		{
-			ImGui::Begin("Projective Texture index");			
-			ImGui::SliderFloat("projectiveTextureIndex", &projectiveTextureIndex, 0, realsenses.size());
+			ImGui::Begin("Texture :");
+			ImGui::Text("Weights:");
+			if (ImGui::Button("ResetWeight")) {
+				for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
+					device->weight = 1.0;
+				}
+			}
+			ImGui::SameLine();
+			ImGui::Checkbox("calculatDeviceWeights", &calculatDeviceWeights);
+			for (auto device : realsenses) {
+				ImGui::Text("%s - %f", device.camera->serial, device.weight);
+			}
 			ImGui::SliderFloat("projectDepthBias", &projectDepthBias, 1e-3, 10e-3);
 			ImGui::End();
 		}
@@ -571,6 +586,7 @@ public:
 
 		virtualmeshview = new GLFrameBuffer(1280, 720);
 		virtualmeshview2 = new GLFrameBuffer(1280, 720);
+		virtualmeshview3 = new GLFrameBuffer(1280, 720);
 	}
 
 	void collectCalibratePoints() {
@@ -742,8 +758,8 @@ public:
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		ImguiOpeGL3App::render(devicemvp, pointsize, shader_program, vao, 3 * 4, GL_TRIANGLES);
 
-		renderScreenViewport(virtualcam->framebuffer.depthBuffer, glm::vec2(-0.75, -0.75), virtualcam->color);
-		renderScreenViewport(virtualcam->framebuffer.texColorBuffer, glm::vec2(-0.25, -0.75), virtualcam->color);
+		renderScreenViewport(virtualcam->framebuffer.depthBuffer, glm::vec2(-0.25, -0.75), virtualcam->color);
+		renderScreenViewport(virtualcam->framebuffer.texColorBuffer, glm::vec2(-0.75, -0.75), virtualcam->color);
 		rendervirtualMesh(virtualcam,false,false);
 	}
 
@@ -814,6 +830,7 @@ public:
 					"ppy" + indexTostring(deviceIndex),
 					"near" + indexTostring(deviceIndex),
 					"far" + indexTostring(deviceIndex),
+					"overlapWeights" + indexTostring(deviceIndex)
 			};
 			float values[] = {
 				device->camera->width,
@@ -823,15 +840,16 @@ public:
 				device->camera->intri.ppx,
 				device->camera->intri.ppy,
 				0,
-				device->camera->farPlane
+				device->camera->farPlane,
+				device->weight
 			};
-			ImguiOpeGL3App::setUniformFloats(shader, floatnames, values, 8);
+			ImguiOpeGL3App::setUniformFloats(shader, floatnames, values, 9);
 			deviceIndex++;
 		}
 		ImguiOpeGL3App::activateTextures(shader, texNames, texturs, deviceIndex * 2);
-		std::string indexName[] = { "count","index","bias" };
-		float idx[] = { realsenses.size(),projectiveTextureIndex,projectDepthBias };
-		ImguiOpeGL3App::setUniformFloats(shader, indexName, idx, 3);
+		std::string indexName[] = { "count","bias"};
+		float idx[] = { realsenses.size(),projectDepthBias};
+		ImguiOpeGL3App::setUniformFloats(shader, indexName, idx, 2);
 		virtualcam->renderRealsenseCudaMesh(devicemvp, shader);
 	}
 	
@@ -897,6 +915,37 @@ public:
 		ImguiOpeGL3App::render(deviceMVP, pointsize, texture_shader_program, device->camIconVao, 3 * 4, GL_TRIANGLES);
 	}
 	
+	// calculate weight depend on camera position
+	void calNewDeviceWeight() {
+		if (!calculatDeviceWeights)return;
+
+		glm::mat4 vmodelMat = virtualcam->getModelMat(lookAtPoint);
+		glm::vec3 virtualviewPosition = glm::vec3(
+			vmodelMat[3][0],
+			vmodelMat[3][1],
+			vmodelMat[3][2]
+		);
+
+		int nearestDeviceIndex=-1;
+		float distance = 99999;
+		for (int i = 0; i < realsenses.size();i++) {
+			auto device = realsenses[i];
+			glm::vec3 devicePosition = glm::vec3(
+				device.camera->modelMat[3][0],
+				device.camera->modelMat[3][1],
+				device.camera->modelMat[3][2]
+			);
+			float d = glm::distance(virtualviewPosition, devicePosition);
+			if (d < distance ) {
+				distance = d;
+				nearestDeviceIndex = i;
+			}
+		}
+		for (int i = 0; i < realsenses.size(); i++) {
+			realsenses[i].weight = (i== nearestDeviceIndex)? 99:1;
+		}
+	}
+
 	// render realsense mesh on framebuffer
 	void framebufferRender() override {
 		for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
@@ -908,37 +957,53 @@ public:
 			device->updateMeshwithCUDA(planeMeshThreshold);
 		}
 
-		auto renderForwardWarppedDepth = [this]() {
-			glm::mat4 m = glm::inverse(virtualcam->getModelMat(lookAtPoint));
-			std::string uniformNames[] = {
-				"w",
-				"h",
-				"fx",
-				"fy",
-				"ppx",
-				"ppy",
-				"near",
-				"far",
-			};
-			float values[] = {
-				virtualcam->w,
-				virtualcam->h,
-				virtualcam->fx,
-				virtualcam->fy,
-				virtualcam->ppx,
-				virtualcam->ppy,
-				virtualcam->nearplane,
-				virtualcam->farplane
-			};
-			ImguiOpeGL3App::setUniformFloats(project_shader_program, uniformNames, values, 8);
-			for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
-				if (device->render2Virtualview) {
-					device->renderRealsenseCudaMesh(m, project_shader_program);
+		auto renderForwardWarppedDepth = [this](bool renderColor) {
+			return [this, renderColor]() {
+				glm::mat4 m = glm::inverse(virtualcam->getModelMat(lookAtPoint));
+				std::string uniformNames[] = {
+					"w",
+					"h",
+					"fx",
+					"fy",
+					"ppx",
+					"ppy",
+					"near",
+					"far",
+				};
+				float values[] = {
+					virtualcam->w,
+					virtualcam->h,
+					virtualcam->fx,
+					virtualcam->fy,
+					virtualcam->ppx,
+					virtualcam->ppy,
+					virtualcam->nearplane,
+					virtualcam->farplane
+				};
+				ImguiOpeGL3App::setUniformFloats(project_shader_program, uniformNames, values, 8);
+				for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
+					if (device->render2Virtualview) {
+						std::string colorUniforms[] = {
+						"renderIndexColor",
+						"index_r",
+						"index_g",
+						"index_b"
+						};
+						float colorValues[] = {
+							renderColor? 1.0:0.0,
+							device->color.x,
+							device->color.y,
+							device->color.z,
+						};
+						ImguiOpeGL3App::setUniformFloats(project_shader_program, colorUniforms, colorValues, 4);
+						device->renderRealsenseCudaMesh(m, project_shader_program);
+					}
 				}
-			}
-			virtualcam->updateMeshwithCUDA();
+			};
 		};
-		virtualcam->framebuffer.render(renderForwardWarppedDepth);
+		virtualcam->framebuffer.render(renderForwardWarppedDepth(false));
+		virtualmeshview3->render(renderForwardWarppedDepth(true));
+		virtualcam->updateMeshwithCUDA();
 
 		//render project depth
 		for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
@@ -985,6 +1050,7 @@ public:
 	}
 	
 	void mainloop() override {
+		calNewDeviceWeight();
 
 		glm::mat4 mvp = Projection * View * Model;
 
@@ -1010,6 +1076,7 @@ public:
 		renderVirtualCamera(virtualcam);
 		renderScreenViewport(virtualmeshview->texColorBuffer, glm::vec2(0.75, -0.75), virtualcam->color);
 		renderScreenViewport(virtualmeshview2->texColorBuffer, glm::vec2(0.25, -0.75), virtualcam->color);
+		renderScreenViewport(virtualmeshview3->texColorBuffer, glm::vec2(-0.75, -0.25), virtualcam->color);
 
 		if (calibrator != nullptr) {
 			calibrator->render(mvp, shader_program);
