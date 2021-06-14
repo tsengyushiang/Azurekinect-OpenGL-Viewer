@@ -105,7 +105,7 @@ public:
 	//helper shape
 	static void genCameraHelper(GLuint& vao, GLuint& vbo, 
 		float width, float height, float ppx, float ppy, float fx, float fy, 
-		glm::ivec3 color, float size,bool isPlane);
+		glm::vec3 color, float size,bool isPlane);
 	static void genOrigionAxis(GLuint& vao, GLuint& vbo);
 
 };

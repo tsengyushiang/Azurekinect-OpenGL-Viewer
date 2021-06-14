@@ -3,7 +3,7 @@
 void ImguiOpeGL3App::genCameraHelper(
 	GLuint& vao, GLuint& vbo,
 	float width,float height,float ppx, float ppy, float fx, float fy, // camera intrinsic,extrinsic 
-	glm::ivec3 color,float size,bool isPlane // size and color
+	glm::vec3 color,float size,bool isPlane // size and color
 	) 
 {
 	std::vector<glm::vec2> uv = {
