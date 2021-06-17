@@ -201,6 +201,9 @@
     <None Include="src\imgui\shaders\projectOnScreen.vs">
       <Filter>來源檔案\imgui+opengl3\shaders</Filter>
     </None>
+    <None Include="src\imgui\shaders\textureSynthesis.fs">
+      <Filter>來源檔案\imgui+opengl3\shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="src\cuda\cudaUtils.cu">

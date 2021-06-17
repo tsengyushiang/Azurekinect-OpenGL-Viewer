@@ -202,6 +202,7 @@
     <None Include="src\imgui\shaders\projectTexture.fs" />
     <None Include="src\imgui\shaders\texture.fs" />
     <None Include="src\imgui\shaders\texture.vs" />
+    <None Include="src\imgui\shaders\textureSynthesis.fs" />
     <None Include="src\imgui\shaders\vertexcolor.fs" />
     <None Include="src\imgui\shaders\vertexcolor.vs" />
   </ItemGroup>

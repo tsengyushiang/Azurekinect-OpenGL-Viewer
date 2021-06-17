@@ -27,6 +27,10 @@ void GLShader::loadshaders() {
     shaderLibs["texture.fs"] =
 #include "shaders/texture.fs"
         ;
+        
+    shaderLibs["textureSynthesis.fs"] =
+#include "shaders/textureSynthesis.fs"
+        ;
 
     shaderLibs["vertexcolor.vs"] =
 #include "shaders/vertexcolor.vs"

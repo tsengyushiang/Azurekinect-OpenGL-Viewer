@@ -113,7 +113,7 @@ void ImguiOpeGL3App::initImguiOpenGL3(int width, int height) {
 
     glEnable(GL_DEPTH_TEST);
     //glEnable(GL_CULL_FACE);
-    //glCullFace(GL_BACK);
+    //glCullFace(GL_FRONT);
     initGL();
 
     // Our state
@@ -126,8 +126,8 @@ void ImguiOpeGL3App::initImguiOpenGL3(int width, int height) {
         framebufferRender();
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
         int display_w, display_h;
         glfwGetFramebufferSize(window, &display_w, &display_h);
@@ -163,9 +163,9 @@ void ImguiOpeGL3App::initImguiOpenGL3(int width, int height) {
             ImGui::Checkbox("isVertical", &camVertical);
             ImGui::SliderFloat("fov", &fov, 30.0f,80.0f); 
             ImGui::SliderFloat("distance", &distance, distancemin, distanceMax);  
-            ImGui::SliderFloat("lookAt-X", &lookAtPoint.x, -10.0f, 10.0f);
-            ImGui::SliderFloat("lookAt-Y", &lookAtPoint.y, -10.0f, 10.0f);
-            ImGui::SliderFloat("lookAt-Z", &lookAtPoint.z, -10.0f, 10.0f);            
+            ImGui::SliderFloat("lookAt-X", &lookAtPoint.x, -5.0f, 5.0f);
+            ImGui::SliderFloat("lookAt-Y", &lookAtPoint.y, -5.0f, 5.0f);
+            ImGui::SliderFloat("lookAt-Z", &lookAtPoint.z, -5.0f, 5.0f);            
 
             ImGui::Text("Mouse dragging : ");
             ImGui::SliderFloat("autoRotateSpeed", &autoRotateSpeed, 0.0, 1e-1);

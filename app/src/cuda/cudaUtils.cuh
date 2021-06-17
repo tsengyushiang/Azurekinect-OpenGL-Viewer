@@ -9,6 +9,7 @@ public:
 		unsigned short* depthRaw, unsigned char* colorRaw,
 		unsigned int w, unsigned int h,
 		float fx, float fy, float ppx, float ppy, float depthScale, float depthThreshold
+		,int DilationErosionIteration=0
 	);
 	static void depthMapTriangulate(
 		struct cudaGraphicsResource** vbo_resource, struct cudaGraphicsResource** ibo_resource,

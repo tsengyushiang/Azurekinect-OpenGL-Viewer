@@ -42,17 +42,27 @@ __global__ void depthMapTriangulate_kernel(
 
     da = glm::normalize(p1 - p0);
     db = glm::normalize(p2 - p0);
-    angle0 = glm::acos(glm::dot(da, db));
+    //angle0 = glm::acos(glm::dot(da, db));
+    angle0 = glm::abs(p1.z-p0.z);
 
     da = glm::normalize(p0 - p1);
     db = glm::normalize(p2 - p1);
-    angle1 = glm::acos(glm::dot(da, db));
+    //angle1 = glm::acos(glm::dot(da, db));
+    angle1 = glm::abs(p2.z - p1.z);
 
     da = glm::normalize(p0 - p2);
     db = glm::normalize(p1 - p2);
-    angle2 = glm::acos(glm::dot(da, db));
+    //angle2 = glm::acos(glm::dot(da, db));
+    angle2 = glm::abs(p0.z - p2.z);
 
-    if (angle0 > threshold && angle1 > threshold && angle2 > threshold) {
+    if (angle0 < threshold && 
+        angle1 < threshold && 
+        angle2 < threshold &&
+        p0.z > 0 &&
+        p1.z > 0 && 
+        p2.z > 0
+      ) 
+    {
         int i = atomicAdd(counter, 1);
         indices[(i) * 3 + 0] = index0;
         indices[(i) * 3 + 1] = index2;
@@ -61,16 +71,27 @@ __global__ void depthMapTriangulate_kernel(
 
     da = glm::normalize(p2 - p1);
     db = glm::normalize(p3 - p1);
-    angle0 = glm::acos(glm::dot(da, db));
+    //angle0 = glm::acos(glm::dot(da, db));
+    angle0 = glm::abs(p2.z - p1.z);
 
     da = glm::normalize(p1 - p2);
     db = glm::normalize(p3 - p2);
-    angle1 = glm::acos(glm::dot(da, db));
+    //angle1 = glm::acos(glm::dot(da, db));
+    angle1 = glm::abs(p3.z - p2.z);
 
     da = glm::normalize(p1 - p3);
     db = glm::normalize(p2 - p3);
-    angle2 = glm::acos(glm::dot(da, db));
-    if (angle0 > threshold && angle1 > threshold && angle2 > threshold) {
+    //angle2 = glm::acos(glm::dot(da, db));
+    angle2 = glm::abs(p1.z - p3.z);
+
+    if (angle0 < threshold &&
+        angle1 < threshold &&
+        angle2 < threshold &&
+        p3.z > 0 &&
+        p1.z > 0 &&
+        p2.z > 0
+        )
+    {
         int i2 = atomicAdd(counter, 1);
         indices[(i2) * 3 + 0] = index1;
         indices[(i2) * 3 + 1] = index2;
