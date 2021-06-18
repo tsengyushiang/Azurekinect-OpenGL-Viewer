@@ -525,7 +525,7 @@ public:
 						device->save();
 					}
 				}
-				ImGui::SliderFloat("planeMeshThreshold", &planeMeshThreshold, -0.1f, 5.0f);
+				ImGui::SliderFloat("planeMeshThreshold", &planeMeshThreshold, -0.1f, 10.0f);
 				ImGui::SliderInt("dilationErosionIteration", &dilationErosionIteration, 0, 50);
 			}
 			// Running device
