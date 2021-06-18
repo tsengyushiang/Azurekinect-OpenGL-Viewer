@@ -525,8 +525,8 @@ public:
 						device->save();
 					}
 				}
-				ImGui::SliderFloat("planeMeshThreshold", &planeMeshThreshold, -1.0f, 15.0f);
-				ImGui::SliderInt("dilationErosionIteration", &dilationErosionIteration, 0, 15);
+				ImGui::SliderFloat("planeMeshThreshold", &planeMeshThreshold, -0.1f, 5.0f);
+				ImGui::SliderInt("dilationErosionIteration", &dilationErosionIteration, 0, 50);
 			}
 			// Running device
 			ImGui::Text("Running Realsense device :");
