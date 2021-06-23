@@ -42,6 +42,15 @@
     <Filter Include="來源檔案\json">
       <UniqueIdentifier>{e7cf0324-de5a-4dd3-9594-1ff786bdf9b1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="來源檔案\virtualcam">
+      <UniqueIdentifier>{e5717b43-c38e-4ccd-903a-9aa1b42ff13d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="來源檔案\ExtrinsicCalibrator">
+      <UniqueIdentifier>{3e997383-904a-485e-92d2-0c802e30ccd1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="來源檔案\CameraManager">
+      <UniqueIdentifier>{11cfae60-c91f-4f16-8888-33cebb9de818}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="app.cpp">
@@ -119,6 +128,21 @@
     <ClCompile Include="src\imgui\GLShader.cpp">
       <Filter>來源檔案\imgui+opengl3</Filter>
     </ClCompile>
+    <ClCompile Include="src\virtualcam\VirtualCam.cpp">
+      <Filter>來源檔案\virtualcam</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ExtrinsicCalibrator\ExtrinsicCalibrator.cpp">
+      <Filter>來源檔案\ExtrinsicCalibrator</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ExtrinsicCalibrator\CorrespondPointCollector.cpp">
+      <Filter>來源檔案\ExtrinsicCalibrator</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CameraManager\CameraGL.cpp">
+      <Filter>來源檔案\CameraManager</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CameraManager\CameraManager.cpp">
+      <Filter>來源檔案\CameraManager</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -175,6 +199,21 @@
     <ClInclude Include="src\realsnese\JsonRealsenseDevice.h">
       <Filter>來源檔案\realsense</Filter>
     </ClInclude>
+    <ClInclude Include="src\virtualcam\VirtualCam.h">
+      <Filter>來源檔案\virtualcam</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ExtrinsicCalibrator\ExtrinsicCalibrator.h">
+      <Filter>來源檔案\ExtrinsicCalibrator</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ExtrinsicCalibrator\CorrespondPointCollector.h">
+      <Filter>來源檔案\ExtrinsicCalibrator</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CameraManager\CameraGL.h">
+      <Filter>來源檔案\CameraManager</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CameraManager\CameraManager.h">
+      <Filter>來源檔案\CameraManager</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="src\imgui\shaders\vertexcolor.fs">
@@ -201,9 +240,6 @@
     <None Include="src\imgui\shaders\projectOnScreen.vs">
       <Filter>來源檔案\imgui+opengl3\shaders</Filter>
     </None>
-    <None Include="src\imgui\shaders\textureSynthesis.fs">
-      <Filter>來源檔案\imgui+opengl3\shaders</Filter>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="src\cuda\cudaUtils.cu">
@@ -213,6 +249,9 @@
       <Filter>來源檔案\cuda</Filter>
     </CudaCompile>
     <CudaCompile Include="src\cuda\depthMapTriangulate.cu">
+      <Filter>來源檔案\cuda</Filter>
+    </CudaCompile>
+    <CudaCompile Include="src\cuda\chromakeyBackgroundRemove.cu">
       <Filter>來源檔案\cuda</Filter>
     </CudaCompile>
   </ItemGroup>

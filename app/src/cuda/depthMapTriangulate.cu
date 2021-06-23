@@ -52,14 +52,7 @@ __global__ void depthMapTriangulate_kernel(
     db = glm::normalize(p1 - p2);
     angle2 = glm::acos(glm::dot(da, db));
 
-    if (angle0 > threshold && 
-        angle1 > threshold && 
-        angle2 > threshold &&
-        p0.z > 0 &&
-        p1.z > 0 && 
-        p2.z > 0
-      ) 
-    {
+    if (angle0 > threshold && angle1 > threshold && angle2 > threshold) {
         int i = atomicAdd(counter, 1);
         indices[(i) * 3 + 0] = index0;
         indices[(i) * 3 + 1] = index2;
@@ -77,15 +70,7 @@ __global__ void depthMapTriangulate_kernel(
     da = glm::normalize(p1 - p3);
     db = glm::normalize(p2 - p3);
     angle2 = glm::acos(glm::dot(da, db));
-
-    if (angle0 > threshold &&
-        angle1 > threshold &&
-        angle2 > threshold &&
-        p3.z > 0 &&
-        p1.z > 0 &&
-        p2.z > 0
-        )
-    {
+    if (angle0 > threshold && angle1 > threshold && angle2 > threshold) {
         int i2 = atomicAdd(counter, 1);
         indices[(i2) * 3 + 0] = index1;
         indices[(i2) * 3 + 1] = index2;

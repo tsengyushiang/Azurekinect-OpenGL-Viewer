@@ -13,6 +13,7 @@ public:
 	static void createBufferObject(GLuint* vbo, struct cudaGraphicsResource** vbo_res,unsigned int vbo_res_flags, unsigned int size, int type);
 	static void deleteVBO(GLuint* vbo, struct cudaGraphicsResource* vbo_res);
 	static void bindReadOnlyGLTextureforCuda(GLuint* tex_screen, struct cudaGraphicsResource* cuda_tex_screen_resource);
+	static void createCudaGLTexture(GLuint* textureID, cudaGraphicsResource_t* cudaResources, int w, int h);
 };
 
 class CudaGLDepth2PlaneMesh {

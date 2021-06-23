@@ -39,7 +39,7 @@ public:
 		std::string filename,
 		int& width, int& height,
 		float& fx, float& fy, float& ppx, float& ppy,
-		float& depthscale, uint16_t** depthmap, unsigned char** colormap
+		int& frameLength, float& depthscale, uint16_t** depthmap, unsigned char** colormap
 	);
 
 	static std::string cameraPoseFilename;
@@ -47,6 +47,14 @@ public:
 		std::vector<Jsonformat::CamPose>& poses
 	);
 	static void loadCameraPoses(
+		std::string filename,
 		std::vector<Jsonformat::CamPose>& poses
+	);
+
+	static void loadVirtualCam(
+		std::string filename,
+		std::vector<Jsonformat::CamPose>& poses,
+		int& width, int& height, float& farPlane,
+		float& fx, float& fy, float& ppx, float& ppy
 	);
 };

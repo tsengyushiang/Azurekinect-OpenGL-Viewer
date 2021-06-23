@@ -37,18 +37,18 @@ __global__ void dilation_kernel(unsigned short* depthRaw, unsigned short* result
     unsigned int index = y * w + x;
 
     unsigned int indexAround[ARROUNDPIXELCOUNT] = {
-        (y + 1)* w + x,
-        (y - 1)* w + x,
-        y* w + (x + 1),
-        y* w + (x - 1)
-    } ;
+        (y + 1) * w + x,
+        (y - 1) * w + x,
+        y * w + (x + 1),
+        y * w + (x - 1)
+    };
 
     result[index] = depthRaw[index];
 
     if (depthRaw[index] < HOLETHRESHOLD) {
         for (int i = 0; i < ARROUNDPIXELCOUNT; i++) {
             unsigned int neighbor = indexAround[i];
-            if (neighbor > 0 && neighbor < w * h) {                
+            if (neighbor > 0 && neighbor < w * h) {
                 if (depthRaw[neighbor] > HOLETHRESHOLD) {
                     result[index] = depthRaw[neighbor];
                     return;
@@ -57,7 +57,6 @@ __global__ void dilation_kernel(unsigned short* depthRaw, unsigned short* result
         }
     }
 }
-
 
 __global__ void depthMap2point_kernel(
     float* pos, 
@@ -96,37 +95,38 @@ void launch_kernel(float* pos,
     // execute the kernel
     dim3 block(8, 8, 1);
     dim3 grid(w / block.x, h / block.y, 1);
+    {
+        bool dstIstmp = true;
+        uint16_t* tmpDepthMap;
+        cudaMalloc((void**)&tmpDepthMap, w * h * sizeof(uint16_t));
 
-    bool dstIstmp = true;
-    uint16_t* tmpDepthMap;
-    cudaMalloc((void**)&tmpDepthMap, w * h * sizeof(uint16_t));
+        // dilation
+        for (int i = 0; i < DilationErosionIteration; i++) {
+            if (dstIstmp) {
+                dilation_kernel << < grid, block >> > (depthRaw, tmpDepthMap, w, h);
+            }
+            else {
+                dilation_kernel << < grid, block >> > (tmpDepthMap, depthRaw, w, h);
+            }
+            dstIstmp = !dstIstmp;
+        }
 
-    // dilation
-    for (int i = 0; i < DilationErosionIteration; i++) {
-        if (dstIstmp) {
-            dilation_kernel << < grid, block >> > (depthRaw, tmpDepthMap, w, h);
+        //erosion
+        for (int i = 0; i < DilationErosionIteration; i++) {
+            if (dstIstmp) {
+                erosion_kernel << < grid, block >> > (depthRaw, tmpDepthMap, w, h);
+            }
+            else {
+                erosion_kernel << < grid, block >> > (tmpDepthMap, depthRaw, w, h);
+            }
+            dstIstmp = !dstIstmp;
         }
-        else {
-            dilation_kernel << < grid, block >> > (tmpDepthMap, depthRaw, w, h);
+        if (!dstIstmp) {
+            cudaMemcpy(tmpDepthMap, depthRaw, w * h * sizeof(uint16_t), cudaMemcpyDeviceToDevice);
         }
-        dstIstmp = !dstIstmp;
+        cudaFree(tmpDepthMap);
     }
-
-    //erosion
-    for (int i = 0; i < DilationErosionIteration; i++) {
-        if (dstIstmp) {
-            erosion_kernel << < grid, block >> > (depthRaw, tmpDepthMap, w, h);
-        }
-        else {
-            erosion_kernel << < grid, block >> > (tmpDepthMap, depthRaw, w, h);
-        }
-        dstIstmp = !dstIstmp;
-    }
-    if (!dstIstmp) {
-        cudaMemcpy(tmpDepthMap, depthRaw, w * h * sizeof(uint16_t), cudaMemcpyDeviceToDevice);
-    }
-    cudaFree(tmpDepthMap);
-    depthMap2point_kernel << < grid, block >> > (pos, depthRaw, colorRaw, w, h, fx, fy, ppx, ppy, depthScale, depthThreshold); 
+    depthMap2point_kernel << < grid, block >> > (pos, depthRaw, colorRaw, w, h, fx, fy, ppx, ppy, depthScale, depthThreshold);
 }
 
 void CudaAlogrithm::depthMap2point(struct cudaGraphicsResource** vbo_resource,
