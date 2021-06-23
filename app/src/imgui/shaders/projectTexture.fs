@@ -4,7 +4,7 @@ R"(
 in vec4 fcolor;
 in vec4 pos;
 
-#define MAXCAM 5
+#define MAXCAM 10
 
 layout(location = 0) out vec4 FragColor;
 
@@ -65,7 +65,9 @@ void main() {
             
         }else{
             potentialColor[i] = texture(color[i], uv.xy);
-            visibleIndex[visibleCount++] = i;
+            if(potentialColor[i].a>0){
+                visibleIndex[visibleCount++] = i;
+            }
         }
     }
     if(visibleCount==0){

@@ -54,6 +54,8 @@ public :
     int dwidth = 1280;
     int dheight = 720;
 
+    int frameLength;
+    int currentFrame;
     uint16_t* p_depth_frame;
     uchar* p_depth_color_frame;
     uchar* p_color_frame;

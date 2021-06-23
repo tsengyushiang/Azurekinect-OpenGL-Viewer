@@ -1,6 +1,63 @@
 ﻿#include "cudaUtils.cuh"
 #include <stdio.h>
 
+#define ARROUNDPIXELCOUNT 4
+#define HOLETHRESHOLD 1e-3
+
+__global__ void erosion_kernel(unsigned short* depthRaw, unsigned short* result, unsigned int w, unsigned int h) {
+    unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
+    unsigned int index = y * w + x;
+
+    unsigned int indexAround[ARROUNDPIXELCOUNT] = {
+        (y + 1) * w + x,
+        (y - 1) * w + x,
+        y * w + (x + 1),
+        y * w + (x - 1)
+    };
+
+    result[index] = depthRaw[index];
+
+    if (depthRaw[index] > HOLETHRESHOLD) {
+        for (int i = 0; i < ARROUNDPIXELCOUNT; i++) {
+            unsigned int neighbor = indexAround[i];
+            if (neighbor > 0 && neighbor < w * h) {
+                if (depthRaw[neighbor] < HOLETHRESHOLD) {
+                    result[index] = 0;
+                    return;
+                }
+            }
+        }
+    }
+}
+
+__global__ void dilation_kernel(unsigned short* depthRaw, unsigned short* result, unsigned int w, unsigned int h) {
+    unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
+    unsigned int index = y * w + x;
+
+    unsigned int indexAround[ARROUNDPIXELCOUNT] = {
+        (y + 1) * w + x,
+        (y - 1) * w + x,
+        y * w + (x + 1),
+        y * w + (x - 1)
+    };
+
+    result[index] = depthRaw[index];
+
+    if (depthRaw[index] < HOLETHRESHOLD) {
+        for (int i = 0; i < ARROUNDPIXELCOUNT; i++) {
+            unsigned int neighbor = indexAround[i];
+            if (neighbor > 0 && neighbor < w * h) {
+                if (depthRaw[neighbor] > HOLETHRESHOLD) {
+                    result[index] = depthRaw[neighbor];
+                    return;
+                }
+            }
+        }
+    }
+}
+
 __global__ void depthMap2point_kernel(
     float* pos, 
     unsigned short* depthRaw, unsigned char* colorRaw,
@@ -33,18 +90,49 @@ __global__ void depthMap2point_kernel(
 void launch_kernel(float* pos, 
     unsigned short* depthRaw, unsigned char* colorRaw,
     unsigned int w, unsigned int h,
-    float fx, float fy, float ppx, float ppy, float depthScale, float depthThreshold)
+    float fx, float fy, float ppx, float ppy, float depthScale, float depthThreshold,int DilationErosionIteration)
 {
     // execute the kernel
     dim3 block(8, 8, 1);
     dim3 grid(w / block.x, h / block.y, 1);
+    {
+        bool dstIstmp = true;
+        uint16_t* tmpDepthMap;
+        cudaMalloc((void**)&tmpDepthMap, w * h * sizeof(uint16_t));
+
+        // dilation
+        for (int i = 0; i < DilationErosionIteration; i++) {
+            if (dstIstmp) {
+                dilation_kernel << < grid, block >> > (depthRaw, tmpDepthMap, w, h);
+            }
+            else {
+                dilation_kernel << < grid, block >> > (tmpDepthMap, depthRaw, w, h);
+            }
+            dstIstmp = !dstIstmp;
+        }
+
+        //erosion
+        for (int i = 0; i < DilationErosionIteration; i++) {
+            if (dstIstmp) {
+                erosion_kernel << < grid, block >> > (depthRaw, tmpDepthMap, w, h);
+            }
+            else {
+                erosion_kernel << < grid, block >> > (tmpDepthMap, depthRaw, w, h);
+            }
+            dstIstmp = !dstIstmp;
+        }
+        if (!dstIstmp) {
+            cudaMemcpy(tmpDepthMap, depthRaw, w * h * sizeof(uint16_t), cudaMemcpyDeviceToDevice);
+        }
+        cudaFree(tmpDepthMap);
+    }
     depthMap2point_kernel << < grid, block >> > (pos, depthRaw, colorRaw, w, h, fx, fy, ppx, ppy, depthScale, depthThreshold);
 }
 
 void CudaAlogrithm::depthMap2point(struct cudaGraphicsResource** vbo_resource,
     unsigned short* depthRaw, unsigned char* colorRaw,
     unsigned int w,unsigned int h,
-    float fx,float fy,float ppx,float ppy, float depthScale, float depthThreshold)
+    float fx,float fy,float ppx,float ppy, float depthScale, float depthThreshold, int DilationErosionIteration)
 {
     // map OpenGL buffer object for writing from CUDA
     float* dptr;
@@ -52,7 +140,7 @@ void CudaAlogrithm::depthMap2point(struct cudaGraphicsResource** vbo_resource,
     size_t num_bytes;
     cudaGraphicsResourceGetMappedPointer((void**)&dptr, &num_bytes, *vbo_resource);
 
-    launch_kernel(dptr, depthRaw, colorRaw, w, h, fx, fy, ppx, ppy, depthScale, depthThreshold);
+    launch_kernel(dptr, depthRaw, colorRaw, w, h, fx, fy, ppx, ppy, depthScale, depthThreshold, DilationErosionIteration);
 
     // unmap buffer object
     cudaGraphicsUnmapResources(1, vbo_resource, 0);

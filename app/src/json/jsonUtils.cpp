@@ -2,7 +2,7 @@
 
 template<typename T>
 void Jsonformat::to_json(json& j, const T& p) {
-	j = json{ {"id", p.id}, {"extrinsic", p.extrinsic}};
+	j = json{ {"id", p.id}, {"extrinsic", p.extrinsic} };
 }
 
 template<typename T>
@@ -13,14 +13,43 @@ void Jsonformat::from_json(const json& j, T& p) {
 
 std::string JsonUtils::cameraPoseFilename = "CameraExtrinsics";
 void JsonUtils::loadCameraPoses(
+	std::string filename,
 	std::vector<Jsonformat::CamPose>& poses
 ) {
 	// write prettified JSON to another file
-	std::ifstream i(cameraPoseFilename + ".json");
+	std::ifstream i(filename + ".json");
 	json j;
 	i >> j;
+	j = j["camExtrinsics"];
 
 	for (json cam : j) {
+		poses.push_back(cam);
+	}
+
+	i.close();
+}
+
+void JsonUtils::loadVirtualCam(
+	std::string filename,
+	std::vector<Jsonformat::CamPose>& poses,
+	int& width, int& height, float& farPlane,
+	float& fx, float& fy, float& ppx, float& ppy
+) {
+	// write prettified JSON to another file
+	std::ifstream i(filename + ".json");
+	json j;
+	i >> j;
+	width = j["width"];
+	height = j["height"];
+	farPlane = j["farPlane"];
+	fx = j["fx"];
+	fy = j["fy"];
+	ppx = j["ppx"];
+	ppy = j["ppy"];
+
+	json extrinsics = j["camExtrinsics"];
+
+	for (json cam : extrinsics) {
 		poses.push_back(cam);
 	}
 
@@ -45,9 +74,9 @@ void JsonUtils::saveCameraPoses(
 void JsonUtils::loadRealsenseJson(
 	std::string filename,
 	int& width, int& height,
-	float& fx, float& fy, float& ppx, float& ppy,
+	float& fx, float& fy, float& ppx, float& ppy, int& frameLength,
 	float& depthscale, uint16_t** depthmap, unsigned char** colormap
-){
+) {
 	std::ifstream i(filename + ".json");
 	json j;
 	i >> j;
@@ -59,16 +88,23 @@ void JsonUtils::loadRealsenseJson(
 	fy = j["fy"];
 	ppx = j["ppx"];
 	ppy = j["ppy"];
-	
-	*depthmap = (uint16_t*)calloc(width * height, sizeof(uint16_t));
-	*colormap = (unsigned char*)calloc(3 * width * height, sizeof(unsigned char));
+	frameLength = j["frameLength"];
 
-	for (int i = 0; i < width * height; i++) {
-		(*depthmap)[i] = j["depthmap_raw"][i];
-	}	
-	
-	for (int i = 0; i < 3*width * height; i++) {
-		(*colormap)[i] = j["colormap_raw"][i];
+	*depthmap = (uint16_t*)calloc(width * height * frameLength, sizeof(uint16_t));
+	*colormap = (unsigned char*)calloc(3 * width * height * frameLength, sizeof(unsigned char));
+
+	for (int frame = 0; frame < frameLength; frame++) {
+
+		std::cout << "frame" << frame << std::endl;
+		for (int i = 0; i < width * height; i++) {
+			int index = frame * width * height + i;
+			(*depthmap)[index] = j["depthmap_raw"][index];
+		}
+
+		for (int i = 0; i < 3 * width * height; i++) {
+			int index = frame * width * height * 3 + i;
+			(*colormap)[index] = j["colormap_raw"][index];
+		}
 	}
 
 	i.close();
@@ -78,8 +114,8 @@ void JsonUtils::saveRealsenseJson(
 	std::string filename,
 	int width, int height,
 	float fx, float fy, float ppx, float ppy,
-	float depthscale, const unsigned short* depthmap,const unsigned char* colormap
-){
+	float depthscale, const unsigned short* depthmap, const unsigned char* colormap
+) {
 	std::vector<float> depthmap_raw;
 	std::vector<unsigned char> colormap_raw;
 
@@ -103,7 +139,7 @@ void JsonUtils::saveRealsenseJson(
 	};
 
 	// write prettified JSON to another file
-	std::ofstream o(filename+".json");
+	std::ofstream o(filename + ".json");
 	o << std::setw(4) << j << std::endl;
 	o.close();
 }
