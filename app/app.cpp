@@ -8,7 +8,7 @@
 #include "src/ExtrinsicCalibrator/ExtrinsicCalibrator.h"
 #include "src/CameraManager/CameraManager.h"
 
-#define MAXTEXTURE 8
+#define MAXTEXTURE 16
 
 class RealsenseDepthSythesisApp :public ImguiOpeGL3App {
 	GLuint vao, vbo;
@@ -28,6 +28,8 @@ class RealsenseDepthSythesisApp :public ImguiOpeGL3App {
 	ImVec4 chromaKeyColor;
 	float chromaKeyColorThreshold=2;
 	int depthDilationIteration = 0;
+	bool autoDepthDilation = true;
+	int maskErosion = 0;
 	float planeMeshThreshold=1;
 
 	float projectDepthBias = 3e-2;
@@ -54,6 +56,8 @@ public:
 			ImGui::Text("Preprocessing:");
 			ImGui::ColorEdit3("chromaKeycolor", (float*)&chromaKeyColor); // Edit 3 floats representing a color
 			ImGui::SliderFloat("chromaKeyColorThreshold", &chromaKeyColorThreshold,0,5); // Edit 3 floats representing a color
+			ImGui::SliderInt("MaskErosion", &maskErosion, 0, 50);
+			ImGui::Checkbox("AutoDepthDilation", &autoDepthDilation);
 			ImGui::SliderInt("DepthDilation", &depthDilationIteration, 0, 50);
 			
 			ImGui::Text("Reconstruct:");			
@@ -186,7 +190,7 @@ public:
 			texNames[deviceIndex * 2] = "color" + indexTostring(deviceIndex);
 			texNames[deviceIndex * 2 + 1] = "depthtest" + indexTostring(deviceIndex);
 
-			texturs[deviceIndex * 2] = drawIndex ? device->cImage : device->image;
+			texturs[deviceIndex * 2] = drawIndex ? device->representColorImage : device->image;
 			texturs[deviceIndex * 2 + 1] = device->framebuffer.depthBuffer;
 
 			std::string floatnames[] = {
@@ -253,7 +257,7 @@ public:
 		camManager.deleteIdleCam();
 
 		camManager.getAllDevice([this](auto device) {
-			device->updateImages(chromaKeyColor, chromaKeyColorThreshold, curFrame);
+			device->updateImages(chromaKeyColor, chromaKeyColorThreshold, maskErosion, autoDepthDilation, curFrame);
 		});
 
 		camManager.getFowardDepthWarppingDevice([this](auto device) {

@@ -254,5 +254,11 @@
     <CudaCompile Include="src\cuda\chromakeyBackgroundRemove.cu">
       <Filter>來源檔案\cuda</Filter>
     </CudaCompile>
+    <CudaCompile Include="src\cuda\maskErosion.cu">
+      <Filter>來源檔案\cuda</Filter>
+    </CudaCompile>
+    <CudaCompile Include="src\cuda\fillDepthWithDilation.cu">
+      <Filter>來源檔案\cuda</Filter>
+    </CudaCompile>
   </ItemGroup>
 </Project>

@@ -4,7 +4,7 @@ R"(
 in vec4 fcolor;
 in vec4 pos;
 
-#define MAXCAM 10
+#define MAXCAM 16
 
 layout(location = 0) out vec4 FragColor;
 

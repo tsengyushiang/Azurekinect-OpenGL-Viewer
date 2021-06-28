@@ -42,3 +42,8 @@ void CudaOpenGL::createCudaGLTexture(GLuint *textureID, cudaGraphicsResource_t* 
 
     cudaGraphicsGLRegisterImage(cudaResources, *textureID, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard);
 }
+
+void CudaOpenGL::deleteCudaGLTexture(GLuint* textureID, cudaGraphicsResource_t* cudaResources) {
+    cudaGraphicsUnregisterResource(*cudaResources);
+    glDeleteTextures(1, textureID);
+}

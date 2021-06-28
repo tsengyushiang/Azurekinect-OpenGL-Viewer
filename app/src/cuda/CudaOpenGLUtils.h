@@ -14,6 +14,7 @@ public:
 	static void deleteVBO(GLuint* vbo, struct cudaGraphicsResource* vbo_res);
 	static void bindReadOnlyGLTextureforCuda(GLuint* tex_screen, struct cudaGraphicsResource* cuda_tex_screen_resource);
 	static void createCudaGLTexture(GLuint* textureID, cudaGraphicsResource_t* cudaResources, int w, int h);
+	static void deleteCudaGLTexture(GLuint* textureID, cudaGraphicsResource_t* cudaResources);
 };
 
 class CudaGLDepth2PlaneMesh {

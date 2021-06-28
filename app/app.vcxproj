@@ -220,6 +220,8 @@
     <CudaCompile Include="src\cuda\cudaUtils.cu" />
     <CudaCompile Include="src\cuda\depthMap2pointcloud.cu" />
     <CudaCompile Include="src\cuda\depthMapTriangulate.cu" />
+    <CudaCompile Include="src\cuda\fillDepthWithDilation.cu" />
+    <CudaCompile Include="src\cuda\maskErosion.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

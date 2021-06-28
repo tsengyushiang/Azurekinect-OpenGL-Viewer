@@ -2,15 +2,21 @@
 
 CameraGL::CameraGL() :planemesh(1280, 720), framebuffer(1280, 720) {
 	camera = new RealsenseDevice();
-	glGenTextures(1, &cImage);	
 	CudaOpenGL::createCudaGLTexture(&image, &image_cuda, camera->width, camera->height);
+	CudaOpenGL::createCudaGLTexture(&representColorImage, &representColorImage_cuda, camera->width, camera->height);
 }
 void CameraGL::destory() {
-	glDeleteTextures(1, &cImage);
+	CudaOpenGL::deleteCudaGLTexture(&image, &image_cuda);
+	CudaOpenGL::deleteCudaGLTexture(&representColorImage, &representColorImage_cuda);
 
 	planemesh.destory();
 }
-void CameraGL::updateImages(ImVec4 chromaKeyColor,float chromaKeyColorThreshold, int curFrame) {
+void CameraGL::updateImages(
+	ImVec4 chromaKeyColor,float chromaKeyColorThreshold,
+	int maskErosionSize, bool autoDepthDilation,
+	int curFrame
+) 
+{
 		auto copyHost2Device = [this](const void* depthRaw, size_t depthSize, const void* colorRaw, size_t colorSize) {
 		cudaMemcpy(planemesh.cudaDepthData, depthRaw, depthSize, cudaMemcpyHostToDevice);
 		cudaMemcpy(planemesh.cudaColorData, colorRaw, colorSize, cudaMemcpyHostToDevice);
@@ -18,6 +24,7 @@ void CameraGL::updateImages(ImVec4 chromaKeyColor,float chromaKeyColorThreshold,
 	camera->currentFrame = curFrame;
 	camera->fetchframes(copyHost2Device);
 
+	// acutal texture
 	CudaAlogrithm::chromaKeyBackgroundRemove(&image_cuda, planemesh.cudaColorData, camera->width, camera->height,
 		glm::vec3(
 			chromaKeyColor.x * 255,
@@ -26,14 +33,31 @@ void CameraGL::updateImages(ImVec4 chromaKeyColor,float chromaKeyColorThreshold,
 		), chromaKeyColorThreshold
 	);
 
-	uchar c[] = { color.z * 255,color.y * 255 ,color.x * 255 };
-	ImguiOpeGL3App::setTexture(cImage, c, 1, 1);
+	CudaAlogrithm::maskErosion(&image_cuda, camera->width, camera->height, maskErosionSize);
+
+	if (autoDepthDilation) {
+		CudaAlogrithm::fillDepthWithDilation(&image_cuda, planemesh.cudaDepthData, camera->width, camera->height);
+	}
+
+	//// debug : index map for project coverage
+	CudaAlogrithm::chromaKeyBackgroundRemove(&representColorImage_cuda, planemesh.cudaColorData, camera->width, camera->height,
+		glm::vec3(
+			chromaKeyColor.x * 255,
+			chromaKeyColor.y * 255,
+			chromaKeyColor.z * 255
+		), chromaKeyColorThreshold,
+		glm::vec3(
+			color.x * 255,
+			color.y * 255,
+			color.z * 255
+		)
+	);
 }
 // pass realsense data to cuda and compute plane mesh and point cloud
 void CameraGL::updateMeshwithCUDA(float planeMeshThreshold, int depthDilationIterationCount) {
 	CudaAlogrithm::depthMap2point(
 		&planemesh.cuda_vbo_resource,
-		planemesh.cudaDepthData, planemesh.cudaColorData,
+		planemesh.cudaDepthData, &image_cuda,
 		camera->width, camera->height,
 		camera->intri.fx, camera->intri.fy, camera->intri.ppx, camera->intri.ppy,
 		camera->intri.depth_scale, camera->farPlane, depthDilationIterationCount);

@@ -14,10 +14,8 @@ public:
 
 	ImVec4 color;
 
-	GLuint image;
-	cudaGraphicsResource_t image_cuda;
-		
-	GLuint cImage;
+	GLuint image,representColorImage;
+	cudaGraphicsResource_t image_cuda, representColorImage_cuda;
 
 	CudaGLDepth2PlaneMesh planemesh;
 
@@ -31,7 +29,7 @@ public:
 	void destory();
 	void save();
 	void addui();
-	void updateImages(ImVec4 chromaKeyColor, float chromaKeyColorThreshold, int curFram);
+	void updateImages(ImVec4 chromaKeyColor, float chromaKeyColorThreshold, int maskErosionSize, bool autoDepthDilation, int curFram);
 	// pass realsense data to cuda and compute plane mesh and point cloud
 	void updateMeshwithCUDA(float planeMeshThreshold, int depthDilationIterationCounte);
 	
