@@ -10,7 +10,7 @@ void GLFrameBuffer::createFrameBuffer(
 
     glGenTextures(1, texColorBuffer);
     glBindTexture(GL_TEXTURE_2D, *texColorBuffer);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -46,18 +46,19 @@ GLFrameBuffer::GLFrameBuffer(int w,int h):
 void GLFrameBuffer::render(std::function<void()> callback) {
 
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // we're not using the stencil buffer now
-	glViewport(0, 0, width, height);
-	glEnable(GL_DEPTH_TEST);
+    glViewport(0, 0, width, height);
+    glClearColor(0, 0, 0, 0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // we're not using the stencil buffer now
+    glEnable(GL_DEPTH_TEST);
 
 	callback();
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void GLFrameBuffer::getRawData(unsigned char* colorRaw, float* depthRaw) {
+unsigned char* GLFrameBuffer::getRawColorData() {
+    unsigned char* colorRaw = new unsigned char[width * height * 4];
 	glBindTexture(GL_TEXTURE_2D, texColorBuffer);
-	glGetTexImage(GL_TEXTURE_2D, 0, GL_BGR, GL_UNSIGNED_BYTE, colorRaw);
-	glBindTexture(GL_TEXTURE_2D, depthBuffer);
-	glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_FLOAT, depthRaw);
+	glGetTexImage(GL_TEXTURE_2D, 0, GL_BGRA, GL_UNSIGNED_BYTE, colorRaw);
+    return colorRaw;
 }

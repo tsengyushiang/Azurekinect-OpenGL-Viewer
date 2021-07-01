@@ -72,7 +72,7 @@ void main() {
     }
     if(visibleCount==0){
         // invisible area to all camera
-        FragColor = vec4(0.0,0.0,0.0,1.0);
+        FragColor = vec4(0.0,0.0,0.0,0.0);
     }else {
         // apply weights to blend texture
         

@@ -26,11 +26,12 @@ public :
 
 	void addCameraUI();
 	void setExtrinsicsUI();
+	void addDepthAndTextureControlsUI();
 
 	size_t size();
 	void getAllDevice(std::function<void(CamIterator)> callback);
 	void getAllDevice(std::function<void(CamIterator, std::vector<CameraGL>&)> callback);
-	void getProjectTextureDevice(std::function<void(CamIterator)> callback);
+	int getProjectTextureDevice(std::function<void(CamIterator)> callback);
 	void getFowardDepthWarppingDevice(std::function<void(CamIterator)> callback);
 
 	void updateProjectTextureWeight(glm::mat4 vmodelMat);

@@ -48,7 +48,7 @@ public :
 
 	GLFrameBuffer(int w, int h);
 	void render(std::function<void()> callback);
-	void getRawData(unsigned char* colorRaw, float* depthRaw);
+	unsigned char* getRawColorData();
 };
 
 class ImguiOpeGL3App

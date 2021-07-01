@@ -8,7 +8,9 @@
 
 class CameraGL {
 public:
-	bool use2createMesh = true;
+	bool useDepth = true;
+	bool useTexture = true;
+
 	bool ready2Delete = false;
 	RealsenseDevice* camera;
 

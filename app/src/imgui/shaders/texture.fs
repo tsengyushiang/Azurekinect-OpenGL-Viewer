@@ -19,11 +19,12 @@ void main() {
 		FragColor = vec4(outliner_r,outliner_g,outliner_b,1.0);
 	}else{
 		vec4 c = texture(color, TexCoord); 
-		if(c.a>0){
-			FragColor = c;
-		}else{
-			FragColor = vec4(1.0,0.0,0.0,1.0);
-		}
+		FragColor = c;
+		//if(c.a>0){
+		//	FragColor = c;
+		//}else{
+		//	FragColor = vec4(1.0,0.0,0.0,1.0);
+		//}
 	}
 }
 

@@ -66,6 +66,22 @@ void CameraManager::setExtrinsicsUI() {
 	}
 }
 
+void CameraManager::addDepthAndTextureControlsUI() {
+
+	auto KEY = [this](std::string keyword,RealsenseDevice* camera)->const char* {
+		return (camera->serial + std::string("##") + keyword).c_str();
+	};
+
+	ImGui::Text("UseDepth : ");
+	for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
+		ImGui::Checkbox(KEY("useDepth", device->camera), &(device->useDepth));
+	}
+	ImGui::Text("UseTexture : ");
+	for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
+		ImGui::Checkbox(KEY("useTexture", device->camera), &(device->useTexture));
+	}
+}
+
 void CameraManager::addCameraUI() {
 	static char jsonfilename[20] = "932122060549";
 	ImGui::Text("jsonfilename: ");
@@ -174,15 +190,22 @@ void CameraManager::getAllDevice(std::function<void(CamIterator, std::vector<Cam
 	}
 }
 
-void CameraManager::getProjectTextureDevice(std::function<void(CamIterator)> callback) {
+int CameraManager::getProjectTextureDevice(std::function<void(CamIterator)> callback) {
+	int count = 0;
 	for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
-		callback(device);
+		if (device->useTexture) {
+			callback(device);
+			count++;
+		}
 	}
+	return count;
 }
 
 void CameraManager::getFowardDepthWarppingDevice(std::function<void(CamIterator)> callback) {
 	for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
-		callback(device);
+		if (device->useDepth) {
+			callback(device);
+		}
 	}
 }
 

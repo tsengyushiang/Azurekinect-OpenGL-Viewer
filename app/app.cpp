@@ -96,6 +96,22 @@ public:
 			camManager.addCameraUI();
 			ImGui::End();
 		}
+
+		{
+			ImGui::Begin("Debug : ");
+			camManager.addDepthAndTextureControlsUI();
+
+			static char url[25] = "virtual-view-color.png";
+			ImGui::InputText("##urlInput", url, 20);
+			ImGui::SameLine();
+			if (ImGui::Button("save virutal view color")) {				
+				unsigned char* colorRaw = virtualcam->viewport.getRawColorData();
+				cv::Mat image(cv::Size(virtualcam->w, virtualcam->h), CV_8UC4, (void*)colorRaw, cv::Mat::AUTO_STEP);
+				cv::imwrite(url, image);
+				delete colorRaw;
+			}
+			ImGui::End();
+		}
 	}
 	void initGL() override {
 		shader_program = GLShader::genShaderProgram(this->window, "vertexcolor.vs", "vertexcolor.fs");
@@ -184,7 +200,7 @@ public:
 		{
 			return std::string("[") + std::to_string(x) + std::string("]");
 		};
-		camManager.getProjectTextureDevice([
+		int textureCount = camManager.getProjectTextureDevice([
 			&texNames, &texturs, &indexTostring, &deviceIndex, &drawIndex, &shader,this
 		](auto device) {
 			texNames[deviceIndex * 2] = "color" + indexTostring(deviceIndex);
@@ -221,7 +237,7 @@ public:
 
 		ImguiOpeGL3App::activateTextures(shader, texNames, texturs, deviceIndex * 2);
 		std::string indexName[] = { "count","bias"};
-		float idx[] = { camManager.size(),projectDepthBias};
+		float idx[] = { textureCount, projectDepthBias};
 		ImguiOpeGL3App::setUniformFloats(shader, indexName, idx, 2);
 
 		camManager.getFowardDepthWarppingDevice([
