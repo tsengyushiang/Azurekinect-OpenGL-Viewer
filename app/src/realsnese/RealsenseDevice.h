@@ -32,11 +32,16 @@ class RealsenseDevice
 public :
 
     glm::mat4 modelMat;
+    
+    RealsenseDevice(
+        int cw,
+        int ch,
+        int dw,
+        int dh
+    );
 
-    RealsenseDevice();
     ~RealsenseDevice();
 
-    bool visible = true;
     bool calibrated=false;
     bool opencvImshow = false;
 
@@ -49,13 +54,11 @@ public :
     int height;
 
     // resolution for color/depth
-    int cwidth=1280;
-    int cheight=720;
-    int dwidth = 1280;
-    int dheight = 720;
+    int cwidth, cheight, dwidth, dheight;
 
     int frameLength;
     int currentFrame;
+    bool frameNeedsUpdate = false;
     uint16_t* p_depth_frame;
     uchar* p_depth_color_frame;
     uchar* p_color_frame;
@@ -68,6 +71,9 @@ public :
     std::string runNetworkDevice(std::string url, rs2::context ctx);
     virtual void runDevice(std::string serial, rs2::context ctx);
     bool fetchframes(int pointcloudStride = 1);
+    
+    std::thread autoUpdate;
+    void getLatestFrame();
     virtual bool fetchframes(std::function<void (
         const void* depthRaw, size_t depthSize,
         const void* colorRaw, size_t colorSize)

@@ -92,16 +92,6 @@ void CameraManager::addCameraUI() {
 	ImGui::SameLine();
 	ImGui::InputText("##jsonfilenameurlInput", jsonfilename, 20);
 
-	// input url for network device
-	static char url[20] = "192.168.0.106";
-	ImGui::Text("Network device Ip: ");
-	ImGui::SameLine();
-	if (ImGui::Button("add")) {
-		addNetworkDevice(url);
-	}
-	ImGui::SameLine();
-	ImGui::InputText("##urlInput", url, 20);
-
 	// list all usb3.0 realsense device
 	if (ImGui::Button("Refresh"))
 		serials = RealsenseDevice::getAllDeviceSerialNumber(ctx);
@@ -119,8 +109,23 @@ void CameraManager::addCameraUI() {
 		}
 		if (!alreadyStart)
 		{
-			if (ImGui::Button(serial.c_str())) {
-				addDevice(serial);
+			ImGui::Text(serial.c_str());
+
+			if (ImGui::Button(("c1920d1280##"+ serial).c_str())) {
+				addDevice(serial,1920,1080,1280,720);
+			}
+			ImGui::SameLine();
+			if (ImGui::Button(("c1280d1280##" + serial).c_str())) {
+				addDevice(serial, 1280, 720, 1280, 720);
+			}
+			ImGui::SameLine();
+			// for L515
+			if (ImGui::Button(("c1920d1024##" + serial).c_str())) {
+				addDevice(serial, 1920, 1080, 1024, 768);
+			}
+			ImGui::SameLine();
+			if (ImGui::Button(("c1280d1024##" + serial).c_str())) {
+				addDevice(serial, 1280, 720, 1024, 768);
 			}
 		}
 	}
@@ -139,44 +144,39 @@ void CameraManager::addCameraUI() {
 	}	
 }
 
-// deprecated
-void CameraManager::addNetworkDevice(std::string url) try {
-	CameraGL device;
-
-	device.camera = new RealsenseDevice();
-	std::string serial = device.camera->runNetworkDevice(url, ctx);
-
-	realsenses.push_back(device);
-}
-catch (const rs2::error& e)
-{
-	std::cerr << "RealSense error calling " << e.get_failed_function() << "(" << e.get_failed_args() << "):\n    " << e.what() << std::endl;
-}
-
 void CameraManager::addJsonDevice(std::string serial) {
-	CameraGL device;
 
-	device.camera = new JsonRealsenseDevice();
+	int w, h;
+	JsonUtils::loadRealsenseJson(serial, w, h);
+	JsonRealsenseDevice* camera = new JsonRealsenseDevice(w,h);
 	JsonUtils::loadRealsenseJson(serial,
-		device.camera->width,
-		device.camera->height,
-		device.camera->intri.fx,
-		device.camera->intri.fy,
-		device.camera->intri.ppx,
-		device.camera->intri.ppy,
-		device.camera->frameLength,
-		device.camera->intri.depth_scale,
-		&device.camera->p_depth_frame,
-		&device.camera->p_color_frame);
+		camera->width,
+		camera->height,
+		camera->intri.fx,
+		camera->intri.fy,
+		camera->intri.ppx,
+		camera->intri.ppy,
+		camera->frameLength,
+		camera->intri.depth_scale,
+		&camera->p_depth_frame,
+		&camera->p_color_frame);
+
+	CameraGL device(camera->width,camera->height, camera->width, camera->height);
+	device.camera = camera;
 	device.camera->serial = serial;
 
 	realsenses.push_back(device);
 }
 
-void CameraManager::addDevice(std::string serial) {
-	CameraGL device;
-	device.camera->runDevice(serial.c_str(), ctx);
-	realsenses.push_back(device);
+void CameraManager::addDevice(std::string serial,int cw,int ch,int dw,int dh) {
+	try {
+		CameraGL device(cw, ch, dw, dh);
+		device.camera->runDevice(serial.c_str(), ctx);
+		realsenses.push_back(device);
+	}
+	catch (...) {
+		std::cout << "Add device { " << serial << " } Error: use offical viewer check your deivce first." << std::endl;
+	}
 }
 
 void CameraManager::getAllDevice(std::function<void(CamIterator)> callback) {

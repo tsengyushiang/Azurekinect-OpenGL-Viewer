@@ -63,7 +63,7 @@ void main() {
         float depth = texture(depthtest[i], uv.xy).x * far[i];
         if((uv.z-depth)>bias){
             
-        }else{
+        }else if(uv.x>=0.0 && uv.x<=1.0 && uv.y>=0.0 && uv.y<=1.0){
             potentialColor[i] = texture(color[i], uv.xy);
             if(potentialColor[i].a>0){
                 visibleIndex[visibleCount++] = i;

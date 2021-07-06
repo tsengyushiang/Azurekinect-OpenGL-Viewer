@@ -26,8 +26,8 @@ public:
 
 	// project depthbuffer
 	GLFrameBuffer framebuffer;
-
-	CameraGL();
+	
+	CameraGL(int cw,int ch,int dw,int dh);
 	void destory();
 	void save();
 	void addui();

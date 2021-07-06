@@ -41,7 +41,10 @@ public:
 		float& fx, float& fy, float& ppx, float& ppy,
 		int& frameLength, float& depthscale, uint16_t** depthmap, unsigned char** colormap
 	);
-
+	static void loadRealsenseJson(
+		std::string filename,
+		int& width, int& height
+	);
 	static std::string cameraPoseFilename;
 	static void saveCameraPoses(
 		std::vector<Jsonformat::CamPose>& poses

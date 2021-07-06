@@ -53,7 +53,9 @@ float RealsenseDevice::get_depth_scale(rs2::device dev)
     }
     throw std::runtime_error("Device does not have a depth sensor");
 }
-RealsenseDevice::RealsenseDevice() {
+RealsenseDevice::RealsenseDevice(int cw,int ch, int dw, int dh) 
+    :cwidth(cw), cheight(ch), dwidth(dw), dheight(dh)
+{
 
     if (targetStream == RS2_STREAM_COLOR) {
         width = cwidth;
@@ -72,9 +74,6 @@ RealsenseDevice::RealsenseDevice() {
     vertexData = (float*)calloc(6 * vertexCount, sizeof(float)); // 6 represent xyzrgb
 
     modelMat = glm::mat4(1.0);
-    //modelMat[3][0] = 1.0; // translate x
-    //modelMat[3][1] = 0.0; // translate y
-    //modelMat[3][2] = 0.0; // translate z
 }
 
 RealsenseDevice::~RealsenseDevice() {
@@ -82,6 +81,7 @@ RealsenseDevice::~RealsenseDevice() {
     free((void*)p_color_frame);
     free((void*)p_depth_color_frame);
     pipe->stop();
+    autoUpdate.join();
     cvDestroyWindow(serial.c_str());
     if (netdev!=nullptr)
         free(netdev);
@@ -105,6 +105,8 @@ void RealsenseDevice::runDevice(std::string serialnum, rs2::context ctx) {
     intri.fy = intrins.fy;
     intri.ppy = intrins.ppy;
     intri.depth_scale = get_depth_scale(profile.get_device());
+
+    autoUpdate = std::thread(&RealsenseDevice::getLatestFrame, this);
 }
 
 std::string RealsenseDevice::runNetworkDevice(std::string url, rs2::context ctx) {
@@ -151,25 +153,38 @@ glm::vec3 RealsenseDevice::colorPixel2point(glm::vec2 pixel) {
     return point;
 }
 
+void RealsenseDevice::getLatestFrame() {
+    rs2::frameset frameset; // Wait for next set of frames from the camera
+    while (true) {
+        try {
+            if (pipe->poll_for_frames(&frameset)) {
+                rs2::frameset data = align_to_color.process(frameset);
+
+                rs2::frame depth = data.get_depth_frame();
+                rs2::frame color = data.get_color_frame();
+
+                memcpy((void*)p_color_frame, color.get_data(), 3 * width * height * sizeof(uchar));
+                memcpy((void*)p_depth_frame, depth.get_data(), width * height * sizeof(uint16_t));
+                memcpy((void*)p_depth_color_frame, color.get_data(), 3 * width * height * sizeof(uchar));
+                frameNeedsUpdate = true;
+            }
+        }catch(...) {
+            break;
+        }            
+    }   
+}
+
 bool RealsenseDevice::fetchframes(std::function<void(
     const void* depthRaw, size_t depthSize,
     const void* colorRaw, size_t colorSize)
 >callback) {
-    rs2::frameset frameset; // Wait for next set of frames from the camera
-    if (pipe->poll_for_frames(&frameset)) {
-        rs2::frameset data = align_to_color.process(frameset);
 
-        rs2::frame depth = data.get_depth_frame();
-        rs2::frame color = data.get_color_frame();
-
-        memcpy((void*)p_color_frame, color.get_data(), 3 * width * height * sizeof(uchar));
-        memcpy((void*)p_depth_frame, depth.get_data(), width * height * sizeof(uint16_t));
-        memcpy((void*)p_depth_color_frame, color.get_data(), 3 * width * height * sizeof(uchar));
-
+    if(frameNeedsUpdate){
         callback(
-            depth.get_data(), width * height * sizeof(uint16_t),
-            color.get_data(), 3 * width * height * sizeof(uchar));
+            p_depth_frame, width * height * sizeof(uint16_t),
+            p_color_frame, 3 * width * height * sizeof(uchar));
         
+        frameNeedsUpdate = false;
         return true;
     }
     return false;

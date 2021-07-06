@@ -73,6 +73,21 @@ void JsonUtils::saveCameraPoses(
 
 void JsonUtils::loadRealsenseJson(
 	std::string filename,
+	int& width, int& height
+) {
+	std::ifstream i(filename + ".json");
+	json j;
+	i >> j;
+
+	width = j["width"];
+	height = j["height"];
+
+	i.close();
+}
+
+
+void JsonUtils::loadRealsenseJson(
+	std::string filename,
 	int& width, int& height,
 	float& fx, float& fy, float& ppx, float& ppy, int& frameLength,
 	float& depthscale, uint16_t** depthmap, unsigned char** colormap

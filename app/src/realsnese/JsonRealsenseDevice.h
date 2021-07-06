@@ -4,7 +4,7 @@
 class JsonRealsenseDevice :public RealsenseDevice {
 
 public :
-    JsonRealsenseDevice() {};
+    JsonRealsenseDevice(int w,int h):RealsenseDevice(w,h,w,h) {};
     bool fetchframes(std::function<void(
         const void* depthRaw, size_t depthSize,
         const void* colorRaw, size_t colorSize)

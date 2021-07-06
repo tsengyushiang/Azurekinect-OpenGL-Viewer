@@ -13,9 +13,8 @@ class CameraManager {
 	std::vector<CameraGL> realsenses;
 	std::set<std::string> serials;
 
-	void addNetworkDevice(std::string url);
 	void addJsonDevice(std::string serial);
-	void addDevice(std::string serial);
+	void addDevice(std::string serial, int cw, int ch, int dw, int wh);
 	void removeDevice(CamIterator device);
 
 public :

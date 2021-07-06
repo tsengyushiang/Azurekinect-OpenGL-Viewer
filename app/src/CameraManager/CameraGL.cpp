@@ -1,7 +1,7 @@
 #include "CameraGL.h"
 
-CameraGL::CameraGL() :planemesh(1280, 720), framebuffer(1280, 720) {
-	camera = new RealsenseDevice();
+CameraGL::CameraGL(int cw, int ch, int dw, int dh) :planemesh(cw, ch), framebuffer(cw, ch) {
+	camera = new RealsenseDevice(cw,ch,dw,dh);
 	CudaOpenGL::createCudaGLTexture(&image, &image_cuda, camera->width, camera->height);
 	CudaOpenGL::createCudaGLTexture(&representColorImage, &representColorImage_cuda, camera->width, camera->height);
 }
@@ -90,7 +90,6 @@ void CameraGL::addui() {
 	}
 	ImGui::SameLine();
 	ImGui::Text(camera->serial.c_str());
-	ImGui::Checkbox(KEY("visible"), &(camera->visible));
 	ImGui::SameLine();
 	ImGui::Checkbox(KEY("calibrated"), &(camera->calibrated));
 	ImGui::ColorEdit3(KEY("color"), (float*)&color); // Edit 3 floats representing a color
@@ -99,8 +98,6 @@ void CameraGL::addui() {
 
 // render single realsense mesh
 void CameraGL::renderMesh(glm::mat4& mvp, GLuint& program) {
-	if (!camera->visible)return;
-
 	auto render = [this, mvp, program](GLuint& vao, int& count) {
 		glm::mat4 m = mvp * camera->modelMat;
 		ImguiOpeGL3App::renderElements(m, 0, program, vao, count * 3, GL_FILL);
