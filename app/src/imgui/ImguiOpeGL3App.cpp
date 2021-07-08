@@ -100,6 +100,7 @@ void ImguiOpeGL3App::initImguiOpenGL3(int width, int height) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
+
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
@@ -154,29 +155,28 @@ void ImguiOpeGL3App::initImguiOpenGL3(int width, int height) {
 
             ImGui::Begin("ImguiOpeGL3App : ");                          // Create a window called "Hello, world!" and append into it.
 
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+            if (ImGui::CollapsingHeader("OpenGL World")) {
+                ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
-            ImGui::ColorEdit3("background color", (float*)&clear_color); // Edit 3 floats representing a color
+                ImGui::ColorEdit3("background color", (float*)&clear_color); // Edit 3 floats representing a color
 
-            ImGui::Text("Time : %d", time);
-            ImGui::Text("Camera parameters : ");
-            ImGui::Checkbox("isVertical", &camVertical);
-            ImGui::SliderFloat("fov", &fov, 30.0f,80.0f); 
-            ImGui::SliderFloat("distance", &distance, distancemin, distanceMax);  
-            ImGui::SliderFloat("lookAt-X", &lookAtPoint.x, -10.0f, 10.0f);
-            ImGui::SliderFloat("lookAt-Y", &lookAtPoint.y, -10.0f, 10.0f);
-            ImGui::SliderFloat("lookAt-Z", &lookAtPoint.z, -10.0f, 10.0f);            
+                ImGui::Text("Time : %d", time);
+                ImGui::Text("Camera parameters : ");
+                ImGui::Checkbox("isVertical", &camVertical);
+                ImGui::SliderFloat("fov", &fov, 30.0f, 80.0f);
+                ImGui::SliderFloat("distance", &distance, distancemin, distanceMax);
+                ImGui::SliderFloat("lookAt-X", &lookAtPoint.x, -10.0f, 10.0f);
+                ImGui::SliderFloat("lookAt-Y", &lookAtPoint.y, -10.0f, 10.0f);
+                ImGui::SliderFloat("lookAt-Z", &lookAtPoint.z, -10.0f, 10.0f);
 
-            ImGui::Text("Mouse dragging : ");
-            ImGui::SliderFloat("autoRotateSpeed", &autoRotateSpeed, 0.0, 1e-1);
-            ImGui::SliderFloat("sensity", &sensity, 1e-1, 1e-3);           
-            ImGui::SliderFloat("PolarAngle", &PolarAngle, PolarAnglemin, PolarAngleMax);        
-            ImGui::SliderFloat("AzimuthAngle", &AzimuthAngle, AzimuthAnglemin, AzimuthAngleMax);            
-         
-            ImGui::End();
-        }
-        {
+                ImGui::Text("Mouse dragging : ");
+                ImGui::SliderFloat("autoRotateSpeed", &autoRotateSpeed, 0.0, 1e-1);
+                ImGui::SliderFloat("sensity", &sensity, 1e-1, 1e-3);
+                ImGui::SliderFloat("PolarAngle", &PolarAngle, PolarAnglemin, PolarAngleMax);
+                ImGui::SliderFloat("AzimuthAngle", &AzimuthAngle, AzimuthAnglemin, AzimuthAngleMax);
+            }                        
             addGui();
+            ImGui::End();
         }
 
         // Rendering

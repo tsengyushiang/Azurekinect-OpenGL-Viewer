@@ -16,8 +16,8 @@ public:
 
 	ImVec4 color;
 
-	GLuint image,representColorImage;
-	cudaGraphicsResource_t image_cuda, representColorImage_cuda;
+	GLuint image, depthvis, representColorImage;
+	cudaGraphicsResource_t image_cuda,depthvis_cuda, representColorImage_cuda;
 
 	CudaGLDepth2PlaneMesh planemesh;
 

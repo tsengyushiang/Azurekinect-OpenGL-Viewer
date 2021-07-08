@@ -28,6 +28,9 @@ public :
 	void addDepthAndTextureControlsUI();
 
 	size_t size();
+
+	int debugDeviceIndex = -1;
+	void getSingleDebugDevice(std::function<void(CameraGL)> callback);
 	void getAllDevice(std::function<void(CamIterator)> callback);
 	void getAllDevice(std::function<void(CamIterator, std::vector<CameraGL>&)> callback);
 	int getProjectTextureDevice(std::function<void(CamIterator)> callback);

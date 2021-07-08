@@ -29,9 +29,6 @@ VirtualCam::VirtualCam(int width, int height) : viewport(width, height), debugvi
 
 void VirtualCam::addUI() {
 
-
-	ImGui::Begin("VirtualCam : ");
-
 	ImGui::Text("Route: ");
 
 	static char jsonfilename[100] = "CameraExtrinsics";
@@ -72,8 +69,6 @@ void VirtualCam::addUI() {
 		ImGui::SliderFloat("PolarAngle##virtualcam", &PolarAngle, PolarAnglemin, PolarAngleMax);
 		ImGui::SliderFloat("distance##virtualcam", &distance, distancemin, distanceMax);
 	}
-
-	ImGui::End();
 
 }
 

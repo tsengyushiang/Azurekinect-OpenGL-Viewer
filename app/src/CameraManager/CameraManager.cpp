@@ -72,6 +72,12 @@ void CameraManager::addDepthAndTextureControlsUI() {
 		return (camera->serial + std::string("##") + keyword).c_str();
 	};
 
+	ImGui::Text("ShowInput : ");
+	for (int i = 0; i < realsenses.size(); i++) {
+		ImGui::RadioButton(KEY("showInput", realsenses[i].camera), &debugDeviceIndex, i);
+	}
+	ImGui::RadioButton("None##showInput", &debugDeviceIndex, -1);
+
 	ImGui::Text("UseDepth : ");
 	for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
 		ImGui::Checkbox(KEY("useDepth", device->camera), &(device->useDepth));
@@ -177,6 +183,11 @@ void CameraManager::addDevice(std::string serial,int cw,int ch,int dw,int dh) {
 	catch (...) {
 		std::cout << "Add device { " << serial << " } Error: use offical viewer check your deivce first." << std::endl;
 	}
+}
+
+void CameraManager::getSingleDebugDevice(std::function<void(CameraGL)> callback) {
+	if (debugDeviceIndex < 0 || debugDeviceIndex >= realsenses.size())return;
+	callback(realsenses[debugDeviceIndex]);
 }
 
 void CameraManager::getAllDevice(std::function<void(CamIterator)> callback) {

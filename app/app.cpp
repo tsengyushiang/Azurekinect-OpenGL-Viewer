@@ -48,20 +48,16 @@ public:
 
 	void addGui() override {
 
-		// projective texture params
-		{
-			ImGui::Begin("Reconstruct & Texture :");
-
-
+		if (ImGui::CollapsingHeader("Reconstruct & Texture :")) {
 			ImGui::Text("Preprocessing:");
 			ImGui::ColorEdit3("chromaKeycolor", (float*)&chromaKeyColor); // Edit 3 floats representing a color
-			ImGui::SliderFloat("chromaKeyColorThreshold", &chromaKeyColorThreshold,0,5); // Edit 3 floats representing a color
+			ImGui::SliderFloat("chromaKeyColorThreshold", &chromaKeyColorThreshold, 0, 5); // Edit 3 floats representing a color
 			ImGui::SliderInt("MaskErosion", &maskErosion, 0, 50);
 			ImGui::Checkbox("AutoDepthDilation", &autoDepthDilation);
 			ImGui::SliderInt("DepthDilation", &depthDilationIteration, 0, 50);
-			
-			ImGui::Text("Reconstruct:");			
-			ImGui::SliderFloat("planeMeshThreshold", &planeMeshThreshold, 1.0f, 90.0f);
+
+			ImGui::Text("Reconstruct:");
+			ImGui::SliderFloat("planeMeshThreshold", &planeMeshThreshold, 0.0f, 90.0f);
 
 			ImGui::Text("Texture Weights:");
 			if (ImGui::Button("ResetWeight")) {
@@ -75,42 +71,30 @@ public:
 				ImGui::Text("%s - %f", device->camera->serial, device->weight);
 			});
 			ImGui::SliderFloat("projectDepthBias", &projectDepthBias, 1e-3, 50e-3);
-			ImGui::End();
 		}
-		
-		//aruco calibrate feature point collector params
-		{
-			ImGui::Begin("Camera Extrinsics: ");
-
+		if (ImGui::CollapsingHeader("Camera Extrinsics")) {
+			//aruco calibrate feature point collector params
 			camManager.setExtrinsicsUI();
 			camPoseCalibrator.addUI();
-
-			ImGui::End();
 		}
-
-		//virtual cam UI
-		virtualcam->addUI();
-		// realsense ui
-		{
-			ImGui::Begin("Cameras Manager: ");
+		if (ImGui::CollapsingHeader("Virtual camera")) {
+			virtualcam->addUI();
+		}
+		if (ImGui::CollapsingHeader("Cameras Manager")) {
 			camManager.addCameraUI();
-			ImGui::End();
 		}
-
-		{
-			ImGui::Begin("Debug : ");
+		if (ImGui::CollapsingHeader("Debug Option")) {
 			camManager.addDepthAndTextureControlsUI();
 
 			static char url[25] = "virtual-view-color.png";
 			ImGui::InputText("##urlInput", url, 20);
 			ImGui::SameLine();
-			if (ImGui::Button("save virutal view color")) {				
+			if (ImGui::Button("save virutal view color")) {
 				unsigned char* colorRaw = virtualcam->viewport.getRawColorData();
 				cv::Mat image(cv::Size(virtualcam->w, virtualcam->h), CV_8UC4, (void*)colorRaw, cv::Mat::AUTO_STEP);
 				cv::imwrite(url, image);
 				delete colorRaw;
 			}
-			ImGui::End();
 		}
 	}
 	void initGL() override {
@@ -131,7 +115,7 @@ public:
 	}
 
 	// virtual mesh project depth to real camera (prepared for projective texture)
-	void renderScreenViewport(GLuint texture, glm::vec2 offset, glm::vec3 color) {
+	void renderScreenViewport(GLuint texture, glm::vec2 offset, glm::vec3 color,float debug = 0, glm::vec2 scale=glm::vec2(0.25,-0.25)) {
 		ImguiOpeGL3App::genCameraHelper(
 			vao,vbo,
 			1, 1, 0.5, 0.5, 0.5, 0.5, glm::vec3(1, 1, 0), 1.0, true
@@ -146,12 +130,12 @@ public:
 					glm::mat4(1.0),
 					glm::vec3(offset.x, offset.y, 0.0)
 				),
-				glm::vec3(0.25, -0.25, 1e-3)
+				glm::vec3(scale.x, scale.y, 1e-3)
 			);
 		
-		std::string outlinerRGB[] = { "outliner_r","outliner_g" ,"outliner_b" };
-		float values[] = { color.x,color.y,color.z};
-		ImguiOpeGL3App::setUniformFloats(texture_shader_program, outlinerRGB, values, 3);
+		std::string outlinerRGB[] = { "outliner_r","outliner_g" ,"outliner_b","debug" };
+		float values[] = { color.x,color.y,color.z,debug };
+		ImguiOpeGL3App::setUniformFloats(texture_shader_program, outlinerRGB, values, 4);
 
 		ImguiOpeGL3App::render(screenDepthMVP, pointsize, texture_shader_program, vao, 3 * 4, GL_TRIANGLES);
 	}
@@ -322,8 +306,37 @@ public:
 			renderTexturedMesh(virtualcam, true, true);
 		};
 		virtualcam->debugview.render(renderTexturedIndexMesh);
+
 	}
 	
+	void render3dworld() {
+		glm::mat4 mvp = Projection * View * Model;
+
+		// render center axis
+		ImguiOpeGL3App::genOrigionAxis(vao, vbo);
+		glm::mat4 mvpAxis = Projection * View * glm::translate(glm::mat4(1.0), lookAtPoint) * Model;
+		ImguiOpeGL3App::render(mvpAxis, pointsize, shader_program, vao, 6, GL_LINES);
+
+		std::vector<glm::vec2> windows = {
+			glm::vec2(0.25,0.75),
+			glm::vec2(0.75,0.75),
+		};
+		int deviceIndex = 0;
+		camManager.getAllDevice([this, &mvp, &windows, &deviceIndex](auto device, auto allDevice) {
+			renderFrustum(device);
+			//renderScreenViewport(device->framebuffer.depthBuffer, windows[deviceIndex++], glm::vec3(device->color.x, device->color.y, device->color.z));
+			//device->renderMesh(mvp, shader_program);
+			camPoseCalibrator.waitCalibrateCamera(device, allDevice);
+		});
+
+		// render virtual camera frustum
+		glm::mat4 devicemvp = mvp * virtualcam->getModelMat(lookAtPoint, curFrame);
+		virtualcam->renderFrustum(devicemvp, vao, vbo, shader_program);
+
+		renderTexturedMesh(virtualcam, false, false);
+		camPoseCalibrator.render(mvp, shader_program);
+	}
+
 	void mainloop() override {
 		if (calculatDeviceWeights) {
 			// calculate weight depend on camera position
@@ -331,35 +344,19 @@ public:
 			camManager.updateProjectTextureWeight(vmodelMat);
 		}
 
-		glm::mat4 mvp = Projection * View * Model;
+		int display_w, display_h;
+		glfwGetFramebufferSize(window, &display_w, &display_h);
+		glViewport(0, 0, display_w/2, display_h/2);
+		render3dworld();
+		glViewport(0, 0, display_w, display_h);
 
-		// render center axis
-		ImguiOpeGL3App::genOrigionAxis(vao, vbo);
-		glm::mat4 mvpAxis = Projection * View * glm::translate(glm::mat4(1.0),lookAtPoint) * Model;
-		ImguiOpeGL3App::render(mvpAxis, pointsize, shader_program, vao, 6, GL_LINES);
-		
-		std::vector<glm::vec2> windows = {
-			glm::vec2(0.25,0.75),
-			glm::vec2(0.75,0.75),
-		};
-		int deviceIndex = 0;
-		camManager.getAllDevice([this,&mvp,&windows,&deviceIndex](auto device,auto allDevice) {
-			renderFrustum(device);
-			//renderScreenViewport(device->framebuffer.depthBuffer, windows[deviceIndex++], glm::vec3(device->color.x, device->color.y, device->color.z));
-			//device->renderMesh(mvp, shader_program);
-			camPoseCalibrator.waitCalibrateCamera(device, allDevice);
+		renderScreenViewport(virtualcam->viewport.texColorBuffer, glm::vec2(0.5, 0.5), virtualcam->color,0, glm::vec2(0.5, -0.5));
+		renderScreenViewport(virtualcam->viewport.depthBuffer, glm::vec2(0.5, -0.5), virtualcam->color,0,glm::vec2(0.5,-0.5));
+
+		camManager.getSingleDebugDevice([this](auto cam) {
+			renderScreenViewport(cam.image, glm::vec2(-0.25, 0.25), virtualcam->color,1.0);
+			renderScreenViewport(cam.depthvis, glm::vec2(-0.25, 0.75), virtualcam->color,1.0);
 		});
-		
-		// render virtual camera frustum
-		glm::mat4 devicemvp = mvp * virtualcam->getModelMat(lookAtPoint, curFrame);
-		virtualcam->renderFrustum(devicemvp, vao, vbo, shader_program);
-
-		renderTexturedMesh(virtualcam, false, false);
-		renderScreenViewport(virtualcam->viewport.texColorBuffer, glm::vec2(0.75, -0.25), virtualcam->color);
-		renderScreenViewport(virtualcam->viewport.depthBuffer, glm::vec2(0.75, -0.75), virtualcam->color);
-		renderScreenViewport(virtualcam->debugview.texColorBuffer, glm::vec2(0.75, 0.25), virtualcam->color);
-
-		camPoseCalibrator.render(mvp, shader_program);
 
 		curFrame++;
 	}

@@ -4,10 +4,13 @@ CameraGL::CameraGL(int cw, int ch, int dw, int dh) :planemesh(cw, ch), framebuff
 	camera = new RealsenseDevice(cw,ch,dw,dh);
 	CudaOpenGL::createCudaGLTexture(&image, &image_cuda, camera->width, camera->height);
 	CudaOpenGL::createCudaGLTexture(&representColorImage, &representColorImage_cuda, camera->width, camera->height);
+	CudaOpenGL::createCudaGLTexture(&depthvis, &depthvis_cuda, camera->width, camera->height);
+
 }
 void CameraGL::destory() {
 	CudaOpenGL::deleteCudaGLTexture(&image, &image_cuda);
 	CudaOpenGL::deleteCudaGLTexture(&representColorImage, &representColorImage_cuda);
+	CudaOpenGL::deleteCudaGLTexture(&depthvis, &depthvis_cuda);
 
 	planemesh.destory();
 }
@@ -17,7 +20,7 @@ void CameraGL::updateImages(
 	int curFrame
 ) 
 {
-		auto copyHost2Device = [this](const void* depthRaw, size_t depthSize, const void* colorRaw, size_t colorSize) {
+	auto copyHost2Device = [this](const void* depthRaw, size_t depthSize, const void* colorRaw, size_t colorSize) {
 		cudaMemcpy(planemesh.cudaDepthData, depthRaw, depthSize, cudaMemcpyHostToDevice);
 		cudaMemcpy(planemesh.cudaColorData, colorRaw, colorSize, cudaMemcpyHostToDevice);
 	};
@@ -38,6 +41,8 @@ void CameraGL::updateImages(
 	if (autoDepthDilation) {
 		CudaAlogrithm::fillDepthWithDilation(&image_cuda, planemesh.cudaDepthData, camera->width, camera->height);
 	}
+
+	CudaAlogrithm::depthVisualize(&image_cuda, &depthvis_cuda, planemesh.cudaDepthData, camera->width, camera->height, camera->intri.depth_scale, camera->farPlane);
 
 	//// debug : index map for project coverage
 	CudaAlogrithm::chromaKeyBackgroundRemove(&representColorImage_cuda, planemesh.cudaColorData, camera->width, camera->height,

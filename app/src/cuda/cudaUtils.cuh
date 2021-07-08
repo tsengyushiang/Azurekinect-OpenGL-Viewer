@@ -39,4 +39,7 @@ public:
 	static void fillDepthWithDilation(cudaGraphicsResource_t* mask, 
 		unsigned short* depthRaw, unsigned int w, unsigned int h
 	);
+
+	static void depthVisualize(cudaGraphicsResource_t* mask, cudaGraphicsResource_t* cudaTexture,
+		uint16_t* colorRaw, unsigned int w, unsigned int h, float depthScale,float farplane);
 };
