@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../imgui/ImguiOpeGL3App.h"
+#include "../ImguiOpenGL/ImguiOpeGL3App.h"
 #include "../cuda/CudaOpenGLUtils.h"
 #include "../cuda/cudaUtils.cuh"
 #include "../json/jsonUtils.h"

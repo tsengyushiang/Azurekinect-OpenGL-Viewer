@@ -1,5 +1,5 @@
 
-#include "src/imgui/ImguiOpeGL3App.h"
+#include "src/ImguiOpenGL/ImguiOpeGL3App.h"
 #include "src/virtualcam/VirtualCam.h"
 #include "src/cuda/CudaOpenGLUtils.h"
 #include "src/cuda/cudaUtils.cuh"

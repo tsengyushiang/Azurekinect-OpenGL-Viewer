@@ -1,6 +1,6 @@
 #pragma once
-#include "../imgui/ImguiOpeGL3App.h"
-#include "../realsnese//RealsenseDevice.h"
+#include "../ImguiOpenGL/ImguiOpeGL3App.h"
+#include "../InputCamera//RealsenseDevice.h"
 #include "../pcl/examples-pcl.h"
 
 class CorrespondPointCollector {

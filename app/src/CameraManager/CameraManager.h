@@ -1,8 +1,8 @@
 #pragma once
 
 #include "./CameraGL.h"
-#include "../realsnese//RealsenseDevice.h"
-#include "../realsnese/JsonRealsenseDevice.h"
+#include "../InputCamera//RealsenseDevice.h"
+#include "../InputCamera/JsonRealsenseDevice.h"
 #include <functional>
 
 #define CamIterator std::vector<CameraGL>::iterator&
