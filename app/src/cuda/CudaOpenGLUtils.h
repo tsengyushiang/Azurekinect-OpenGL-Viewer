@@ -28,7 +28,7 @@ public :
 	int width = 1280;
 	int height = 720;
 
-	CudaGLDepth2PlaneMesh(int w, int h);
+	CudaGLDepth2PlaneMesh(int w, int h,int colorchannel);
 	void destory();
 	void render(std::function<void(GLuint& vao, int& count)>callback);
 };

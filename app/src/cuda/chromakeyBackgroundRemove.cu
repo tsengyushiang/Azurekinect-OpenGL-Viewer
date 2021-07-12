@@ -1,5 +1,6 @@
 #include "cudaUtils.cuh"
 #include <stdio.h>
+#include "../InputCamera/InputBase.h"
 
 __global__ void chromaKeyBackgroundRemove_kernel(
     unsigned char* colorRaw, cudaSurfaceObject_t output, unsigned int w, unsigned int h, glm::vec3 chromakey,float threshold)
@@ -9,15 +10,15 @@ __global__ void chromaKeyBackgroundRemove_kernel(
     unsigned int index = y * w + x;
 
     glm::vec3 color = glm::vec3(
-        colorRaw[index * 3 + 2],
-        colorRaw[index * 3 + 1],
-        colorRaw[index * 3 + 0]
+        colorRaw[index * INPUT_COLOR_CHANNEL + 2],
+        colorRaw[index * INPUT_COLOR_CHANNEL + 1],
+        colorRaw[index * INPUT_COLOR_CHANNEL + 0]
     );
 
     uchar4 pixel = {
-        colorRaw[index * 3 + 2],
-        colorRaw[index * 3 + 1],
-        colorRaw[index * 3 + 0],
+        colorRaw[index * INPUT_COLOR_CHANNEL + 2],
+        colorRaw[index * INPUT_COLOR_CHANNEL + 1],
+        colorRaw[index * INPUT_COLOR_CHANNEL + 0],
         glm::distance(color,chromakey)> threshold ?255:0
     };
     //Write the new pixel color to the 
@@ -32,9 +33,9 @@ __global__ void chromaKeyBackgroundRemove_kernel(
     unsigned int index = y * w + x;
 
     glm::vec3 color = glm::vec3(
-        colorRaw[index * 3 + 2],
-        colorRaw[index * 3 + 1],
-        colorRaw[index * 3 + 0]
+        colorRaw[index * INPUT_COLOR_CHANNEL + 2],
+        colorRaw[index * INPUT_COLOR_CHANNEL + 1],
+        colorRaw[index * INPUT_COLOR_CHANNEL + 0]
     );
 
     uchar4 pixel = {

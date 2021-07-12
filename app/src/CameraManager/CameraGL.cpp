@@ -1,7 +1,7 @@
 #include "CameraGL.h"
 
-CameraGL::CameraGL(int cw, int ch, int dw, int dh) :planemesh(cw, ch), framebuffer(cw, ch) {
-	camera = new RealsenseDevice(cw,ch,dw,dh);
+CameraGL::CameraGL(InputBase* cam) :planemesh(cam->width, cam->height, INPUT_COLOR_CHANNEL), framebuffer(cam->width, cam->height) {
+	camera = cam;
 	CudaOpenGL::createCudaGLTexture(&image, &image_cuda, camera->width, camera->height);
 	CudaOpenGL::createCudaGLTexture(&representColorImage, &representColorImage_cuda, camera->width, camera->height);
 	CudaOpenGL::createCudaGLTexture(&depthvis, &depthvis_cuda, camera->width, camera->height);
@@ -13,6 +13,7 @@ void CameraGL::destory() {
 	CudaOpenGL::deleteCudaGLTexture(&depthvis, &depthvis_cuda);
 
 	planemesh.destory();
+	free(camera);
 }
 void CameraGL::updateImages(
 	ImVec4 chromaKeyColor,float chromaKeyColorThreshold,
@@ -24,7 +25,6 @@ void CameraGL::updateImages(
 		cudaMemcpy(planemesh.cudaDepthData, depthRaw, depthSize, cudaMemcpyHostToDevice);
 		cudaMemcpy(planemesh.cudaColorData, colorRaw, colorSize, cudaMemcpyHostToDevice);
 	};
-	camera->currentFrame = curFrame;
 	camera->fetchframes(copyHost2Device);
 
 	// acutal texture

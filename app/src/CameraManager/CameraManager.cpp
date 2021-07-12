@@ -1,19 +1,20 @@
 #include "./CameraManager.h"
 
 CameraManager::CameraManager() {
-	serials = RealsenseDevice::getAllDeviceSerialNumber(ctx);
+	Realsense::updateAvailableSerialnums(ctx);
+	AzureKinect::updateAvailableSerialnums();
 }
 
 void CameraManager::destory() {
-	for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
+	for (auto device = cameras.begin(); device != cameras.end(); device++) {
 		removeDevice(device);
 	}
 }
 
 void CameraManager::removeDevice(CamIterator device) {
-	delete device->camera;
-	serials = RealsenseDevice::getAllDeviceSerialNumber(ctx);
-	device = realsenses.erase(device);
+	Realsense::updateAvailableSerialnums(ctx);
+	AzureKinect::updateAvailableSerialnums();
+	device = cameras.erase(device);
 	device->destory();
 }
 
@@ -68,22 +69,22 @@ void CameraManager::setExtrinsicsUI() {
 
 void CameraManager::addDepthAndTextureControlsUI() {
 
-	auto KEY = [this](std::string keyword,RealsenseDevice* camera)->const char* {
+	auto KEY = [this](std::string keyword,InputBase* camera)->const char* {
 		return (camera->serial + std::string("##") + keyword).c_str();
 	};
 
 	ImGui::Text("ShowInput : ");
-	for (int i = 0; i < realsenses.size(); i++) {
-		ImGui::RadioButton(KEY("showInput", realsenses[i].camera), &debugDeviceIndex, i);
+	for (int i = 0; i < cameras.size(); i++) {
+		ImGui::RadioButton(KEY("showInput", cameras[i].camera), &debugDeviceIndex, i);
 	}
 	ImGui::RadioButton("None##showInput", &debugDeviceIndex, -1);
 
 	ImGui::Text("UseDepth : ");
-	for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
+	for (auto device = cameras.begin(); device != cameras.end(); device++) {
 		ImGui::Checkbox(KEY("useDepth", device->camera), &(device->useDepth));
 	}
 	ImGui::Text("UseTexture : ");
-	for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
+	for (auto device = cameras.begin(); device != cameras.end(); device++) {
 		ImGui::Checkbox(KEY("useTexture", device->camera), &(device->useTexture));
 	}
 }
@@ -99,15 +100,47 @@ void CameraManager::addCameraUI() {
 	ImGui::InputText("##jsonfilenameurlInput", jsonfilename, 20);
 
 	// list all usb3.0 realsense device
-	if (ImGui::Button("Refresh"))
-		serials = RealsenseDevice::getAllDeviceSerialNumber(ctx);
+	if (ImGui::Button("Refresh")) {
+		Realsense::updateAvailableSerialnums(ctx);
+		AzureKinect::updateAvailableSerialnums();
+	}
 	ImGui::SameLine();
-	ImGui::Text("Realsense device :");
+	if (ImGui::Button("snapshot all")) {
+		for (auto device = cameras.begin(); device != cameras.end(); device++) {
+			device->save();
+		}
+	}
 
-	// waiting active device
-	for (std::string serial : serials) {
+	ImGui::Text("AzureKinect device :");
+	//waiting Azure kinect activated device
+	for (std::string serial : AzureKinect::availableSerialnums) {
 		bool alreadyStart = false;
-		for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
+		for (auto device = cameras.begin(); device != cameras.end(); device++) {
+			if (device->camera->serial == serial) {
+				alreadyStart = true;
+				break;
+			}
+		}
+		if (!alreadyStart)
+		{
+			ImGui::Text(serial.c_str());
+
+			if (ImGui::Button(("1080p##Azruekinect" + serial).c_str())) {
+				addAzuekinect(serial, 1920, 1080);
+			}
+			ImGui::SameLine();
+			if (ImGui::Button(("720p##Azruekinect" + serial).c_str())) {
+				addAzuekinect(serial, 1280, 720);
+			}
+
+		}
+	}
+
+	ImGui::Text("Realsense device :");
+	// waiting realsense active device
+	for (std::string serial : Realsense::availableSerialnums) {
+		bool alreadyStart = false;
+		for (auto device = cameras.begin(); device != cameras.end(); device++) {
 			if (device->camera->serial == serial) {
 				alreadyStart = true;
 				break;
@@ -118,34 +151,28 @@ void CameraManager::addCameraUI() {
 			ImGui::Text(serial.c_str());
 
 			if (ImGui::Button(("c1920d1280##"+ serial).c_str())) {
-				addDevice(serial,1920,1080,1280,720);
+				addRealsense(serial,1920,1080,1280,720);
 			}
 			ImGui::SameLine();
 			if (ImGui::Button(("c1280d1280##" + serial).c_str())) {
-				addDevice(serial, 1280, 720, 1280, 720);
+				addRealsense(serial, 1280, 720, 1280, 720);
 			}
 			ImGui::SameLine();
 			// for L515
 			if (ImGui::Button(("c1920d1024##" + serial).c_str())) {
-				addDevice(serial, 1920, 1080, 1024, 768);
+				addRealsense(serial, 1920, 1080, 1024, 768);
 			}
 			ImGui::SameLine();
 			if (ImGui::Button(("c1280d1024##" + serial).c_str())) {
-				addDevice(serial, 1280, 720, 1024, 768);
+				addRealsense(serial, 1280, 720, 1024, 768);
 			}
 		}
 	}
-	{
-		ImGui::Text("Debug :");
-		if (ImGui::Button("snapshot all")) {
-			for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
-				device->save();
-			}
-		}
-	}
+	
+
 	// Running device
-	ImGui::Text("Running Realsense device :");
-	for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
+	ImGui::Text("Running Device :");
+	for (auto device = cameras.begin(); device != cameras.end(); device++) {
 		device->addui();
 	}	
 }
@@ -154,7 +181,10 @@ void CameraManager::addJsonDevice(std::string serial) {
 
 	int w, h;
 	JsonUtils::loadRealsenseJson(serial, w, h);
-	JsonRealsenseDevice* camera = new JsonRealsenseDevice(w,h);
+	
+	JsonData* camera = new JsonData(w,h);
+	camera->serial = serial;
+	
 	JsonUtils::loadRealsenseJson(serial,
 		camera->width,
 		camera->height,
@@ -167,18 +197,24 @@ void CameraManager::addJsonDevice(std::string serial) {
 		&camera->p_depth_frame,
 		&camera->p_color_frame);
 
-	CameraGL device(camera->width,camera->height, camera->width, camera->height);
-	device.camera = camera;
-	device.camera->serial = serial;
+	CameraGL device(camera);
 
-	realsenses.push_back(device);
+	cameras.push_back(device);
 }
 
-void CameraManager::addDevice(std::string serial,int cw,int ch,int dw,int dh) {
+void CameraManager::addAzuekinect(std::string serial, int cw, int ch) {
+	AzureKinect* azureKinect = new AzureKinect(cw,ch);
+	azureKinect->runDevice(serial);
+	CameraGL device(azureKinect);
+	cameras.push_back(device);
+}
+
+void CameraManager::addRealsense(std::string serial,int cw,int ch,int dw,int dh) {
 	try {
-		CameraGL device(cw, ch, dw, dh);
-		device.camera->runDevice(serial.c_str(), ctx);
-		realsenses.push_back(device);
+		Realsense* realsense = new Realsense(cw, ch, dw, dh);
+		realsense->runDevice(serial.c_str(), ctx);
+		CameraGL device(realsense);
+		cameras.push_back(device);
 	}
 	catch (...) {
 		std::cout << "Add device { " << serial << " } Error: use offical viewer check your deivce first." << std::endl;
@@ -186,24 +222,24 @@ void CameraManager::addDevice(std::string serial,int cw,int ch,int dw,int dh) {
 }
 
 void CameraManager::getSingleDebugDevice(std::function<void(CameraGL)> callback) {
-	if (debugDeviceIndex < 0 || debugDeviceIndex >= realsenses.size())return;
-	callback(realsenses[debugDeviceIndex]);
+	if (debugDeviceIndex < 0 || debugDeviceIndex >= cameras.size())return;
+	callback(cameras[debugDeviceIndex]);
 }
 
 void CameraManager::getAllDevice(std::function<void(CamIterator)> callback) {
-	for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
+	for (auto device = cameras.begin(); device != cameras.end(); device++) {
 		callback(device);
 	}
 }
 void CameraManager::getAllDevice(std::function<void(CamIterator, std::vector<CameraGL>& allDevice)> callback) {
-	for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
-		callback(device, realsenses);
+	for (auto device = cameras.begin(); device != cameras.end(); device++) {
+		callback(device, cameras);
 	}
 }
 
 int CameraManager::getProjectTextureDevice(std::function<void(CamIterator)> callback) {
 	int count = 0;
-	for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
+	for (auto device = cameras.begin(); device != cameras.end(); device++) {
 		if (device->useTexture) {
 			callback(device);
 			count++;
@@ -213,7 +249,7 @@ int CameraManager::getProjectTextureDevice(std::function<void(CamIterator)> call
 }
 
 void CameraManager::getFowardDepthWarppingDevice(std::function<void(CamIterator)> callback) {
-	for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
+	for (auto device = cameras.begin(); device != cameras.end(); device++) {
 		if (device->useDepth) {
 			callback(device);
 		}
@@ -221,7 +257,7 @@ void CameraManager::getFowardDepthWarppingDevice(std::function<void(CamIterator)
 }
 
 size_t CameraManager::size() {
-	return realsenses.size();
+	return cameras.size();
 }
 
 void CameraManager::updateProjectTextureWeight(glm::mat4 vmodelMat) {
@@ -233,8 +269,8 @@ void CameraManager::updateProjectTextureWeight(glm::mat4 vmodelMat) {
 
 	int nearestDeviceIndex = -1;
 	float distance = 99999;
-	for (int i = 0; i < realsenses.size(); i++) {
-		auto device = realsenses[i];
+	for (int i = 0; i < cameras.size(); i++) {
+		auto device = cameras[i];
 		glm::vec3 devicePosition = glm::vec3(
 			device.camera->modelMat[3][0],
 			device.camera->modelMat[3][1],
@@ -246,13 +282,13 @@ void CameraManager::updateProjectTextureWeight(glm::mat4 vmodelMat) {
 			nearestDeviceIndex = i;
 		}
 	}
-	for (int i = 0; i < realsenses.size(); i++) {
-		realsenses[i].weight = (i == nearestDeviceIndex) ? 99 : 1;
+	for (int i = 0; i < cameras.size(); i++) {
+		cameras[i].weight = (i == nearestDeviceIndex) ? 99 : 1;
 	}
 }
 
 void CameraManager::deleteIdleCam() {
-	for (auto device = realsenses.begin(); device != realsenses.end(); device++) {
+	for (auto device = cameras.begin(); device != cameras.end(); device++) {
 		if (device->ready2Delete) {
 			removeDevice(device);
 			device--;

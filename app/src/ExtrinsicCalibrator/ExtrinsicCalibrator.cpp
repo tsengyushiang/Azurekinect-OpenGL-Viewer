@@ -86,9 +86,9 @@ void ExtrinsicCalibrator::collectCalibratePoints() {
 	}
 }
 
-void ExtrinsicCalibrator::alignDevice2calibratedDevice(RealsenseDevice* uncalibratedCam, std::vector<CameraGL>& allDevice) {
+void ExtrinsicCalibrator::alignDevice2calibratedDevice(InputBase* uncalibratedCam, std::vector<CameraGL>& allDevice) {
 
-	RealsenseDevice* baseCamera = nullptr;
+	InputBase* baseCamera = nullptr;
 	glm::mat4 baseCam2Markerorigion;
 	for (auto device = allDevice.begin(); device != allDevice.end(); device++) {
 		if (device->camera->calibrated) {
@@ -109,7 +109,7 @@ void ExtrinsicCalibrator::alignDevice2calibratedDevice(RealsenseDevice* uncalibr
 	}
 }
 
-CalibrateResult ExtrinsicCalibrator::putAruco2Origion(RealsenseDevice* camera) {
+CalibrateResult ExtrinsicCalibrator::putAruco2Origion(InputBase* camera) {
 
 	CalibrateResult result;
 	result.success = false;

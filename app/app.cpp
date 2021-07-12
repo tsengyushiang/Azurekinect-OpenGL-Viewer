@@ -28,7 +28,7 @@ class RealsenseDepthSythesisApp :public ImguiOpeGL3App {
 	ImVec4 chromaKeyColor;
 	float chromaKeyColorThreshold=2;
 	int depthDilationIteration = 0;
-	bool autoDepthDilation = true;
+	bool autoDepthDilation = false;
 	int maskErosion = 0;
 	float planeMeshThreshold=1;
 

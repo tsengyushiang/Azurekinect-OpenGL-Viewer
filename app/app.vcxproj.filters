@@ -95,10 +95,10 @@
     <ClCompile Include="src\InputCamera\realsense-net-opencv.cpp">
       <Filter>來源檔案\InputCamera\example</Filter>
     </ClCompile>
-    <ClCompile Include="src\InputCamera\JsonRealsenseDevice.cpp">
+    <ClCompile Include="src\InputCamera\JsonData.cpp">
       <Filter>來源檔案\InputCamera</Filter>
     </ClCompile>
-    <ClCompile Include="src\InputCamera\RealsenseDevice.cpp">
+    <ClCompile Include="src\InputCamera\Realsense.cpp">
       <Filter>來源檔案\InputCamera</Filter>
     </ClCompile>
     <ClCompile Include="src\ImguiOpenGL\official-example.cpp">
@@ -142,6 +142,12 @@
     </ClCompile>
     <ClCompile Include="src\ImguiOpenGL\ImguiOpenGL3App_glhelper.cpp">
       <Filter>來源檔案\ImguiOpenGL</Filter>
+    </ClCompile>
+    <ClCompile Include="src\InputCamera\AzureKinect.cpp">
+      <Filter>來源檔案\InputCamera</Filter>
+    </ClCompile>
+    <ClCompile Include="src\InputCamera\InputBase.cpp">
+      <Filter>來源檔案\InputCamera</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -187,10 +193,10 @@
     <ClInclude Include="src\InputCamera\example-realsense.h">
       <Filter>來源檔案\InputCamera\example</Filter>
     </ClInclude>
-    <ClInclude Include="src\InputCamera\JsonRealsenseDevice.h">
+    <ClInclude Include="src\InputCamera\JsonData.h">
       <Filter>來源檔案\InputCamera</Filter>
     </ClInclude>
-    <ClInclude Include="src\InputCamera\RealsenseDevice.h">
+    <ClInclude Include="src\InputCamera\Realsense.h">
       <Filter>來源檔案\InputCamera</Filter>
     </ClInclude>
     <ClInclude Include="src\ImguiOpenGL\examples.h">
@@ -213,6 +219,12 @@
     </ClInclude>
     <ClInclude Include="src\ImguiOpenGL\ImguiOpeGL3App.h">
       <Filter>來源檔案\ImguiOpenGL</Filter>
+    </ClInclude>
+    <ClInclude Include="src\InputCamera\AzureKinect.h">
+      <Filter>來源檔案\InputCamera</Filter>
+    </ClInclude>
+    <ClInclude Include="src\InputCamera\InputBase.h">
+      <Filter>來源檔案\InputCamera</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

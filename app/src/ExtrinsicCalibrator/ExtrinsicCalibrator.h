@@ -25,7 +25,7 @@ public :
 	// detect aruco to calibrate unregisted camera
 	void waitCalibrateCamera(std::vector<CameraGL>::iterator device, std::vector<CameraGL>& allDevice);
 	void collectCalibratePoints();
-	void alignDevice2calibratedDevice(RealsenseDevice* uncalibratedCam, std::vector<CameraGL>& allDevice);
-	CalibrateResult putAruco2Origion(RealsenseDevice* camera);
+	void alignDevice2calibratedDevice(InputBase* uncalibratedCam, std::vector<CameraGL>& allDevice);
+	CalibrateResult putAruco2Origion(InputBase* camera);
 	bool checkIsCalibrating(std::string serial, glm::vec3& index);
 };

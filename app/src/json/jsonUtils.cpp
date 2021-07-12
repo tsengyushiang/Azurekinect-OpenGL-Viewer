@@ -1,4 +1,5 @@
 #include "./jsonUtils.h"
+#include "../InputCamera/InputBase.h"
 
 template<typename T>
 void Jsonformat::to_json(json& j, const T& p) {
@@ -105,9 +106,12 @@ void JsonUtils::loadRealsenseJson(
 	ppy = j["ppy"];
 	frameLength = j["frameLength"];
 
+	free(*depthmap);
+	free(*colormap);
 	*depthmap = (uint16_t*)calloc(width * height * frameLength, sizeof(uint16_t));
-	*colormap = (unsigned char*)calloc(3 * width * height * frameLength, sizeof(unsigned char));
+	*colormap = (unsigned char*)calloc(INPUT_COLOR_CHANNEL * width * height * frameLength, sizeof(unsigned char));
 
+	const int INPUT_JSON_COLOR_CHANNEL = 3;
 	for (int frame = 0; frame < frameLength; frame++) {
 
 		std::cout << "frame" << frame << std::endl;
@@ -116,9 +120,12 @@ void JsonUtils::loadRealsenseJson(
 			(*depthmap)[index] = j["depthmap_raw"][index];
 		}
 
-		for (int i = 0; i < 3 * width * height; i++) {
-			int index = frame * width * height * 3 + i;
-			(*colormap)[index] = j["colormap_raw"][index];
+		int frameBegin = frame * width * height * INPUT_JSON_COLOR_CHANNEL;
+		for (int i = 0; i < width * height; i++) {
+			for (int channel = 0; channel < INPUT_JSON_COLOR_CHANNEL; channel++) {
+				(*colormap)[frameBegin + i* INPUT_COLOR_CHANNEL + channel] = 
+					j["colormap_raw"][frameBegin + i * INPUT_JSON_COLOR_CHANNEL + channel];
+			}
 		}
 	}
 
@@ -136,9 +143,9 @@ void JsonUtils::saveRealsenseJson(
 
 	for (int i = 0; i < width * height; i++) {
 		depthmap_raw.push_back(depthmap[i]);
-		colormap_raw.push_back(colormap[i * 3 + 0]);
-		colormap_raw.push_back(colormap[i * 3 + 1]);
-		colormap_raw.push_back(colormap[i * 3 + 2]);
+		colormap_raw.push_back(colormap[i * INPUT_COLOR_CHANNEL + 0]);
+		colormap_raw.push_back(colormap[i * INPUT_COLOR_CHANNEL + 1]);
+		colormap_raw.push_back(colormap[i * INPUT_COLOR_CHANNEL + 2]);
 	}
 
 	json j = {
@@ -171,9 +178,9 @@ void JsonUtils::saveRealsenseJson(
 
 	for (int i = 0; i < width * height; i++) {
 		depthmap_raw.push_back(depthmap[i] * depthscale);
-		colormap_raw.push_back(colormap[i * 3 + 0]);
-		colormap_raw.push_back(colormap[i * 3 + 1]);
-		colormap_raw.push_back(colormap[i * 3 + 2]);
+		colormap_raw.push_back(colormap[i * INPUT_COLOR_CHANNEL + 0]);
+		colormap_raw.push_back(colormap[i * INPUT_COLOR_CHANNEL + 1]);
+		colormap_raw.push_back(colormap[i * INPUT_COLOR_CHANNEL + 2]);
 	}
 
 	json j = {

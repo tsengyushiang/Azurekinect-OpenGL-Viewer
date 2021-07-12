@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -74,6 +74,7 @@
     <Import Project="opencv-aruco.props" />
     <Import Project="pcl-Release_x64.props" />
     <Import Project="cuda.props" />
+    <Import Project="AzureKinect-Release_x64.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -171,9 +172,11 @@
     <ClCompile Include="src\ImguiOpenGL\Imgui\imgui_widgets.cpp" />
     <ClCompile Include="src\ImguiOpenGL\official-example.cpp" />
     <ClCompile Include="src\ImguiOpenGL\shader-example.cpp" />
-    <ClCompile Include="src\InputCamera\JsonRealsenseDevice.cpp" />
+    <ClCompile Include="src\InputCamera\AzureKinect.cpp" />
+    <ClCompile Include="src\InputCamera\InputBase.cpp" />
+    <ClCompile Include="src\InputCamera\JsonData.cpp" />
     <ClCompile Include="src\InputCamera\realsense-net-opencv.cpp" />
-    <ClCompile Include="src\InputCamera\RealsenseDevice.cpp" />
+    <ClCompile Include="src\InputCamera\Realsense.cpp" />
     <ClCompile Include="src\json\jsonUtils.cpp" />
     <ClCompile Include="src\opencv\opencv-aruco.cpp" />
     <ClCompile Include="src\pcl\fast_triangulation_of_unordered_pcd.cpp" />
@@ -197,9 +200,11 @@
     <ClInclude Include="src\ImguiOpenGL\Imgui\imgui_impl_glfw.h" />
     <ClInclude Include="src\ImguiOpenGL\Imgui\imgui_impl_opengl3.h" />
     <ClInclude Include="src\ImguiOpenGL\Imgui\imgui_internal.h" />
+    <ClInclude Include="src\InputCamera\AzureKinect.h" />
     <ClInclude Include="src\InputCamera\example-realsense.h" />
-    <ClInclude Include="src\InputCamera\JsonRealsenseDevice.h" />
-    <ClInclude Include="src\InputCamera\RealsenseDevice.h" />
+    <ClInclude Include="src\InputCamera\InputBase.h" />
+    <ClInclude Include="src\InputCamera\JsonData.h" />
+    <ClInclude Include="src\InputCamera\Realsense.h" />
     <ClInclude Include="src\json\jsonUtils.h" />
     <ClInclude Include="src\opencv\opecv-utils.h" />
     <ClInclude Include="src\pcl\examples-pcl.h" />

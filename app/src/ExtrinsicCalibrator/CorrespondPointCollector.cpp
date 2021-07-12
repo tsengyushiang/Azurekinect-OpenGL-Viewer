@@ -1,6 +1,6 @@
 #include "./CorrespondPointCollector.h"
 
-CorrespondPointCollector::CorrespondPointCollector(RealsenseDevice* srcCam, RealsenseDevice* trgCam, int count, float threshold) {
+CorrespondPointCollector::CorrespondPointCollector(InputBase* srcCam, InputBase* trgCam, int count, float threshold) {
 	sourcecam = srcCam;
 	targetcam = trgCam;
 	size = count;

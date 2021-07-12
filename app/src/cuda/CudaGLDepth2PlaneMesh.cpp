@@ -1,6 +1,6 @@
 #include "./CudaOpenGLUtils.h"
-
-CudaGLDepth2PlaneMesh::CudaGLDepth2PlaneMesh(int w, int h) {
+#
+CudaGLDepth2PlaneMesh::CudaGLDepth2PlaneMesh(int w, int h,int colorChannel) {
 	width = w;
 	height = h;
 	glGenVertexArrays(1, &vao);
@@ -8,7 +8,7 @@ CudaGLDepth2PlaneMesh::CudaGLDepth2PlaneMesh(int w, int h) {
 	CudaOpenGL::createBufferObject(&ibo, &cuda_ibo_resource, cudaGraphicsMapFlagsNone, width * height * 2 * 3 * sizeof(sizeof(unsigned int)), GL_ELEMENT_ARRAY_BUFFER);
 	cudaMalloc((void**)&cudaIndicesCount, sizeof(int));
 	cudaMalloc((void**)&cudaDepthData, width * height * sizeof(uint16_t));
-	cudaMalloc((void**)&cudaColorData, width * height * 3 * sizeof(unsigned char));
+	cudaMalloc((void**)&cudaColorData, width * height * colorChannel * sizeof(unsigned char));
 };
 
 void CudaGLDepth2PlaneMesh::destory() {

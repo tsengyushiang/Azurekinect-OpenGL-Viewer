@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../ImguiOpenGL/ImguiOpeGL3App.h"
-#include "../InputCamera//RealsenseDevice.h"
+#include "../InputCamera/InputBase.h"
 #include "../cuda/CudaOpenGLUtils.h"
 #include "../cuda/cudaUtils.cuh"
 #include "../json/jsonUtils.h"
@@ -12,7 +12,7 @@ public:
 	bool useTexture = true;
 
 	bool ready2Delete = false;
-	RealsenseDevice* camera;
+	InputBase* camera;
 
 	ImVec4 color;
 
@@ -26,8 +26,8 @@ public:
 
 	// project depthbuffer
 	GLFrameBuffer framebuffer;
-	
-	CameraGL(int cw,int ch,int dw,int dh);
+
+	CameraGL(InputBase* cam);
 	void destory();
 	void save();
 	void addui();
