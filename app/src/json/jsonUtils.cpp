@@ -18,7 +18,7 @@ void JsonUtils::loadCameraPoses(
 	std::vector<Jsonformat::CamPose>& poses
 ) {
 	// write prettified JSON to another file
-	std::ifstream i(filename + ".json");
+	std::ifstream i(filename);
 	json j;
 	i >> j;
 	j = j["camExtrinsics"];
@@ -37,7 +37,7 @@ void JsonUtils::loadVirtualCam(
 	float& fx, float& fy, float& ppx, float& ppy
 ) {
 	// write prettified JSON to another file
-	std::ifstream i(filename + ".json");
+	std::ifstream i(filename);
 	json j;
 	i >> j;
 	width = j["width"];
@@ -76,7 +76,7 @@ void JsonUtils::loadRealsenseJson(
 	std::string filename,
 	int& width, int& height
 ) {
-	std::ifstream i(filename + ".json");
+	std::ifstream i(filename);
 	json j;
 	i >> j;
 
@@ -93,7 +93,7 @@ void JsonUtils::loadRealsenseJson(
 	float& fx, float& fy, float& ppx, float& ppy, int& frameLength,
 	float& depthscale, uint16_t** depthmap, unsigned char** colormap
 ) {
-	std::ifstream i(filename + ".json");
+	std::ifstream i(filename);
 	json j;
 	i >> j;
 
@@ -157,8 +157,12 @@ void JsonUtils::saveRealsenseJson(
 		{"ppy",ppy},
 		{"depthscale",depthscale},
 		{"colormap_raw",colormap_raw},
-		{"depthmap_raw",depthmap_raw}
+		{"depthmap_raw",depthmap_raw},
+		{"frameLength",1},
 	};
+
+	cv::Mat image(cv::Size(width, height), INPUT_COLOR_CHANNEL==3? CV_8UC3 : CV_8UC4, (void*)colormap, cv::Mat::AUTO_STEP);
+	cv::imwrite(filename + ".png", image);
 
 	// write prettified JSON to another file
 	std::ofstream o(filename + ".json");
@@ -193,7 +197,8 @@ void JsonUtils::saveRealsenseJson(
 		{"depthscale",depthscale},
 		{"colormap_raw",colormap_raw},
 		{"depthmap_raw",depthmap_raw},
-		{"extrinsic",extrinsic4x4}
+		{"extrinsic",extrinsic4x4},
+		{"frameLength",1}
 	};
 
 	// write prettified JSON to another file

@@ -39,13 +39,15 @@ void ExtrinsicCalibrator::collectCalibratePoints() {
 	std::vector<glm::vec2> cornerSrc = OpenCVUtils::opencv_detect_aruco_from_RealsenseRaw(
 		calibrator->sourcecam->width,
 		calibrator->sourcecam->height,
-		calibrator->sourcecam->p_color_frame
+		calibrator->sourcecam->p_color_frame,
+		INPUT_COLOR_CHANNEL
 	);
 
 	std::vector<glm::vec2> cornerTrg = OpenCVUtils::opencv_detect_aruco_from_RealsenseRaw(
 		calibrator->targetcam->width,
 		calibrator->targetcam->height,
-		calibrator->targetcam->p_color_frame
+		calibrator->targetcam->p_color_frame,
+		INPUT_COLOR_CHANNEL
 	);
 
 	if (cornerSrc.size() > 0 && cornerTrg.size() > 0) {
@@ -118,7 +120,8 @@ CalibrateResult ExtrinsicCalibrator::putAruco2Origion(InputBase* camera) {
 	std::vector<glm::vec2> corner = OpenCVUtils::opencv_detect_aruco_from_RealsenseRaw(
 		camera->width,
 		camera->height,
-		camera->p_color_frame
+		camera->p_color_frame,
+		INPUT_COLOR_CHANNEL
 	);
 
 	if (corner.size() > 0) {

@@ -5,6 +5,7 @@ layout(location = 0) in vec4 vposition;
 layout(location = 1) in vec4 vcolor;
 
 uniform mat4 MVP;
+uniform mat4 modelMat;
 
 uniform float p_w;
 uniform float p_h;
@@ -16,9 +17,13 @@ uniform float p_near;
 uniform float p_far;
 
 out vec4 fcolor;
-out vec4 pos;
+out vec3 world_pos;
+out vec3 camworld_pos;
+out vec2 TexCoord;
 
 void main() {
+    world_pos = (modelMat * vposition).xyz;
+    camworld_pos = (modelMat * vec4(0,0,0,1.0)).xyz;
     vec4 uv = MVP * vposition;
 
     uv.w = uv.z;
@@ -27,7 +32,7 @@ void main() {
     uv.z = (uv.z/p_far*2.0-1.0)*uv.z;
 
     fcolor = vcolor;
-    pos = vposition;
+    TexCoord = vcolor.xy;
     gl_Position =  uv;
 };
 

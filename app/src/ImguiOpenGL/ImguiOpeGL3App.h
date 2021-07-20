@@ -1,6 +1,7 @@
 #pragma once
 
 #include "imgui.h"
+#include "./Imgui/ImGuiFileDialog/ImGuiFileDialog.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include <stdio.h>
@@ -100,6 +101,7 @@ public:
 	static void render(glm::mat4& mvp, float pointsize,GLuint shader_program, GLuint vao, float size, int type);
 	static void activateTextures(GLuint shader_program, std::string* uniformName, GLuint* textureId, int textureCount);
 	static void setUniformFloats(GLuint shader_program, std::string* uniformName, float* values, int count);
+	static void setUniformMat(GLuint shader_program, std::string uniformName, glm::mat4& mat);
 	//---------------------following method implement in ImguiOpeGL3App_glhelper.cpp
 
 	//helper shape

@@ -16,6 +16,13 @@ void ImguiOpeGL3App::renderElements(glm::mat4& mvp, float psize, GLuint shader_p
 
     glUseProgram(0);
 }
+void ImguiOpeGL3App::setUniformMat(GLuint shader_program, std::string uniformName, glm::mat4& mat) {
+    glUseProgram(shader_program);
+    GLuint MatrixID = glGetUniformLocation(shader_program, uniformName.c_str());
+    glm::mat4 identity = glm::mat4(1.0);
+    glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &mat[0][0]);
+    glUseProgram(0);
+}
 
 void ImguiOpeGL3App::setUniformFloats(GLuint shader_program, std::string* uniformName, float* values, int count) {
 

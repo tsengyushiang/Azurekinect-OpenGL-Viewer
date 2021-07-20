@@ -95,7 +95,7 @@ __global__ void depthMap2point_kernel(
 {
     unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
     unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
-    unsigned int index = y * w + x;
+    unsigned int index = (h-1-y) * w + x;
 
     float depthValue = (float)depthRaw[index] * depthScale;
 
@@ -109,9 +109,9 @@ __global__ void depthMap2point_kernel(
         pos[index * 6 + 1] = (y - ppy) / fy * depthValue;
         pos[index * 6 + 2] = depthValue;
 
-        pos[index * 6 + 3] = (float)pixel.z / 255;
-        pos[index * 6 + 4] = (float)pixel.y / 255;
-        pos[index * 6 + 5] = (float)pixel.x / 255;
+        pos[index * 6 + 3] = float(x) / float(w);
+        pos[index * 6 + 4] = float(y) / float(h);
+        pos[index * 6 + 5] = 1.0;
     }
     else {
         pos[index * 6 + 0] = 0;

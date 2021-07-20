@@ -56,8 +56,8 @@ __global__ void depthMapTriangulate_kernel(
         angle0 > threshold && angle1 > threshold && angle2 > threshold) {
         int i = atomicAdd(counter, 1);
         indices[(i) * 3 + 0] = index0;
-        indices[(i) * 3 + 1] = index2;
-        indices[(i) * 3 + 2] = index1;
+        indices[(i) * 3 + 1] = index1;
+        indices[(i) * 3 + 2] = index2;
     }
 
     da = glm::normalize(p2 - p1);
@@ -75,8 +75,8 @@ __global__ void depthMapTriangulate_kernel(
         angle0 > threshold && angle1 > threshold && angle2 > threshold) {
         int i2 = atomicAdd(counter, 1);
         indices[(i2) * 3 + 0] = index1;
-        indices[(i2) * 3 + 1] = index2;
-        indices[(i2) * 3 + 2] = index3;
+        indices[(i2) * 3 + 1] = index3;
+        indices[(i2) * 3 + 2] = index2;
     }
 }
 

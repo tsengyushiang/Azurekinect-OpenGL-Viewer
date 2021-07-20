@@ -4,6 +4,22 @@ std::map<std::string, std::string> GLShader::shaderLibs = std::map<std::string, 
 
 void GLShader::loadshaders() {
 
+    shaderLibs["cosWeightDiscardwTexture.fs"] =
+#include "shaders/cosWeightDiscardwTexture.fs"
+        ;
+
+    shaderLibs["mask.fs"] =
+#include "shaders/mask.fs"
+        ;
+
+    shaderLibs["cosWeight.fs"] =
+#include "shaders/cosWeight.fs"
+        ;
+
+    shaderLibs["facenormal.fs"] =
+#include "shaders/facenormal.fs"
+        ;
+
     shaderLibs["projectOnScreen.vs"] =
 #include "shaders/projectOnScreen.vs"
         ;

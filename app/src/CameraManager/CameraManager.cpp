@@ -19,36 +19,41 @@ void CameraManager::removeDevice(CamIterator device) {
 }
 
 void CameraManager::setExtrinsicsUI() {
-	static char jsonfilename[100] = "CameraExtrinsics";
-	ImGui::Text("jsonfilename: ");
+	if (ImGui::Button("load camera pose"))
+		ImGuiFileDialog::Instance()->OpenDialog("load camera pose", "load camera pose", ".json", ".");
+	if (ImGuiFileDialog::Instance()->Display("load camera pose"))
+	{
+		// action if OK
+		if (ImGuiFileDialog::Instance()->IsOk())
+		{
+			std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
+			std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+			// action
+			std::map<std::string, glm::mat4> poses;
+			std::vector<Jsonformat::CamPose> setting;
+			JsonUtils::loadCameraPoses(filePathName, setting);
+			for (auto cam : setting) {
+				poses[cam.id] = glm::mat4(
+					cam.extrinsic[0], cam.extrinsic[4], cam.extrinsic[8], cam.extrinsic[12],
+					cam.extrinsic[1], cam.extrinsic[5], cam.extrinsic[9], cam.extrinsic[13],
+					cam.extrinsic[2], cam.extrinsic[6], cam.extrinsic[10], cam.extrinsic[14],
+					cam.extrinsic[3], cam.extrinsic[7], cam.extrinsic[11], cam.extrinsic[15]
+				);
+				std::cout << cam.extrinsic[0] << ", " << cam.extrinsic[4] << "," << cam.extrinsic[8] << "," << cam.extrinsic[12] << std::endl;
+				std::cout << cam.extrinsic[1] << ", " << cam.extrinsic[5] << "," << cam.extrinsic[9] << "," << cam.extrinsic[13] << std::endl;
+				std::cout << cam.extrinsic[2] << ", " << cam.extrinsic[6] << "," << cam.extrinsic[10] << "," << cam.extrinsic[14] << std::endl;
+				std::cout << cam.extrinsic[3] << ", " << cam.extrinsic[7] << "," << cam.extrinsic[11] << "," << cam.extrinsic[15] << std::endl;
 
-	ImGui::SameLine();
-	if (ImGui::Button("load camera pose")) {
-		std::map<std::string, glm::mat4> poses;
-		std::vector<Jsonformat::CamPose> setting;
-		JsonUtils::loadCameraPoses(jsonfilename, setting);
-		for (auto cam : setting) {
-			poses[cam.id] = glm::mat4(
-				cam.extrinsic[0], cam.extrinsic[4], cam.extrinsic[8], cam.extrinsic[12],
-				cam.extrinsic[1], cam.extrinsic[5], cam.extrinsic[9], cam.extrinsic[13],
-				cam.extrinsic[2], cam.extrinsic[6], cam.extrinsic[10], cam.extrinsic[14],
-				cam.extrinsic[3], cam.extrinsic[7], cam.extrinsic[11], cam.extrinsic[15]
-			);
-			std::cout << cam.extrinsic[0] << ", " << cam.extrinsic[4] << "," << cam.extrinsic[8] << "," << cam.extrinsic[12] << std::endl;
-			std::cout << cam.extrinsic[1] << ", " << cam.extrinsic[5] << "," << cam.extrinsic[9] << "," << cam.extrinsic[13] << std::endl;
-			std::cout << cam.extrinsic[2] << ", " << cam.extrinsic[6] << "," << cam.extrinsic[10] << "," << cam.extrinsic[14] << std::endl;
-			std::cout << cam.extrinsic[3] << ", " << cam.extrinsic[7] << "," << cam.extrinsic[11] << "," << cam.extrinsic[15] << std::endl;
+			}
 
+			getAllDevice([&poses](auto device) {
+				device->camera->calibrated = true;
+				device->camera->modelMat = poses[device->camera->serial];
+			});
 		}
-
-		getAllDevice([&poses](auto device) {
-			device->camera->calibrated = true;
-			device->camera->modelMat = poses[device->camera->serial];
-		});
+		// close
+		ImGuiFileDialog::Instance()->Close();
 	}
-
-	ImGui::SameLine();
-	ImGui::InputText("##jsonfilenameurlInput", jsonfilename, 100);
 
 	if (ImGui::Button("save camera pose")) {
 		std::vector<Jsonformat::CamPose> setting;
@@ -75,29 +80,39 @@ void CameraManager::addDepthAndTextureControlsUI() {
 
 	ImGui::Text("ShowInput : ");
 	for (int i = 0; i < cameras.size(); i++) {
-		ImGui::RadioButton(KEY("showInput", cameras[i].camera), &debugDeviceIndex, i);
+		ImGui::RadioButton(KEY("showInput", cameras[i].camera), &debugInputDeviceIndex, i);
 	}
-	ImGui::RadioButton("None##showInput", &debugDeviceIndex, -1);
+	ImGui::RadioButton("None##showInput", &debugInputDeviceIndex, -1);	
+	
+	ImGui::Text("ShowOutput : ");
+	for (int i = 0; i < cameras.size(); i++) {
+		ImGui::RadioButton(KEY("showOutput", cameras[i].camera), &debugOutputDeviceIndex, i);
+	}
+	ImGui::RadioButton("None##showOutput", &debugOutputDeviceIndex, -1);
 
-	ImGui::Text("UseDepth : ");
+	ImGui::Text("UseDevice : ");
 	for (auto device = cameras.begin(); device != cameras.end(); device++) {
 		ImGui::Checkbox(KEY("useDepth", device->camera), &(device->useDepth));
-	}
-	ImGui::Text("UseTexture : ");
-	for (auto device = cameras.begin(); device != cameras.end(); device++) {
-		ImGui::Checkbox(KEY("useTexture", device->camera), &(device->useTexture));
 	}
 }
 
 void CameraManager::addCameraUI() {
-	static char jsonfilename[20] = "932122060549";
-	ImGui::Text("jsonfilename: ");
-	ImGui::SameLine();
-	if (ImGui::Button("add##jsonfilename")) {
-		addJsonDevice(jsonfilename);
+
+	if (ImGui::Button("Add Camera Frame(s)"))
+		ImGuiFileDialog::Instance()->OpenDialog("Add Camera Frame(s)", "Add Camera Frame(s)", ".json", ".", 0);
+	if (ImGuiFileDialog::Instance()->Display("Add Camera Frame(s)"))
+	{
+		// action if OK
+		if (ImGuiFileDialog::Instance()->IsOk())
+		{
+			auto filePathMap = ImGuiFileDialog::Instance()->GetSelection();
+			for (auto nameAndPath : filePathMap) {
+				addJsonDevice(nameAndPath.first.substr(0, nameAndPath.first.size() - 5),nameAndPath.second);
+			}
+		}
+		// close
+		ImGuiFileDialog::Instance()->Close();
 	}
-	ImGui::SameLine();
-	ImGui::InputText("##jsonfilenameurlInput", jsonfilename, 20);
 
 	// list all usb3.0 realsense device
 	if (ImGui::Button("Refresh")) {
@@ -177,15 +192,15 @@ void CameraManager::addCameraUI() {
 	}	
 }
 
-void CameraManager::addJsonDevice(std::string serial) {
+void CameraManager::addJsonDevice(std::string serial, std::string filePath) {
 
 	int w, h;
-	JsonUtils::loadRealsenseJson(serial, w, h);
+	JsonUtils::loadRealsenseJson(filePath, w, h);
 	
 	JsonData* camera = new JsonData(w,h);
 	camera->serial = serial;
 	
-	JsonUtils::loadRealsenseJson(serial,
+	JsonUtils::loadRealsenseJson(filePath,
 		camera->width,
 		camera->height,
 		camera->intri.fx,
@@ -221,9 +236,14 @@ void CameraManager::addRealsense(std::string serial,int cw,int ch,int dw,int dh)
 	}
 }
 
-void CameraManager::getSingleDebugDevice(std::function<void(CameraGL)> callback) {
-	if (debugDeviceIndex < 0 || debugDeviceIndex >= cameras.size())return;
-	callback(cameras[debugDeviceIndex]);
+void CameraManager::getInputDebugDevice(std::function<void(CameraGL)> callback) {
+	if (debugInputDeviceIndex < 0 || debugInputDeviceIndex >= cameras.size())return;
+	callback(cameras[debugInputDeviceIndex]);
+}
+
+void CameraManager::getOutputDebugDevice(std::function<void(CameraGL)> callback) {
+	if (debugOutputDeviceIndex < 0 || debugOutputDeviceIndex >= cameras.size())return;
+	callback(cameras[debugOutputDeviceIndex]);
 }
 
 void CameraManager::getAllDevice(std::function<void(CamIterator)> callback) {
@@ -248,7 +268,7 @@ int CameraManager::getProjectTextureDevice(std::function<void(CamIterator)> call
 	return count;
 }
 
-void CameraManager::getFowardDepthWarppingDevice(std::function<void(CamIterator)> callback) {
+void CameraManager::getFoward3DWrappingDevice(std::function<void(CamIterator)> callback) {
 	for (auto device = cameras.begin(); device != cameras.end(); device++) {
 		if (device->useDepth) {
 			callback(device);

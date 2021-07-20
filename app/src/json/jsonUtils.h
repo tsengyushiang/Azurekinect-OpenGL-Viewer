@@ -3,7 +3,7 @@
 #include <iomanip>
 #include <iostream>
 #include <fstream> 
-
+#include <opencv2/opencv.hpp>
 #include "json/json.hpp"
 using json = nlohmann::json;
 namespace Jsonformat {

@@ -7,7 +7,20 @@
 #include "../json/jsonUtils.h"
 
 class CameraGL {
+	
+	GLFrameBuffer maskInVirtualView;
+	GLFrameBuffer meshnormalInVirtualView;
+	GLFrameBuffer cosWeightInVirtualView;
+	GLFrameBuffer afterDicardInVirtualView;
+
 public:
+	
+	enum FrameBuffer
+	{
+		MASK, MESHNORMAL, COSWEIGHT, AFTERDISCARD
+	};
+	GLFrameBuffer* getFrameBuffer(FrameBuffer);
+
 	bool useDepth = true;
 	bool useTexture = true;
 
@@ -24,16 +37,13 @@ public:
 	// project texture weight
 	float weight = 1.0;
 
-	// project depthbuffer
-	GLFrameBuffer framebuffer;
-
 	CameraGL(InputBase* cam);
 	void destory();
 	void save();
 	void addui();
 	void updateImages(ImVec4 chromaKeyColor, float chromaKeyColorThreshold, int maskErosionSize, bool autoDepthDilation, int curFram);
 	// pass realsense data to cuda and compute plane mesh and point cloud
-	void updateMeshwithCUDA(float planeMeshThreshold, int depthDilationIterationCounte);
+	void updateMeshwithCUDA(float planeMeshThreshold, int depthDilationIterationCounte, int pointSmoothing);
 	
 	// render single realsense mesh
 	void renderMesh(glm::mat4& mvp, GLuint& program);

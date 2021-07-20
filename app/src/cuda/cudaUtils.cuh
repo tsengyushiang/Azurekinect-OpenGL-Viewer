@@ -19,6 +19,11 @@ public:
 		float fx, float fy, float ppx, float ppy, float depthScale, float depthThreshold,
 		int DilationErosionIteration
 	);
+	
+	static void planePointsLaplacianSmoothing(struct cudaGraphicsResource** vbo_resource,
+		unsigned int w, unsigned int h, int interation
+	);
+
 	static void depthMapTriangulate(
 		struct cudaGraphicsResource** vbo_resource, struct cudaGraphicsResource** ibo_resource,
 		unsigned int w, unsigned int h,int *count,float degree

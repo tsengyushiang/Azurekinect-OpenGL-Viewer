@@ -1,6 +1,27 @@
 #include "CameraGL.h"
 
-CameraGL::CameraGL(InputBase* cam) :planemesh(cam->width, cam->height, INPUT_COLOR_CHANNEL), framebuffer(cam->width, cam->height) {
+GLFrameBuffer* CameraGL::getFrameBuffer(FrameBuffer type) {
+
+	if (type == FrameBuffer::MASK) {
+		return &maskInVirtualView;
+	}
+	else if (type == FrameBuffer::MESHNORMAL) {
+		return &meshnormalInVirtualView;
+	}
+	else if (type == FrameBuffer::COSWEIGHT) {
+		return &cosWeightInVirtualView;
+	}
+	else if (type == FrameBuffer::AFTERDISCARD) {
+		return &afterDicardInVirtualView;
+	}
+}
+
+CameraGL::CameraGL(InputBase* cam) :planemesh(cam->width, cam->height, INPUT_COLOR_CHANNEL), 
+	maskInVirtualView(cam->width, cam->height),
+	meshnormalInVirtualView(cam->width, cam->height),
+	cosWeightInVirtualView(cam->width, cam->height),
+	afterDicardInVirtualView(cam->width, cam->height)
+{
 	camera = cam;
 	CudaOpenGL::createCudaGLTexture(&image, &image_cuda, camera->width, camera->height);
 	CudaOpenGL::createCudaGLTexture(&representColorImage, &representColorImage_cuda, camera->width, camera->height);
@@ -59,13 +80,18 @@ void CameraGL::updateImages(
 	);
 }
 // pass realsense data to cuda and compute plane mesh and point cloud
-void CameraGL::updateMeshwithCUDA(float planeMeshThreshold, int depthDilationIterationCount) {
+void CameraGL::updateMeshwithCUDA(float planeMeshThreshold, int depthDilationIterationCount, int pointSmoothing) {
 	CudaAlogrithm::depthMap2point(
 		&planemesh.cuda_vbo_resource,
 		planemesh.cudaDepthData, &image_cuda,
 		camera->width, camera->height,
 		camera->intri.fx, camera->intri.fy, camera->intri.ppx, camera->intri.ppy,
 		camera->intri.depth_scale, camera->farPlane, depthDilationIterationCount);
+	
+	CudaAlogrithm::planePointsLaplacianSmoothing(
+		&planemesh.cuda_vbo_resource,
+		camera->width, camera->height, pointSmoothing
+	);
 
 	CudaAlogrithm::depthMapTriangulate(
 		&planemesh.cuda_vbo_resource,
@@ -142,5 +168,7 @@ void CameraGL::renderFrustum(
 	float values[] = { color.x,color.y,color.z };
 	ImguiOpeGL3App::setUniformFloats(render_Texture_program, outlinerRGB, values, 3);
 
+	glDisable(GL_CULL_FACE);
 	ImguiOpeGL3App::render(deviceMVP, 0, render_Texture_program, vao, 3 * 4, GL_TRIANGLES);
+	glEnable(GL_CULL_FACE);
 }

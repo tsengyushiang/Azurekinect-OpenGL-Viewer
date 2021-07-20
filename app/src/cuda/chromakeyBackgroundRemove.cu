@@ -7,7 +7,7 @@ __global__ void chromaKeyBackgroundRemove_kernel(
 {
     unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
     unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
-    unsigned int index = y * w + x;
+    unsigned int index = (h-1-y) * w + x;
 
     glm::vec3 color = glm::vec3(
         colorRaw[index * INPUT_COLOR_CHANNEL + 2],
@@ -30,7 +30,7 @@ __global__ void chromaKeyBackgroundRemove_kernel(
 {
     unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
     unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
-    unsigned int index = y * w + x;
+    unsigned int index = (h-1-y) * w + x;
 
     glm::vec3 color = glm::vec3(
         colorRaw[index * INPUT_COLOR_CHANNEL + 2],

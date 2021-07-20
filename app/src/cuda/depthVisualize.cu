@@ -6,7 +6,7 @@ __global__ void depthVisualize_kernel(
 {
     unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
     unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
-    unsigned int index = y * w + x;
+    unsigned int index = (h-1-y) * w + x;
 
     uchar4 pixelCenter = { 0,0,0,0 };
     surf2Dread(&pixelCenter, mask, x * sizeof(uchar4), y);

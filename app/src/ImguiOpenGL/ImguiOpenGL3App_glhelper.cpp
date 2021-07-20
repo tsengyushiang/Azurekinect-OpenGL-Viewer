@@ -33,10 +33,10 @@ void ImguiOpeGL3App::genCameraHelper(
 	GLfloat frustum[6 * 3 * 4]; // 6 value * 3 vertex * 4 faces
 
 	for (int i = 1; i < 5; i++) {
-
-		int index1 = i;
+		
+		int index3 = i;
 		int index2 = 0;
-		int index3 = (i + 1)>4?1:(i+1);
+		int index1 = (i + 1)>4?1:(i+1);
 
 		// assign vertex and color
 		frustum[6 * 3 * (i - 1) + 0] = points[index1].x;

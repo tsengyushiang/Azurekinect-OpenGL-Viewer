@@ -21,13 +21,13 @@ void ImguiOpeGL3App::mousedrag(float dx,float dy) {
     //std::cout << "Inheritance public:mousedrag(float dx,float dy) to interact with window" << std::endl;
     
     if (abs(dx) > abs(dy)) {
-        if (dx > 0) {
+        if (dx < 0) {
             AzimuthAngle += sensity;
             if (AzimuthAngle > AzimuthAngleMax) {
                 AzimuthAngle = AzimuthAnglemin;
             }
         }
-        else if (dx < 0) {
+        else if (dx > 0) {
             AzimuthAngle -= sensity;
             if (AzimuthAngle < AzimuthAnglemin) {
                 AzimuthAngle = AzimuthAngleMax;
@@ -35,11 +35,11 @@ void ImguiOpeGL3App::mousedrag(float dx,float dy) {
         }
     }
     else {
-        if (dy > 0) {
+        if (dy < 0) {
             if ((PolarAngle + sensity) > PolarAngleMax) return;
             PolarAngle += sensity;
         }
-        else if (dy < 0) {
+        else if (dy > 0) {
             if ((PolarAngle - sensity) < PolarAnglemin) return;
             PolarAngle -= sensity;
         }
@@ -63,7 +63,7 @@ void ImguiOpeGL3App::setcamera(float width, float height) {
             distance * cos(PolarAngle) + lookAtPoint.y,
             distance * sin(PolarAngle) * sin(AzimuthAngle) + lookAtPoint.z), // Camera is at (4,3,3), in World Space
         lookAtPoint, // and looks at the origin
-        glm::vec3(0, -1, 0)  // Head is up (set to 0,-1,0 to look upside-down)
+        glm::vec3(0, 1, 0)  // Head is up (set to 0,-1,0 to look upside-down)
     );
 
     Model = camVertical ?
@@ -113,8 +113,7 @@ void ImguiOpeGL3App::initImguiOpenGL3(int width, int height) {
     ImGui_ImplOpenGL3_Init(glsl_version);
 
     glEnable(GL_DEPTH_TEST);
-    //glEnable(GL_CULL_FACE);
-    //glCullFace(GL_BACK);
+    glEnable(GL_CULL_FACE);
     initGL();
 
     // Our state
@@ -129,7 +128,8 @@ void ImguiOpeGL3App::initImguiOpenGL3(int width, int height) {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        
+        glCullFace(GL_BACK);
+
         int display_w, display_h;
         glfwGetFramebufferSize(window, &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
@@ -154,9 +154,9 @@ void ImguiOpeGL3App::initImguiOpenGL3(int width, int height) {
             static int counter = 0;
 
             ImGui::Begin("ImguiOpeGL3App : ");                          // Create a window called "Hello, world!" and append into it.
+            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
             if (ImGui::CollapsingHeader("OpenGL World")) {
-                ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
                 ImGui::ColorEdit3("background color", (float*)&clear_color); // Edit 3 floats representing a color
 

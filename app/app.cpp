@@ -8,15 +8,19 @@
 #include "src/ExtrinsicCalibrator/ExtrinsicCalibrator.h"
 #include "src/CameraManager/CameraManager.h"
 
-#define MAXTEXTURE 16
-
 class RealsenseDepthSythesisApp :public ImguiOpeGL3App {
 	GLuint vao, vbo;
 
-	GLuint shader_program, texture_shader_program;
-	GLuint project_shader_program;
-	GLuint projectTextre_shader_program, screen_projectTextre_shader_program;
-	
+	GLuint shader_program;
+
+	GLuint texture_shader_program;
+	GLuint screen_texturedMesh_shader_program;
+
+	GLuint screen_MeshMask_shader_program;
+	GLuint screen_facenormal_shader_program;
+	GLuint screen_cosWeight_shader_program;
+	GLuint screen_cosWeightDiscard_shader_program;
+
 	VirtualCam* virtualcam;
 
 	CameraManager camManager;
@@ -28,9 +32,11 @@ class RealsenseDepthSythesisApp :public ImguiOpeGL3App {
 	ImVec4 chromaKeyColor;
 	float chromaKeyColorThreshold=2;
 	int depthDilationIteration = 0;
+	int pointsSmoothing = 10;
 	bool autoDepthDilation = false;
-	int maskErosion = 0;
-	float planeMeshThreshold=1;
+	int maskErosion = 3;
+	float planeMeshThreshold=0;
+	float cullTriangleThreshold = 0.25;
 
 	float projectDepthBias = 3e-2;
 	bool calculatDeviceWeights=false;
@@ -55,32 +61,22 @@ public:
 			ImGui::SliderInt("MaskErosion", &maskErosion, 0, 50);
 			ImGui::Checkbox("AutoDepthDilation", &autoDepthDilation);
 			ImGui::SliderInt("DepthDilation", &depthDilationIteration, 0, 50);
+			ImGui::SliderInt("pointsSmoothing", &pointsSmoothing, 0, 50);
 
 			ImGui::Text("Reconstruct:");
 			ImGui::SliderFloat("planeMeshThreshold", &planeMeshThreshold, 0.0f, 90.0f);
+			ImGui::SliderFloat("cullTriangleThreshold", &cullTriangleThreshold, 0, 1);
 
-			ImGui::Text("Texture Weights:");
-			if (ImGui::Button("ResetWeight")) {
-				camManager.getProjectTextureDevice([](auto device) {
-					device->weight = 1.0;
-				});
-			}
-			ImGui::SameLine();
-			ImGui::Checkbox("calculatDeviceWeights", &calculatDeviceWeights);
-			camManager.getProjectTextureDevice([](auto device) {
-				ImGui::Text("%s - %f", device->camera->serial, device->weight);
-			});
-			ImGui::SliderFloat("projectDepthBias", &projectDepthBias, 1e-3, 50e-3);
 		}
-		if (ImGui::CollapsingHeader("Camera Extrinsics")) {
+		if (ImGui::CollapsingHeader("Camera Extrinsics Calibrator")) {
 			//aruco calibrate feature point collector params
-			camManager.setExtrinsicsUI();
 			camPoseCalibrator.addUI();
 		}
 		if (ImGui::CollapsingHeader("Virtual camera")) {
 			virtualcam->addUI();
 		}
 		if (ImGui::CollapsingHeader("Cameras Manager")) {
+			camManager.setExtrinsicsUI();
 			camManager.addCameraUI();
 		}
 		if (ImGui::CollapsingHeader("Debug Option")) {
@@ -100,22 +96,31 @@ public:
 	void initGL() override {
 		shader_program = GLShader::genShaderProgram(this->window, "vertexcolor.vs", "vertexcolor.fs");
 		texture_shader_program = GLShader::genShaderProgram(this->window, "texture.vs", "texture.fs");
-		project_shader_program = GLShader::genShaderProgram(this->window,"projectPointcloud.vs", "projectPointcloud.fs");
-		projectTextre_shader_program = GLShader::genShaderProgram(this->window,"vertexcolor.vs","projectTexture.fs");
-		screen_projectTextre_shader_program = GLShader::genShaderProgram(this->window,"projectOnScreen.vs","projectTexture.fs");
 		
+		screen_texturedMesh_shader_program = GLShader::genShaderProgram(this->window, "projectOnScreen.vs", "texture.fs");
+		screen_facenormal_shader_program = GLShader::genShaderProgram(this->window, "projectOnScreen.vs", "facenormal.fs");
+		screen_cosWeight_shader_program = GLShader::genShaderProgram(this->window, "projectOnScreen.vs", "cosWeight.fs");
+		screen_cosWeightDiscard_shader_program = GLShader::genShaderProgram(this->window, "projectOnScreen.vs", "cosWeightDiscardwTexture.fs");
+		screen_MeshMask_shader_program = GLShader::genShaderProgram(this->window, "projectOnScreen.vs", "mask.fs");
+
 		glGenVertexArrays(1, &vao);
 		glGenBuffers(1, &vbo);
 
-		virtualcam = new VirtualCam(1280, 720);
-		virtualcam->fx = 924.6023559570313;
-		virtualcam->fy = 922.5956420898438;
-		virtualcam->ppx = 632.439208984375;
-		virtualcam->ppy = 356.8707275390625;
+		//virtualcam = new VirtualCam(1280, 720);
+		//virtualcam->fx = 924.6023559570313;
+		//virtualcam->fy = 922.5956420898438;
+		//virtualcam->ppx = 632.439208984375;
+		//virtualcam->ppy = 356.8707275390625;
+
+		virtualcam = new VirtualCam(1920, 1080);
+		virtualcam->fx = 913.4943237304688;
+		virtualcam->fy = 913.079833984375;
+		virtualcam->ppx = 960.0040283203125;
+		virtualcam->ppy = 552.7597045898438;
 	}
 
 	// virtual mesh project depth to real camera (prepared for projective texture)
-	void renderScreenViewport(GLuint texture, glm::vec2 offset, glm::vec3 color,float debug = 0, glm::vec2 scale=glm::vec2(0.25,-0.25)) {
+	void renderScreenViewport(GLuint texture, glm::vec2 offset, glm::vec3 color,float debug = 0, glm::vec2 scale=glm::vec2(0.25,0.25)) {
 		ImguiOpeGL3App::genCameraHelper(
 			vao,vbo,
 			1, 1, 0.5, 0.5, 0.5, 0.5, glm::vec3(1, 1, 0), 1.0, true
@@ -140,106 +145,45 @@ public:
 		ImguiOpeGL3App::render(screenDepthMVP, pointsize, texture_shader_program, vao, 3 * 4, GL_TRIANGLES);
 	}
 
-	// render virtual mesh with projective textures
-	void renderTexturedMesh(VirtualCam* virtualcam,bool renderOnScreen,bool drawIndex) {
-		glm::mat4 mvp = Projection * View * Model;
-		// render virtual camera
-		glm::mat4 devicemvp = mvp;
-
-		// project textre;
-		int deviceIndex = 0;
-		GLuint shader = projectTextre_shader_program;
-
-		if (renderOnScreen) {
-			shader = screen_projectTextre_shader_program;
-			std::string uniformNames[] = {
-				"p_w",
-				"p_h",
-				"p_fx",
-				"p_fy",
-				"p_ppx",
-				"p_ppy",
-				"p_near",
-				"p_far",
-			};
-			float values[] = {
-				virtualcam->w,
-				virtualcam->h,
-				virtualcam->fx,
-				virtualcam->fy,
-				virtualcam->ppx,
-				virtualcam->ppy,
-				virtualcam->nearplane,
-				virtualcam->farplane
-			};
-			ImguiOpeGL3App::setUniformFloats(shader, uniformNames, values, 8);
-
-			devicemvp = glm::inverse(virtualcam->getModelMat(lookAtPoint, curFrame));
-		}
-
-		std::string texNames[MAXTEXTURE];
-		GLuint texturs[MAXTEXTURE];
-
-		auto indexTostring = [=](int x) mutable throw() -> std::string
-		{
-			return std::string("[") + std::to_string(x) + std::string("]");
+	void updateForwardWrappingTexture(GLuint shader, VirtualCam* virtualcam, bool drawIndex,CameraGL::FrameBuffer type) {
+		glm::mat4 devicemvp = glm::inverse(virtualcam->getModelMat(lookAtPoint, curFrame));
+		std::string uniformNames[] = {
+			"p_w",
+			"p_h",
+			"p_fx",
+			"p_fy",
+			"p_ppx",
+			"p_ppy",
+			"p_near",
+			"p_far",
+			"weightThreshold"
 		};
-		int textureCount = camManager.getProjectTextureDevice([
-			&texNames, &texturs, &indexTostring, &deviceIndex, &drawIndex, &shader,this
-		](auto device) {
-			texNames[deviceIndex * 2] = "color" + indexTostring(deviceIndex);
-			texNames[deviceIndex * 2 + 1] = "depthtest" + indexTostring(deviceIndex);
+		float values[] = {
+			virtualcam->w,
+			virtualcam->h,
+			virtualcam->fx,
+			virtualcam->fy,
+			virtualcam->ppx,
+			virtualcam->ppy,
+			virtualcam->nearplane,
+			virtualcam->farplane,
+			cullTriangleThreshold
+		};
+		ImguiOpeGL3App::setUniformFloats(shader, uniformNames, values, 8+1);
 
-			texturs[deviceIndex * 2] = drawIndex ? device->representColorImage : device->image;
-			texturs[deviceIndex * 2 + 1] = device->framebuffer.depthBuffer;
-
-			std::string floatnames[] = {
-					"w" + indexTostring(deviceIndex),
-					"h" + indexTostring(deviceIndex),
-					"fx" + indexTostring(deviceIndex),
-					"fy" + indexTostring(deviceIndex),
-					"ppx" + indexTostring(deviceIndex),
-					"ppy" + indexTostring(deviceIndex),
-					"near" + indexTostring(deviceIndex),
-					"far" + indexTostring(deviceIndex),
-					"overlapWeights" + indexTostring(deviceIndex)
+		camManager.getFoward3DWrappingDevice([
+			&type, &drawIndex, &shader, this, &devicemvp
+		](auto forwardwrappingDevice) {
+			std::string uniformNames[] = { "color" };
+			GLuint texture[] = { drawIndex ? forwardwrappingDevice->representColorImage : forwardwrappingDevice->image};
+			ImguiOpeGL3App::activateTextures(shader, uniformNames, texture, 1);
+			auto render = [&forwardwrappingDevice, &shader, this, &devicemvp]() {
+				ImguiOpeGL3App::setUniformMat(shader, "modelMat", forwardwrappingDevice->camera->modelMat);
+				forwardwrappingDevice->renderMesh(devicemvp, shader);
 			};
-			float values[] = {
-				device->camera->width,
-				device->camera->height,
-				device->camera->intri.fx,
-				device->camera->intri.fy,
-				device->camera->intri.ppx,
-				device->camera->intri.ppy,
-				0,
-				device->camera->farPlane,
-				device->weight
-			};
-			ImguiOpeGL3App::setUniformFloats(shader, floatnames, values, 9);
-			deviceIndex++;
+			forwardwrappingDevice->getFrameBuffer(type)->render(render);
 		});
-
-		ImguiOpeGL3App::activateTextures(shader, texNames, texturs, deviceIndex * 2);
-		std::string indexName[] = { "count","bias"};
-		float idx[] = { textureCount, projectDepthBias};
-		ImguiOpeGL3App::setUniformFloats(shader, indexName, idx, 2);
-
-		camManager.getFowardDepthWarppingDevice([
-			&texNames, &texturs, &indexTostring, &deviceIndex, &drawIndex, &shader, this, &devicemvp
-		](auto forwardDepthDevice) {
-			deviceIndex = 0;
-			camManager.getProjectTextureDevice([
-				&texNames, &texturs, &indexTostring, &deviceIndex, &drawIndex, &shader, this, &forwardDepthDevice
-			](auto device) {
-				glUseProgram(shader);
-				GLuint MatrixID = glGetUniformLocation(shader, (std::string("extrinsic") + indexTostring(deviceIndex++)).c_str());
-				glm::mat4 model = glm::inverse(device->camera->modelMat) * forwardDepthDevice->camera->modelMat;
-				glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &model[0][0]);
-				glUseProgram(0);
-			});
-			forwardDepthDevice->renderMesh(devicemvp, shader);
-		});
-	}
+	}	
 	
 	// render single realsense camera pose and color image in world coordinate
 	void renderFrustum(std::vector<CameraGL>::iterator device) {
@@ -260,53 +204,14 @@ public:
 			device->updateImages(chromaKeyColor, chromaKeyColorThreshold, maskErosion, autoDepthDilation, curFrame);
 		});
 
-		camManager.getFowardDepthWarppingDevice([this](auto device) {
-			device->updateMeshwithCUDA(planeMeshThreshold,depthDilationIteration);
-		});		
-
-		//render project depth
-		camManager.getProjectTextureDevice([this](auto device) {
-			auto renderVirtualMeshProjectDepth = [device, this]() {
-				std::string uniformNames[] = {
-				"w",
-				"h",
-				"fx",
-				"fy",
-				"ppx",
-				"ppy",
-				"near",
-				"far",
-				};
-				float values[] = {
-					device->camera->width,
-					device->camera->height,
-					device->camera->intri.fx,
-					device->camera->intri.fy,
-					device->camera->intri.ppx,
-					device->camera->intri.ppy,
-					0,
-					device->camera->farPlane
-				};
-				ImguiOpeGL3App::setUniformFloats(project_shader_program, uniformNames, values, 8);
-
-				glm::mat4 m = glm::inverse(device->camera->modelMat);
-				camManager.getFowardDepthWarppingDevice([this, &m](auto device) {
-					device->renderMesh(m, project_shader_program);
-				});
-			};
-			device->framebuffer.render(renderVirtualMeshProjectDepth);
+		camManager.getFoward3DWrappingDevice([this](auto device) {
+			device->updateMeshwithCUDA(planeMeshThreshold,depthDilationIteration,pointsSmoothing);
 		});
 
-		auto renderTexturedMeshInVirtualview = [this]() {
-			renderTexturedMesh(virtualcam, true,false);
-		};
-		virtualcam->viewport.render(renderTexturedMeshInVirtualview);
-
-		auto renderTexturedIndexMesh = [this]() {
-			renderTexturedMesh(virtualcam, true, true);
-		};
-		virtualcam->debugview.render(renderTexturedIndexMesh);
-
+		updateForwardWrappingTexture(screen_MeshMask_shader_program,virtualcam,false,CameraGL::FrameBuffer::MASK);
+		updateForwardWrappingTexture(screen_facenormal_shader_program,virtualcam,false, CameraGL::FrameBuffer::MESHNORMAL);
+		updateForwardWrappingTexture(screen_cosWeight_shader_program,virtualcam,false, CameraGL::FrameBuffer::COSWEIGHT);
+		updateForwardWrappingTexture(screen_cosWeightDiscard_shader_program,virtualcam,false, CameraGL::FrameBuffer::AFTERDISCARD);
 	}
 	
 	void render3dworld() {
@@ -317,15 +222,8 @@ public:
 		glm::mat4 mvpAxis = Projection * View * glm::translate(glm::mat4(1.0), lookAtPoint) * Model;
 		ImguiOpeGL3App::render(mvpAxis, pointsize, shader_program, vao, 6, GL_LINES);
 
-		std::vector<glm::vec2> windows = {
-			glm::vec2(0.25,0.75),
-			glm::vec2(0.75,0.75),
-		};
-		int deviceIndex = 0;
-		camManager.getAllDevice([this, &mvp, &windows, &deviceIndex](auto device, auto allDevice) {
+		camManager.getAllDevice([this, &mvp](auto device, auto allDevice) {
 			renderFrustum(device);
-			//renderScreenViewport(device->framebuffer.depthBuffer, windows[deviceIndex++], glm::vec3(device->color.x, device->color.y, device->color.z));
-			//device->renderMesh(mvp, shader_program);
 			camPoseCalibrator.waitCalibrateCamera(device, allDevice);
 		});
 
@@ -333,7 +231,12 @@ public:
 		glm::mat4 devicemvp = mvp * virtualcam->getModelMat(lookAtPoint, curFrame);
 		virtualcam->renderFrustum(devicemvp, vao, vbo, shader_program);
 
-		renderTexturedMesh(virtualcam, false, false);
+		camManager.getFoward3DWrappingDevice([&mvp, this](auto device) {
+			std::string uniformNames[] = { "color" };
+			GLuint texture[] = { device->image };
+			ImguiOpeGL3App::activateTextures(texture_shader_program, uniformNames, texture, 1);
+			device->renderMesh(mvp, texture_shader_program);
+		});
 		camPoseCalibrator.render(mvp, shader_program);
 	}
 
@@ -350,12 +253,18 @@ public:
 		render3dworld();
 		glViewport(0, 0, display_w, display_h);
 
-		renderScreenViewport(virtualcam->viewport.texColorBuffer, glm::vec2(0.5, 0.5), virtualcam->color,0, glm::vec2(0.5, -0.5));
-		renderScreenViewport(virtualcam->viewport.depthBuffer, glm::vec2(0.5, -0.5), virtualcam->color,0,glm::vec2(0.5,-0.5));
 
-		camManager.getSingleDebugDevice([this](auto cam) {
+		camManager.getInputDebugDevice([this](auto cam) {
 			renderScreenViewport(cam.image, glm::vec2(-0.25, 0.25), virtualcam->color,1.0);
 			renderScreenViewport(cam.depthvis, glm::vec2(-0.25, 0.75), virtualcam->color,1.0);
+		});		
+		
+		camManager.getOutputDebugDevice([this](auto cam) {
+			renderScreenViewport(cam.getFrameBuffer(CameraGL::FrameBuffer::AFTERDISCARD)->texColorBuffer, glm::vec2(0.5, 0.5), virtualcam->color, 0, glm::vec2(0.5, 0.5));
+			renderScreenViewport(cam.getFrameBuffer(CameraGL::FrameBuffer::MASK)->texColorBuffer, glm::vec2(0.25, -0.25), virtualcam->color, 0, glm::vec2(0.25, 0.25));
+			renderScreenViewport(cam.getFrameBuffer(CameraGL::FrameBuffer::MESHNORMAL)->depthBuffer, glm::vec2(0.25, -0.75), virtualcam->color, 0, glm::vec2(0.25, 0.25));
+			renderScreenViewport(cam.getFrameBuffer(CameraGL::FrameBuffer::COSWEIGHT)->texColorBuffer, glm::vec2(0.75, -0.25), virtualcam->color, 0, glm::vec2(0.25, 0.25));
+			renderScreenViewport(cam.getFrameBuffer(CameraGL::FrameBuffer::MESHNORMAL)->texColorBuffer, glm::vec2(0.75, -0.75), virtualcam->color, 0, glm::vec2(0.25, 0.25));
 		});
 
 		curFrame++;

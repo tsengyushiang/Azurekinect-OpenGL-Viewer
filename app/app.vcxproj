@@ -164,6 +164,7 @@
     <ClCompile Include="src\ImguiOpenGL\ImguiOpenGL3App_gl.cpp" />
     <ClCompile Include="src\ImguiOpenGL\ImguiOpenGL3App_glhelper.cpp" />
     <ClCompile Include="src\ImguiOpenGL\Imgui\imgui.cpp" />
+    <ClCompile Include="src\ImguiOpenGL\Imgui\ImGuiFileDialog\ImGuiFileDialog.cpp" />
     <ClCompile Include="src\ImguiOpenGL\Imgui\imgui_demo.cpp" />
     <ClCompile Include="src\ImguiOpenGL\Imgui\imgui_draw.cpp" />
     <ClCompile Include="src\ImguiOpenGL\Imgui\imgui_impl_glfw.cpp" />
@@ -211,6 +212,10 @@
     <ClInclude Include="src\virtualcam\VirtualCam.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="src\ImguiOpenGL\shaders\cosWeight.fs" />
+    <None Include="src\ImguiOpenGL\shaders\cosWeightDiscardwTexture.fs" />
+    <None Include="src\ImguiOpenGL\shaders\facenormal.fs" />
+    <None Include="src\ImguiOpenGL\shaders\mask.fs" />
     <None Include="src\ImguiOpenGL\shaders\projectOnScreen.vs" />
     <None Include="src\ImguiOpenGL\shaders\projectPointcloud.fs" />
     <None Include="src\ImguiOpenGL\shaders\projectPointcloud.vs" />
@@ -228,6 +233,7 @@
     <CudaCompile Include="src\cuda\depthVisualize.cu" />
     <CudaCompile Include="src\cuda\fillDepthWithDilation.cu" />
     <CudaCompile Include="src\cuda\maskErosion.cu" />
+    <CudaCompile Include="src\cuda\pointLaplacianSmoothing.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

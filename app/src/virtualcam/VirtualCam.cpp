@@ -31,31 +31,36 @@ void VirtualCam::addUI() {
 
 	ImGui::Text("Route: ");
 
-	static char jsonfilename[100] = "CameraExtrinsics";
-	ImGui::Text("jsonfilename: ");
+	if (ImGui::Button("load Virtual Route"))
+		ImGuiFileDialog::Instance()->OpenDialog("load Virtual Route", "load Virtual Route", ".json", ".");
+	if (ImGuiFileDialog::Instance()->Display("load Virtual Route"))
+	{
+		// action if OK
+		if (ImGuiFileDialog::Instance()->IsOk())
+		{
+			std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
+			std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+			// action
+			std::vector<Jsonformat::CamPose> camRoute;
+			JsonUtils::loadVirtualCam(filePathName, camRoute,
+				w, h, farplane, fx, fy, ppx, ppy);
+			for (auto cam : camRoute) {
+				modelMats.push_back(glm::mat4(
+					cam.extrinsic[0], cam.extrinsic[4], cam.extrinsic[8], cam.extrinsic[12],
+					cam.extrinsic[1], cam.extrinsic[5], cam.extrinsic[9], cam.extrinsic[13],
+					cam.extrinsic[2], cam.extrinsic[6], cam.extrinsic[10], cam.extrinsic[14],
+					cam.extrinsic[3], cam.extrinsic[7], cam.extrinsic[11], cam.extrinsic[15]
+				));
+				std::cout << cam.extrinsic[0] << ", " << cam.extrinsic[4] << "," << cam.extrinsic[8] << "," << cam.extrinsic[12] << std::endl;
+				std::cout << cam.extrinsic[1] << ", " << cam.extrinsic[5] << "," << cam.extrinsic[9] << "," << cam.extrinsic[13] << std::endl;
+				std::cout << cam.extrinsic[2] << ", " << cam.extrinsic[6] << "," << cam.extrinsic[10] << "," << cam.extrinsic[14] << std::endl;
+				std::cout << cam.extrinsic[3] << ", " << cam.extrinsic[7] << "," << cam.extrinsic[11] << "," << cam.extrinsic[15] << std::endl;
 
-	ImGui::SameLine();
-	if (ImGui::Button("load")) {
-		std::vector<Jsonformat::CamPose> camRoute;
-		JsonUtils::loadVirtualCam(jsonfilename, camRoute,
-			w, h, farplane, fx, fy, ppx, ppy);
-		for (auto cam : camRoute) {
-			modelMats.push_back(glm::mat4(
-				cam.extrinsic[0], cam.extrinsic[4], cam.extrinsic[8], cam.extrinsic[12],
-				cam.extrinsic[1], cam.extrinsic[5], cam.extrinsic[9], cam.extrinsic[13],
-				cam.extrinsic[2], cam.extrinsic[6], cam.extrinsic[10], cam.extrinsic[14],
-				cam.extrinsic[3], cam.extrinsic[7], cam.extrinsic[11], cam.extrinsic[15]
-			));
-			std::cout << cam.extrinsic[0] << ", " << cam.extrinsic[4] << "," << cam.extrinsic[8] << "," << cam.extrinsic[12] << std::endl;
-			std::cout << cam.extrinsic[1] << ", " << cam.extrinsic[5] << "," << cam.extrinsic[9] << "," << cam.extrinsic[13] << std::endl;
-			std::cout << cam.extrinsic[2] << ", " << cam.extrinsic[6] << "," << cam.extrinsic[10] << "," << cam.extrinsic[14] << std::endl;
-			std::cout << cam.extrinsic[3] << ", " << cam.extrinsic[7] << "," << cam.extrinsic[11] << "," << cam.extrinsic[15] << std::endl;
-
+			}
 		}
-
+		// close
+		ImGuiFileDialog::Instance()->Close();
 	}
-	ImGui::SameLine();
-	ImGui::InputText("##jsonfilenameurlInput", jsonfilename, 20);
 
 	if(ImGui::Button("switch debug mode")) {
 		std::cout << "manual mode" << isFromFile  << std::endl;
@@ -107,7 +112,8 @@ void VirtualCam::renderFrustum(
 		color, farplane, false
 	);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	glDisable(GL_CULL_FACE);
 	ImguiOpeGL3App::render(devicemvp, 0, render_vertexColor_program, vao, 3 * 4, GL_TRIANGLES);
-
+	glEnable(GL_CULL_FACE);
 }
 

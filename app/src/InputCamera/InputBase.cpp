@@ -20,7 +20,7 @@ InputBase::~InputBase() {
 glm::vec3 InputBase::colorPixel2point(glm::vec2 pixel) {
     int i = pixel.y;
     int j = pixel.x;
-    int index = i * width + j;
+    int index = i* width + j;
 
     float depthValue = (float)p_depth_frame[index] * intri.depth_scale;
     if (depthValue > farPlane) {
@@ -28,7 +28,7 @@ glm::vec3 InputBase::colorPixel2point(glm::vec2 pixel) {
     }
     glm::vec3 point(
         (float(j) - intri.ppx) / intri.fx * depthValue,
-        (float(i) - intri.ppy) / intri.fy * depthValue,
+        (height - 1 - float(i) - intri.ppy) / intri.fy * depthValue,
         depthValue
     );
 
