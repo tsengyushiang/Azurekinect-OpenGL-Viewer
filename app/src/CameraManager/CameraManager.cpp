@@ -90,6 +90,13 @@ void CameraManager::addDepthAndTextureControlsUI() {
 	}
 	ImGui::RadioButton("None##showOutput", &debugOutputDeviceIndex, -1);
 
+	ImGui::Text("SaveOutput : ");
+	for (int i = 0; i < cameras.size(); i++) {
+		if(ImGui::Button(KEY("SaveOutput", cameras[i].camera))){
+			cameras[i].saveWrappedResult();
+		}
+	}
+
 	ImGui::Text("UseDevice : ");
 	for (auto device = cameras.begin(); device != cameras.end(); device++) {
 		ImGui::Checkbox(KEY("useDepth", device->camera), &(device->useDepth));

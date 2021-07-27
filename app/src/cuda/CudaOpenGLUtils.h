@@ -4,9 +4,9 @@
 
 #include <GL/gl3w.h>            // Initialize with gl3wInit()
 #include <GLFW/glfw3.h>         // Include glfw3.h after our OpenGL definitions
-
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
+#include "../config.h"
 
 class CudaOpenGL {
 public:

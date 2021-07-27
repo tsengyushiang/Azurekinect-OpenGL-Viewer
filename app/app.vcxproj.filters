@@ -229,6 +229,9 @@
     <ClInclude Include="src\InputCamera\InputBase.h">
       <Filter>來源檔案\InputCamera</Filter>
     </ClInclude>
+    <ClInclude Include="src\config.h">
+      <Filter>來源檔案</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="src\ImguiOpenGL\shaders\projectOnScreen.vs">
@@ -269,9 +272,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="src\cuda\cudaUtils.cu">
-      <Filter>來源檔案\cuda</Filter>
-    </CudaCompile>
     <CudaCompile Include="src\cuda\depthMap2pointcloud.cu">
       <Filter>來源檔案\cuda</Filter>
     </CudaCompile>
@@ -291,6 +291,9 @@
       <Filter>來源檔案\cuda</Filter>
     </CudaCompile>
     <CudaCompile Include="src\cuda\pointLaplacianSmoothing.cu">
+      <Filter>來源檔案\cuda</Filter>
+    </CudaCompile>
+    <CudaCompile Include="src\cuda\planeVertexNormalEstimate.cu">
       <Filter>來源檔案\cuda</Filter>
     </CudaCompile>
   </ItemGroup>

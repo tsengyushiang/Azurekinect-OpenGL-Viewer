@@ -16,24 +16,24 @@ __global__ void depthMapTriangulate_kernel(
     unsigned int index3 = ((y+1) * width + (x+1));
 
     glm::vec3 p0 = glm::vec3(
-        pos[index0 * 6 + 0],
-        pos[index0 * 6 + 1],
-        pos[index0 * 6 + 2]
+        pos[index0 * ATTRIBUTESIZE + ATTRIBUTE_OFFSET_VERTEX + 0],
+        pos[index0 * ATTRIBUTESIZE + ATTRIBUTE_OFFSET_VERTEX + 1],
+        pos[index0 * ATTRIBUTESIZE + ATTRIBUTE_OFFSET_VERTEX + 2]
     ); 
     glm::vec3 p1 = glm::vec3(
-        pos[index1 * 6 + 0],
-        pos[index1 * 6 + 1],
-        pos[index1 * 6 + 2]
+        pos[index1 * ATTRIBUTESIZE + ATTRIBUTE_OFFSET_VERTEX + 0],
+        pos[index1 * ATTRIBUTESIZE + ATTRIBUTE_OFFSET_VERTEX + 1],
+        pos[index1 * ATTRIBUTESIZE + ATTRIBUTE_OFFSET_VERTEX + 2]
     ); 
     glm::vec3 p2 = glm::vec3(
-        pos[index2 * 6 + 0],
-        pos[index2 * 6 + 1],
-        pos[index2 * 6 + 2]
+        pos[index2 * ATTRIBUTESIZE + ATTRIBUTE_OFFSET_VERTEX + 0],
+        pos[index2 * ATTRIBUTESIZE + ATTRIBUTE_OFFSET_VERTEX + 1],
+        pos[index2 * ATTRIBUTESIZE + ATTRIBUTE_OFFSET_VERTEX + 2]
     );    
     glm::vec3 p3 = glm::vec3(
-        pos[index3 * 6 + 0],
-        pos[index3 * 6 + 1],
-        pos[index3 * 6 + 2]
+        pos[index3 * ATTRIBUTESIZE + 0],
+        pos[index3 * ATTRIBUTESIZE + 1],
+        pos[index3 * ATTRIBUTESIZE + 2]
     );
 
     float threshold = degree/180 * 3.1415926;

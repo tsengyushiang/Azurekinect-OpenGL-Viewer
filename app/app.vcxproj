@@ -188,6 +188,7 @@
     <ClInclude Include="resource.h" />
     <ClInclude Include="src\CameraManager\CameraGL.h" />
     <ClInclude Include="src\CameraManager\CameraManager.h" />
+    <ClInclude Include="src\config.h" />
     <ClInclude Include="src\cuda\CudaOpenGLUtils.h" />
     <ClInclude Include="src\cuda\cudaUtils.cuh" />
     <ClInclude Include="src\ExtrinsicCalibrator\CorrespondPointCollector.h" />
@@ -227,12 +228,12 @@
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="src\cuda\chromakeyBackgroundRemove.cu" />
-    <CudaCompile Include="src\cuda\cudaUtils.cu" />
     <CudaCompile Include="src\cuda\depthMap2pointcloud.cu" />
     <CudaCompile Include="src\cuda\depthMapTriangulate.cu" />
     <CudaCompile Include="src\cuda\depthVisualize.cu" />
     <CudaCompile Include="src\cuda\fillDepthWithDilation.cu" />
     <CudaCompile Include="src\cuda\maskErosion.cu" />
+    <CudaCompile Include="src\cuda\planeVertexNormalEstimate.cu" />
     <CudaCompile Include="src\cuda\pointLaplacianSmoothing.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -31,7 +31,6 @@ class RealsenseDepthSythesisApp :public ImguiOpeGL3App {
 
 	ImVec4 chromaKeyColor;
 	float chromaKeyColorThreshold=2;
-	int depthDilationIteration = 0;
 	int pointsSmoothing = 10;
 	bool autoDepthDilation = false;
 	int maskErosion = 3;
@@ -60,7 +59,6 @@ public:
 			ImGui::SliderFloat("chromaKeyColorThreshold", &chromaKeyColorThreshold, 0, 5); // Edit 3 floats representing a color
 			ImGui::SliderInt("MaskErosion", &maskErosion, 0, 50);
 			ImGui::Checkbox("AutoDepthDilation", &autoDepthDilation);
-			ImGui::SliderInt("DepthDilation", &depthDilationIteration, 0, 50);
 			ImGui::SliderInt("pointsSmoothing", &pointsSmoothing, 0, 50);
 
 			ImGui::Text("Reconstruct:");
@@ -205,7 +203,7 @@ public:
 		});
 
 		camManager.getFoward3DWrappingDevice([this](auto device) {
-			device->updateMeshwithCUDA(planeMeshThreshold,depthDilationIteration,pointsSmoothing);
+			device->updateMeshwithCUDA(planeMeshThreshold,pointsSmoothing);
 		});
 
 		updateForwardWrappingTexture(screen_MeshMask_shader_program,virtualcam,false,CameraGL::FrameBuffer::MASK);

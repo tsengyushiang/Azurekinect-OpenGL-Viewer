@@ -5,13 +5,11 @@ uniform float weightThreshold;
 
 in vec3 world_pos;
 in vec3 camworld_pos;
+in vec3 normal;
 
 void main() {
-    vec3 x = dFdx(world_pos);
-    vec3 y = dFdy(world_pos);
-    vec3 normal = cross(x, y);
-    vec3 norm = normalize(normal);
-    float weight = dot(norm,normalize(world_pos-camworld_pos));
+
+    float weight = dot(normal,normalize(camworld_pos-world_pos));
     if(weight>weightThreshold){
         FragColor = vec4(weight,weight,weight,1.0);
     }else{

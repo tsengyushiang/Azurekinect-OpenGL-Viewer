@@ -80,17 +80,22 @@ void CameraGL::updateImages(
 	);
 }
 // pass realsense data to cuda and compute plane mesh and point cloud
-void CameraGL::updateMeshwithCUDA(float planeMeshThreshold, int depthDilationIterationCount, int pointSmoothing) {
+void CameraGL::updateMeshwithCUDA(float planeMeshThreshold, int pointSmoothing) {
 	CudaAlogrithm::depthMap2point(
 		&planemesh.cuda_vbo_resource,
 		planemesh.cudaDepthData, &image_cuda,
 		camera->width, camera->height,
 		camera->intri.fx, camera->intri.fy, camera->intri.ppx, camera->intri.ppy,
-		camera->intri.depth_scale, camera->farPlane, depthDilationIterationCount);
+		camera->intri.depth_scale, camera->farPlane);
 	
 	CudaAlogrithm::planePointsLaplacianSmoothing(
 		&planemesh.cuda_vbo_resource,
 		camera->width, camera->height, pointSmoothing
+	);
+
+	CudaAlogrithm::planeVertexNormalEstimate(
+		&planemesh.cuda_vbo_resource,
+		camera->width, camera->height
 	);
 
 	CudaAlogrithm::depthMapTriangulate(
@@ -101,6 +106,23 @@ void CameraGL::updateMeshwithCUDA(float planeMeshThreshold, int depthDilationIte
 		planemesh.cudaIndicesCount,
 		planeMeshThreshold
 	);
+}
+
+void CameraGL::saveWrappedResult() {
+
+	std::vector<FrameBuffer> saveType = {
+		FrameBuffer::AFTERDISCARD,
+		FrameBuffer::COSWEIGHT,
+		FrameBuffer::MASK,
+		FrameBuffer::MESHNORMAL,
+	};
+	
+	for (auto type : saveType) {
+		unsigned char* colorRaw = getFrameBuffer(type)->getRawColorData();
+		cv::Mat image(cv::Size(camera->width, camera->height), CV_8UC4, (void*)colorRaw, cv::Mat::AUTO_STEP);
+		cv::imwrite(camera->serial + std::to_string(type)+".png", image);
+		delete colorRaw;
+	}
 }
 
 void CameraGL::save() {
@@ -151,7 +173,9 @@ void CameraGL::renderFrustum(
 		camColor, 0.2, false
 	);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	glDisable(GL_CULL_FACE);
 	ImguiOpeGL3App::render(deviceMVP, 0, render_vertexColor_program, vao, 3 * 4, GL_TRIANGLES);
+	glEnable(GL_CULL_FACE);
 
 	ImguiOpeGL3App::genCameraHelper(
 		vao, vbo,

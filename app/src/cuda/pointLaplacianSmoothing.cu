@@ -10,11 +10,11 @@ __global__ void planePointsLaplacianSmoothing_kernel(
     unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
     unsigned int index = y * w + x;
 
-    for (int i = 0; i < 6; i++) {
-        outputPoints[index * 6 + i] = inputPoints[index * 6 + i];
+    for (int i = 0; i < ATTRIBUTESIZE; i++) {
+        outputPoints[index * ATTRIBUTESIZE + ATTRIBUTE_OFFSET_VERTEX + i] = inputPoints[index * ATTRIBUTESIZE + ATTRIBUTE_OFFSET_VERTEX + i];
     }
     // self is valid point
-    if (inputPoints[index * 6 + 2] != 0) {
+    if (inputPoints[index * ATTRIBUTESIZE + ATTRIBUTE_OFFSET_VERTEX + 2] != 0) {
         float coordinateSum[3] = { 0,0,0 };
         int validNeighborCount = 0;
         for (int shiftY = -NEIGHBORINDEXSTEP; shiftY <= NEIGHBORINDEXSTEP; shiftY++) {
@@ -29,19 +29,19 @@ __global__ void planePointsLaplacianSmoothing_kernel(
                     int indexNeighbor = (y + shiftY) * w + (shiftX + x);
 
                     // neighbor is valid point
-                    if (inputPoints[indexNeighbor * 6 + 2] != 0) {
-                        coordinateSum[0] += inputPoints[indexNeighbor * 6 + 0];
-                        coordinateSum[1] += inputPoints[indexNeighbor * 6 + 1];
-                        coordinateSum[2] += inputPoints[indexNeighbor * 6 + 2];
+                    if (inputPoints[indexNeighbor * ATTRIBUTESIZE + ATTRIBUTE_OFFSET_VERTEX + 2] != 0) {
+                        coordinateSum[0] += inputPoints[indexNeighbor * ATTRIBUTESIZE + ATTRIBUTE_OFFSET_VERTEX + 0];
+                        coordinateSum[1] += inputPoints[indexNeighbor * ATTRIBUTESIZE + ATTRIBUTE_OFFSET_VERTEX + 1];
+                        coordinateSum[2] += inputPoints[indexNeighbor * ATTRIBUTESIZE + ATTRIBUTE_OFFSET_VERTEX + 2];
                         validNeighborCount++;
                     }
                 }
             }
         }
         if (validNeighborCount != 0) {
-            outputPoints[index * 6 + 0] = coordinateSum[0] / validNeighborCount;
-            outputPoints[index * 6 + 1] = coordinateSum[1] / validNeighborCount;
-            outputPoints[index * 6 + 2] = coordinateSum[2] / validNeighborCount;
+            outputPoints[index * ATTRIBUTESIZE + ATTRIBUTE_OFFSET_VERTEX + 0] = coordinateSum[0] / validNeighborCount;
+            outputPoints[index * ATTRIBUTESIZE + ATTRIBUTE_OFFSET_VERTEX + 1] = coordinateSum[1] / validNeighborCount;
+            outputPoints[index * ATTRIBUTESIZE + ATTRIBUTE_OFFSET_VERTEX + 2] = coordinateSum[2] / validNeighborCount;
         }
     }    
 }
@@ -54,7 +54,7 @@ void launch_kernel(float* pos, unsigned int w, unsigned int h,int iteration)
     {
         bool dstIstmp = true;
         float* tmpPointsArray;
-        cudaMalloc((void**)&tmpPointsArray, w * h * 6 * sizeof(float));
+        cudaMalloc((void**)&tmpPointsArray, w * h * ATTRIBUTESIZE * sizeof(float));
 
         // dilation
         for (int i = 0; i < iteration; i++) {
@@ -68,7 +68,7 @@ void launch_kernel(float* pos, unsigned int w, unsigned int h,int iteration)
         }
 
         if (!dstIstmp) {
-            cudaMemcpy(tmpPointsArray, pos, w * h * 6 * sizeof(uint16_t), cudaMemcpyDeviceToDevice);
+            cudaMemcpy(tmpPointsArray, pos, w * h * ATTRIBUTESIZE * sizeof(uint16_t), cudaMemcpyDeviceToDevice);
         }
         cudaFree(tmpPointsArray);
     }

@@ -2,7 +2,8 @@ R"(
 #version 330
 
 layout(location = 0) in vec4 vposition;
-layout(location = 1) in vec4 vcolor;
+layout(location = 1) in vec4 vUv;
+layout(location = 2) in vec4 vnormal;
 
 uniform mat4 MVP;
 uniform mat4 modelMat;
@@ -16,8 +17,8 @@ uniform float p_ppy;
 uniform float p_near;
 uniform float p_far;
 
-out vec4 fcolor;
 out vec3 world_pos;
+out vec3 normal;
 out vec3 camworld_pos;
 out vec2 TexCoord;
 
@@ -31,8 +32,8 @@ void main() {
     uv.y = (uv.y * (2.0 / p_h * p_fy) + (p_ppy * 2.0 / p_h - 1.0) * uv.z);
     uv.z = (uv.z/p_far*2.0-1.0)*uv.z;
 
-    fcolor = vcolor;
-    TexCoord = vcolor.xy;
+    TexCoord = vUv.xy;
+    normal = vnormal.xyz;
     gl_Position =  uv;
 };
 

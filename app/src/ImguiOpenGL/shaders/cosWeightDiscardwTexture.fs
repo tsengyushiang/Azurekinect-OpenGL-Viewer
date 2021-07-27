@@ -8,13 +8,11 @@ uniform float debug;
 in vec3 world_pos;
 in vec3 camworld_pos;
 in vec2 TexCoord;
+in vec3 normal;
 
 void main() {
-    vec3 x = dFdx(world_pos);
-    vec3 y = dFdy(world_pos);
-    vec3 normal = cross(x, y);
-    vec3 norm = normalize(normal);
-    float weight = dot(norm,normalize(world_pos-camworld_pos));
+
+    float weight = dot(normal,normalize(camworld_pos-world_pos));
     if(weight>weightThreshold){
         vec4 c = texture(color, TexCoord); 
 	    if(c.a>0){

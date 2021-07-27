@@ -40,10 +40,11 @@ public:
 	CameraGL(InputBase* cam);
 	void destory();
 	void save();
+	void saveWrappedResult();
 	void addui();
 	void updateImages(ImVec4 chromaKeyColor, float chromaKeyColorThreshold, int maskErosionSize, bool autoDepthDilation, int curFram);
 	// pass realsense data to cuda and compute plane mesh and point cloud
-	void updateMeshwithCUDA(float planeMeshThreshold, int depthDilationIterationCounte, int pointSmoothing);
+	void updateMeshwithCUDA(float planeMeshThreshold, int pointSmoothing);
 	
 	// render single realsense mesh
 	void renderMesh(glm::mat4& mvp, GLuint& program);

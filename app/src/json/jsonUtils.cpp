@@ -1,6 +1,8 @@
 #include "./jsonUtils.h"
 #include "../InputCamera/InputBase.h"
 
+int SaveFileCount = 0;
+
 template<typename T>
 void Jsonformat::to_json(json& j, const T& p) {
 	j = json{ {"id", p.id}, {"extrinsic", p.extrinsic} };
@@ -162,10 +164,10 @@ void JsonUtils::saveRealsenseJson(
 	};
 
 	cv::Mat image(cv::Size(width, height), INPUT_COLOR_CHANNEL==3? CV_8UC3 : CV_8UC4, (void*)colormap, cv::Mat::AUTO_STEP);
-	cv::imwrite(filename + ".png", image);
+	cv::imwrite(filename + std::to_string(SaveFileCount)+".png", image);
 
 	// write prettified JSON to another file
-	std::ofstream o(filename + ".json");
+	std::ofstream o(filename + std::to_string(SaveFileCount++) +".json");
 	o << std::setw(4) << j << std::endl;
 	o.close();
 }
