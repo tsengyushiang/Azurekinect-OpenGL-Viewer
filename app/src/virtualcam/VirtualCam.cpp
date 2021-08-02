@@ -8,11 +8,12 @@ glm::mat4 VirtualCam::getModelMat(glm::vec3 lookAtPoint, int curFrame) {
 		return modelMats[curFrame % modelMats.size()];
 	}
 	//manual mode
+	pose.lookAtPoint = lookAtPoint;
 	glm::mat4 rt = glm::lookAt(
 		glm::vec3(
-			distance * sin(PolarAngle) * cos(AzimuthAngle) + lookAtPoint.x,
-			distance * cos(PolarAngle) + lookAtPoint.y,
-			distance * sin(PolarAngle) * sin(AzimuthAngle) + lookAtPoint.z), // Camera is at (4,3,3), in World Space
+			pose.distance * sin(pose.PolarAngle) * cos(pose.AzimuthAngle) + lookAtPoint.x,
+			pose.distance * cos(pose.PolarAngle) + lookAtPoint.y,
+			pose.distance * sin(pose.PolarAngle) * sin(pose.AzimuthAngle) + lookAtPoint.z), // Camera is at (4,3,3), in World Space
 		lookAtPoint, // and looks at the origin
 		glm::vec3(0, -1, 0)  // Head is up (set to 0,-1,0 to look upside-down)
 	);
@@ -70,9 +71,9 @@ void VirtualCam::addUI() {
 	if (!isFromFile) {
 		ImGui::Text("Sphereical Coordiante :");
 		ImGui::SliderFloat("farplane##virtualcam", &farplane, 0, 10);
-		ImGui::SliderFloat("AzimuthAngle##virtualcam", &AzimuthAngle, AzimuthAnglemin, AzimuthAngleMax);
-		ImGui::SliderFloat("PolarAngle##virtualcam", &PolarAngle, PolarAnglemin, PolarAngleMax);
-		ImGui::SliderFloat("distance##virtualcam", &distance, distancemin, distanceMax);
+		ImGui::SliderFloat("AzimuthAngle##virtualcam", &pose.AzimuthAngle, AzimuthAnglemin, AzimuthAngleMax);
+		ImGui::SliderFloat("PolarAngle##virtualcam", &pose.PolarAngle, PolarAnglemin, PolarAngleMax);
+		ImGui::SliderFloat("distance##virtualcam", &pose.distance, distancemin, distanceMax);
 	}
 
 }

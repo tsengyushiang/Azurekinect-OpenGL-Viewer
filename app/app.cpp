@@ -7,6 +7,9 @@
 #include "src/json/jsonUtils.h"
 #include "src/ExtrinsicCalibrator/ExtrinsicCalibrator.h"
 #include "src/CameraManager/CameraManager.h"
+#include "src/virtualcam/VirtualRouteAnimator.h"
+#include <opencv2/core/utils/filesystem.hpp>
+#include <filesystem>
 
 class RealsenseDepthSythesisApp :public ImguiOpeGL3App {
 	GLuint vao, vbo;
@@ -20,8 +23,11 @@ class RealsenseDepthSythesisApp :public ImguiOpeGL3App {
 	GLuint screen_facenormal_shader_program;
 	GLuint screen_cosWeight_shader_program;
 	GLuint screen_cosWeightDiscard_shader_program;
+	GLuint cosWeightDiscard_shader_program;
 
 	VirtualCam* virtualcam;
+	VirtualRouteAnimator animator;
+	int currentRecordFrame = -1;
 
 	CameraManager camManager;
 
@@ -50,7 +56,27 @@ public:
 		glDeleteVertexArrays(1, &vao);
 		glDeleteBuffers(1, &vbo);
 	}
-
+	void onBeforeRender() override {
+		//run animation if is triggered
+		currentRecordFrame = animator.animeVirtualCamPose(virtualcam->pose);
+		if (currentRecordFrame > -1) {
+			std::cout << currentRecordFrame << std::endl;
+		}
+	}
+	void onAfterRender() override {
+		if (currentRecordFrame > -1) {
+			// save all animation frames
+			std::string outputFolder = cv::utils::fs::join("./", std::to_string(currentRecordFrame));
+			cv::utils::fs::createDirectory(outputFolder);
+			camManager.getFoward3DWrappingDevice([this,&outputFolder](auto cam) {
+				std::string imgefilename = cv::utils::fs::join(outputFolder, cam->camera->serial + ".png");
+				unsigned char* colorRaw = cam->getFrameBuffer(CameraGL::FrameBuffer::AFTERDISCARD)->getRawColorData();				
+				cv::Mat image(cv::Size(cam->camera->width, cam->camera->height), CV_8UC4, (void*)colorRaw, cv::Mat::AUTO_STEP);
+				cv::imwrite(imgefilename, image);
+				currentRecordFrame = -1;
+			});
+		}
+	}
 	void addGui() override {
 
 		if (ImGui::CollapsingHeader("Reconstruct & Texture :")) {
@@ -72,6 +98,7 @@ public:
 		}
 		if (ImGui::CollapsingHeader("Virtual camera")) {
 			virtualcam->addUI();
+			animator.addUI(virtualcam->pose);
 		}
 		if (ImGui::CollapsingHeader("Cameras Manager")) {
 			camManager.setExtrinsicsUI();
@@ -99,6 +126,7 @@ public:
 		screen_facenormal_shader_program = GLShader::genShaderProgram(this->window, "projectOnScreen.vs", "facenormal.fs");
 		screen_cosWeight_shader_program = GLShader::genShaderProgram(this->window, "projectOnScreen.vs", "cosWeight.fs");
 		screen_cosWeightDiscard_shader_program = GLShader::genShaderProgram(this->window, "projectOnScreen.vs", "cosWeightDiscardwTexture.fs");
+		cosWeightDiscard_shader_program = GLShader::genShaderProgram(this->window, "vertexcolor.vs", "cosWeightDiscardwTexture.fs");
 		screen_MeshMask_shader_program = GLShader::genShaderProgram(this->window, "projectOnScreen.vs", "mask.fs");
 
 		glGenVertexArrays(1, &vao);
@@ -229,11 +257,16 @@ public:
 		glm::mat4 devicemvp = mvp * virtualcam->getModelMat(lookAtPoint, curFrame);
 		virtualcam->renderFrustum(devicemvp, vao, vbo, shader_program);
 
-		camManager.getFoward3DWrappingDevice([&mvp, this](auto device) {
+		GLuint _3dshader = cosWeightDiscard_shader_program;
+		camManager.getFoward3DWrappingDevice([&_3dshader, &mvp, this](auto device) {
+			std::string uniformName[] = {"weightThreshold"};
+			float values[] = {cullTriangleThreshold};
+			ImguiOpeGL3App::setUniformFloats(_3dshader, uniformName, values, 1);
 			std::string uniformNames[] = { "color" };
 			GLuint texture[] = { device->image };
-			ImguiOpeGL3App::activateTextures(texture_shader_program, uniformNames, texture, 1);
-			device->renderMesh(mvp, texture_shader_program);
+			ImguiOpeGL3App::activateTextures(_3dshader, uniformNames, texture, 1);
+			ImguiOpeGL3App::setUniformMat(_3dshader, "modelMat", device->camera->modelMat);
+			device->renderMesh(mvp, _3dshader);
 		});
 		camPoseCalibrator.render(mvp, shader_program);
 	}

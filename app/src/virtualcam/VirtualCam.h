@@ -8,26 +8,33 @@
 #include <glm/glm.hpp>
 #include <opencv2\core\hal\interface.h>
 
+struct SphericalCamPose {
+	float distance;
+	float PolarAngle;
+	float AzimuthAngle;
+	glm::vec3 lookAtPoint;
+};
+
 class VirtualCam {
-public:
-	int w, h;
-	float ppx, ppy, fx, fy;
-
-	float distance = 0.616;
-	float PolarAngle = 1.57;
-	float AzimuthAngle = 4.732;
-	float farplane = 1.5;
-	float nearplane = 0;
-
 	float distancemin = 0;
 	float distanceMax = 5;
 	float PolarAngleMax = 3.0;
 	float PolarAnglemin = 0.1;
 	float AzimuthAngleMax = 6.28;
 	float AzimuthAnglemin = -6.28;
+public:
+	int w, h;
+	float ppx, ppy, fx, fy;
+	float farplane = 1.5;
+	float nearplane = 0;
+
+	SphericalCamPose pose = {
+		0.616,
+		1.57,
+		4.732
+	};
 
 	glm::vec3 color = glm::vec3(1.0, 1.0, 0.0);
-
 	std::vector<glm::mat4> modelMats;
 
 	GLFrameBuffer viewport;

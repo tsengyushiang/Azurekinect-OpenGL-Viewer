@@ -3,13 +3,12 @@ R"(
 layout(location = 0) out vec4 FragColor;
 uniform float weightThreshold;
 
-in vec3 world_pos;
-in vec3 camworld_pos;
+in vec3 local_pos;
 in vec3 normal;
 
 void main() {
 
-    float weight = dot(normal,normalize(camworld_pos-world_pos));
+    float weight = dot(normal,normalize(-local_pos));
     if(weight>weightThreshold){
         FragColor = vec4(weight,weight,weight,1.0);
     }else{

@@ -183,6 +183,7 @@
     <ClCompile Include="src\pcl\fast_triangulation_of_unordered_pcd.cpp" />
     <ClCompile Include="src\pcl\rigid-transforrm-from-points.cpp" />
     <ClCompile Include="src\virtualcam\VirtualCam.cpp" />
+    <ClCompile Include="src\virtualcam\VirtualRouteAnimator.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
@@ -211,6 +212,7 @@
     <ClInclude Include="src\opencv\opecv-utils.h" />
     <ClInclude Include="src\pcl\examples-pcl.h" />
     <ClInclude Include="src\virtualcam\VirtualCam.h" />
+    <ClInclude Include="src\virtualcam\VirtualRouteAnimator.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="src\ImguiOpenGL\shaders\cosWeight.fs" />

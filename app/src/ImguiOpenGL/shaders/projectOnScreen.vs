@@ -17,14 +17,12 @@ uniform float p_ppy;
 uniform float p_near;
 uniform float p_far;
 
-out vec3 world_pos;
+out vec3 local_pos;
 out vec3 normal;
-out vec3 camworld_pos;
 out vec2 TexCoord;
 
 void main() {
-    world_pos = (modelMat * vposition).xyz;
-    camworld_pos = (modelMat * vec4(0,0,0,1.0)).xyz;
+    local_pos = vposition.xyz;
     vec4 uv = MVP * vposition;
 
     uv.w = uv.z;

@@ -152,6 +152,9 @@
     <ClCompile Include="src\ImguiOpenGL\Imgui\ImGuiFileDialog\ImGuiFileDialog.cpp">
       <Filter>來源檔案\ImguiOpenGL\include</Filter>
     </ClCompile>
+    <ClCompile Include="src\virtualcam\VirtualRouteAnimator.cpp">
+      <Filter>來源檔案\virtualcam</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -231,6 +234,9 @@
     </ClInclude>
     <ClInclude Include="src\config.h">
       <Filter>來源檔案</Filter>
+    </ClInclude>
+    <ClInclude Include="src\virtualcam\VirtualRouteAnimator.h">
+      <Filter>來源檔案\virtualcam</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

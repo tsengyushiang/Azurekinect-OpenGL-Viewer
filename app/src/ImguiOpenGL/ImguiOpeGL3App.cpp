@@ -8,9 +8,9 @@ void ImguiOpeGL3App::glfw_error_callback(int error, const char* description)
 {
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
-void ImguiOpeGL3App::framebufferRender() {
-
-}
+void ImguiOpeGL3App::framebufferRender() {}
+void ImguiOpeGL3App::onBeforeRender() {}
+void ImguiOpeGL3App::onAfterRender() {}
 void ImguiOpeGL3App::mainloop() {
     std::cout << "Inheritance public:mainloop() to render your objects." << std::endl;
 }
@@ -122,9 +122,9 @@ void ImguiOpeGL3App::initImguiOpenGL3(int width, int height) {
     // Main loop
     while (!glfwWindowShouldClose(window))
     {
+        onBeforeRender();
         time = glfwGetTime();
         framebufferRender();
-
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -185,6 +185,7 @@ void ImguiOpeGL3App::initImguiOpenGL3(int width, int height) {
 
         glfwSwapBuffers(window);
         glfwPollEvents();
+        onAfterRender();
     }
 
     // Cleanup

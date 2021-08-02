@@ -65,6 +65,8 @@ public:
 	virtual void framebufferRender();
 	virtual void addGui();
 	virtual void mousedrag(float,float);
+	virtual void onBeforeRender();
+	virtual void onAfterRender();
 	static void glfw_error_callback(int error, const char* description);
 
 	float time = 0;
