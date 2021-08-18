@@ -57,7 +57,7 @@ public:
 	static void loadVirtualCam(
 		std::string filename,
 		std::vector<Jsonformat::CamPose>& poses,
-		int& width, int& height, float& farPlane,
+		int& width, int& height,
 		float& fx, float& fy, float& ppx, float& ppy
 	);
 };

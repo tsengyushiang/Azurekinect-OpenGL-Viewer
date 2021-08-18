@@ -23,6 +23,7 @@ public:
 
 	bool useDepth = true;
 	bool useTexture = true;
+	glm::mat4 getModelMat();
 
 	bool ready2Delete = false;
 	InputBase* camera;
@@ -36,13 +37,14 @@ public:
 
 	// project texture weight
 	float weight = 1.0;
-
+	bool create3d = true;
 	CameraGL(InputBase* cam);
 	void destory();
 	void save();
 	void saveWrappedResult();
 	void addui();
-	void updateImages(ImVec4 chromaKeyColor, float chromaKeyColorThreshold, int maskErosionSize, bool autoDepthDilation, int curFram);
+	void updateImages(ImVec4 chromaKeyColor, float chromaKeyColorThreshold,
+		int maskErosionSize, bool autoDepthDilation);
 	// pass realsense data to cuda and compute plane mesh and point cloud
 	void updateMeshwithCUDA(float planeMeshThreshold, int pointSmoothing);
 	

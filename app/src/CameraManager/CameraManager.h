@@ -7,7 +7,7 @@
 #include <functional>
 
 #define CamIterator std::vector<CameraGL>::iterator&
-
+#define RecordContainer FILE
 class CameraManager {
 
 	rs2::context ctx;
@@ -15,10 +15,15 @@ class CameraManager {
 
 	void addJsonDevice(std::string serial, std::string filePath);
 	void addRealsense(std::string serial, int cw, int ch, int dw, int wh);
-	void addAzuekinect(std::string serial, int cw, int ch);
+	void addAzuekinect(int index);
 	void removeDevice(CamIterator device);
 
 public :
+	std::vector<RecordContainer*>record_depth_frames;
+	std::vector<RecordContainer*>record_color_frames;
+	 
+	int recordFrameCount = 0;
+	bool recording = false;
 
 	CameraManager();
 	void destory();
@@ -29,6 +34,8 @@ public :
 	void addDepthAndTextureControlsUI();
 
 	size_t size();
+
+	void recordFrame();
 
 	int debugInputDeviceIndex = -1;
 	void getInputDebugDevice(std::function<void(CameraGL)> callback);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "./InputBase.h"
+#include "MultiDeviceCapturer.h"
 #include <k4a/k4a.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,24 +10,20 @@
 
 class AzureKinect :public InputBase {
 
-    k4a_device_t device;
-    k4a_device_configuration_t camera_configuration;
-    k4a_calibration_t calibration;
-    k4a_transformation_t transformation;
-
-    k4a_image_t transformed_depth_image = NULL;
-
+    k4a::calibration calibration;
+    k4a::transformation* depth_to_color;
 
 public:
-    AzureKinect(int w, int h);
+    AzureKinect(int w=1280, int h=720);
     ~AzureKinect();
 
-    void runDevice(std::string serailnum);
+    void runDevice(int index);
 
     std::thread autoUpdate;
     void getLatestFrame();
 
-    static void updateAvailableSerialnums();
-    static std::set<std::string> availableSerialnums;
-    static std::map<std::string, k4a_device_t> availableDeviceDict;
+    int indexOfMultiDeviceCapturer = -1;
+    static MultiDeviceCapturer* capturer;
+    static bool alreadyStart;
+    static void startDevices();
 };

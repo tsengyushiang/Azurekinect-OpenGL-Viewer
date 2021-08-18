@@ -51,6 +51,9 @@
     <Filter Include="來源檔案\ImguiOpenGL\shaders">
       <UniqueIdentifier>{242da6df-a65d-48d4-88bc-57c4077f5cd5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="來源檔案\eigen">
+      <UniqueIdentifier>{433906bd-a22f-481a-ba83-1ccefa7fa1cb}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="app.cpp">
@@ -155,6 +158,9 @@
     <ClCompile Include="src\virtualcam\VirtualRouteAnimator.cpp">
       <Filter>來源檔案\virtualcam</Filter>
     </ClCompile>
+    <ClCompile Include="src\eigen\EigenUtils.cpp">
+      <Filter>來源檔案\eigen</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -238,6 +244,12 @@
     <ClInclude Include="src\virtualcam\VirtualRouteAnimator.h">
       <Filter>來源檔案\virtualcam</Filter>
     </ClInclude>
+    <ClInclude Include="src\InputCamera\MultiDeviceCapturer.h">
+      <Filter>來源檔案\InputCamera</Filter>
+    </ClInclude>
+    <ClInclude Include="src\eigen\EigenUtils.h">
+      <Filter>來源檔案\eigen</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="src\ImguiOpenGL\shaders\projectOnScreen.vs">
@@ -300,6 +312,9 @@
       <Filter>來源檔案\cuda</Filter>
     </CudaCompile>
     <CudaCompile Include="src\cuda\planeVertexNormalEstimate.cu">
+      <Filter>來源檔案\cuda</Filter>
+    </CudaCompile>
+    <CudaCompile Include="src\cuda\detphclipping.cu">
       <Filter>來源檔案\cuda</Filter>
     </CudaCompile>
   </ItemGroup>

@@ -2,7 +2,7 @@
 
 CameraManager::CameraManager() {
 	Realsense::updateAvailableSerialnums(ctx);
-	AzureKinect::updateAvailableSerialnums();
+	AzureKinect::startDevices();
 }
 
 void CameraManager::destory() {
@@ -13,7 +13,6 @@ void CameraManager::destory() {
 
 void CameraManager::removeDevice(CamIterator device) {
 	Realsense::updateAvailableSerialnums(ctx);
-	AzureKinect::updateAvailableSerialnums();
 	device = cameras.erase(device);
 	device->destory();
 }
@@ -83,6 +82,7 @@ void CameraManager::addDepthAndTextureControlsUI() {
 		ImGui::RadioButton(KEY("showInput", cameras[i].camera), &debugInputDeviceIndex, i);
 	}
 	ImGui::RadioButton("None##showInput", &debugInputDeviceIndex, -1);	
+	ImGui::RadioButton("All##showInput", &debugInputDeviceIndex, -2);	
 	
 	ImGui::Text("ShowOutput : ");
 	for (int i = 0; i < cameras.size(); i++) {
@@ -100,6 +100,52 @@ void CameraManager::addDepthAndTextureControlsUI() {
 	ImGui::Text("UseDevice : ");
 	for (auto device = cameras.begin(); device != cameras.end(); device++) {
 		ImGui::Checkbox(KEY("useDepth", device->camera), &(device->useDepth));
+	}
+}
+
+void CameraManager::recordFrame() {
+
+	const int MAXCAPTUREFRAME = 1000;
+	if (cameras.size() > 0 && recording) {
+		
+		if(recordFrameCount==0){
+			for (auto cam : cameras) {
+				record_color_frames.push_back(fopen(std::string(cam.camera->serial + "color.bin").c_str(), "wb"));
+				record_depth_frames.push_back(fopen(std::string(cam.camera->serial + "depth.bin").c_str(), "wb"));
+			}
+		}
+
+		for (int i = 0; i < cameras.size();i++) {
+			auto cam = cameras[i].camera;
+
+			int width = cam->width;
+			int height = cam->height;
+
+			fwrite(
+				cam->p_color_frame, 1,
+				INPUT_COLOR_CHANNEL * width * height * sizeof(unsigned char),
+				record_color_frames[i]
+			);
+			fflush(record_color_frames[i]);
+			fwrite(
+				cam->p_depth_frame, 1,
+				width * height * sizeof(uint16_t),
+				record_depth_frames[i]
+			);
+			fflush(record_depth_frames[i]);
+
+		}
+		recordFrameCount++;
+		if (recordFrameCount >= MAXCAPTUREFRAME) {
+			recordFrameCount = 0;
+			recording = false;
+			for (int i = 0; i < cameras.size(); i++) {
+				fclose(record_color_frames[i]);
+				fclose(record_depth_frames[i]);
+				record_color_frames.clear();
+				record_depth_frames.clear();
+			}
+		}
 	}
 }
 
@@ -124,7 +170,6 @@ void CameraManager::addCameraUI() {
 	// list all usb3.0 realsense device
 	if (ImGui::Button("Refresh")) {
 		Realsense::updateAvailableSerialnums(ctx);
-		AzureKinect::updateAvailableSerialnums();
 	}
 	ImGui::SameLine();
 	if (ImGui::Button("snapshot all")) {
@@ -133,30 +178,26 @@ void CameraManager::addCameraUI() {
 		}
 	}
 
-	ImGui::Text("AzureKinect device :");
-	//waiting Azure kinect activated device
-	for (std::string serial : AzureKinect::availableSerialnums) {
-		bool alreadyStart = false;
+	if (ImGui::Button("Toggle create point cloud or not")) {
 		for (auto device = cameras.begin(); device != cameras.end(); device++) {
-			if (device->camera->serial == serial) {
-				alreadyStart = true;
-				break;
-			}
-		}
-		if (!alreadyStart)
-		{
-			ImGui::Text(serial.c_str());
-
-			if (ImGui::Button(("1080p##Azruekinect" + serial).c_str())) {
-				addAzuekinect(serial, 1920, 1080);
-			}
-			ImGui::SameLine();
-			if (ImGui::Button(("720p##Azruekinect" + serial).c_str())) {
-				addAzuekinect(serial, 1280, 720);
-			}
-
+			device->create3d = !device->create3d;
 		}
 	}
+	if (ImGui::Button(std::string("Already Record "+std::to_string(recordFrameCount)+" frames").c_str())) {
+		recording = !recording;
+	}
+
+	ImGui::Text("AzureKinect device :");
+	//waiting Azure kinect activated device
+	if (!AzureKinect::alreadyStart) {
+		if (ImGui::Button("StartAllAzureKinect")) {
+			AzureKinect::alreadyStart = true;
+			for (int i = 0; i < AzureKinect::capturer->subordinate_devices.size() + 1; i++) {
+				addAzuekinect(i);
+			}
+		}
+	}
+	
 
 	ImGui::Text("Realsense device :");
 	// waiting realsense active device
@@ -224,9 +265,9 @@ void CameraManager::addJsonDevice(std::string serial, std::string filePath) {
 	cameras.push_back(device);
 }
 
-void CameraManager::addAzuekinect(std::string serial, int cw, int ch) {
-	AzureKinect* azureKinect = new AzureKinect(cw,ch);
-	azureKinect->runDevice(serial);
+void CameraManager::addAzuekinect(int index) {
+	AzureKinect* azureKinect = new AzureKinect();
+	azureKinect->runDevice(index);
 	CameraGL device(azureKinect);
 	cameras.push_back(device);
 }
@@ -244,6 +285,11 @@ void CameraManager::addRealsense(std::string serial,int cw,int ch,int dw,int dh)
 }
 
 void CameraManager::getInputDebugDevice(std::function<void(CameraGL)> callback) {
+	if (debugInputDeviceIndex == -2) {
+		for (int i = 0; i < cameras.size();i++) {
+			callback(cameras[i]);
+		}
+	}
 	if (debugInputDeviceIndex < 0 || debugInputDeviceIndex >= cameras.size())return;
 	callback(cameras[debugInputDeviceIndex]);
 }

@@ -15,6 +15,9 @@ GLFrameBuffer* CameraGL::getFrameBuffer(FrameBuffer type) {
 		return &afterDicardInVirtualView;
 	}
 }
+glm::mat4 CameraGL::getModelMat() {
+	return camera->modelMat;
+}
 
 CameraGL::CameraGL(InputBase* cam) :planemesh(cam->width, cam->height, INPUT_COLOR_CHANNEL), 
 	maskInVirtualView(cam->width, cam->height),
@@ -38,8 +41,7 @@ void CameraGL::destory() {
 }
 void CameraGL::updateImages(
 	ImVec4 chromaKeyColor,float chromaKeyColorThreshold,
-	int maskErosionSize, bool autoDepthDilation,
-	int curFrame
+	int maskErosionSize, bool autoDepthDilation
 ) 
 {
 	auto copyHost2Device = [this](const void* depthRaw, size_t depthSize, const void* colorRaw, size_t colorSize) {
@@ -48,7 +50,7 @@ void CameraGL::updateImages(
 	};
 	camera->fetchframes(copyHost2Device);
 
-	// acutal texture
+	// acutal texture and create Mask
 	CudaAlogrithm::chromaKeyBackgroundRemove(&image_cuda, planemesh.cudaColorData, camera->width, camera->height,
 		glm::vec3(
 			chromaKeyColor.x * 255,
@@ -56,56 +58,65 @@ void CameraGL::updateImages(
 			chromaKeyColor.z * 255
 		), chromaKeyColorThreshold
 	);
-
-	CudaAlogrithm::maskErosion(&image_cuda, camera->width, camera->height, maskErosionSize);
-
-	if (autoDepthDilation) {
-		CudaAlogrithm::fillDepthWithDilation(&image_cuda, planemesh.cudaDepthData, camera->width, camera->height);
-	}
-
+	CudaAlogrithm::clipFloorAndFarDepth(
+		&image_cuda, planemesh.cudaDepthData,
+		camera->width, camera->height,
+		camera->intri.fx, camera->intri.fy, camera->intri.ppx, camera->intri.ppy, camera->intri.depth_scale,
+		camera->farPlane, camera->esitmatePlaneCenter,camera->esitmatePlaneNormal, camera->point2floorDistance
+	);
 	CudaAlogrithm::depthVisualize(&image_cuda, &depthvis_cuda, planemesh.cudaDepthData, camera->width, camera->height, camera->intri.depth_scale, camera->farPlane);
 
-	//// debug : index map for project coverage
-	CudaAlogrithm::chromaKeyBackgroundRemove(&representColorImage_cuda, planemesh.cudaColorData, camera->width, camera->height,
-		glm::vec3(
-			chromaKeyColor.x * 255,
-			chromaKeyColor.y * 255,
-			chromaKeyColor.z * 255
-		), chromaKeyColorThreshold,
-		glm::vec3(
-			color.x * 255,
-			color.y * 255,
-			color.z * 255
-		)
-	);
+	if (create3d) {
+		CudaAlogrithm::maskErosion(&image_cuda, camera->width, camera->height, maskErosionSize);
+
+		if (autoDepthDilation) {
+			CudaAlogrithm::fillDepthWithDilation(&image_cuda, planemesh.cudaDepthData, camera->width, camera->height);
+		}
+
+		//// debug : index map for project coverage
+		CudaAlogrithm::chromaKeyBackgroundRemove(&representColorImage_cuda, planemesh.cudaColorData, camera->width, camera->height,
+			glm::vec3(
+				chromaKeyColor.x * 255,
+				chromaKeyColor.y * 255,
+				chromaKeyColor.z * 255
+			), chromaKeyColorThreshold,
+			glm::vec3(
+				color.x * 255,
+				color.y * 255,
+				color.z * 255
+			)
+		);
+	}
 }
 // pass realsense data to cuda and compute plane mesh and point cloud
 void CameraGL::updateMeshwithCUDA(float planeMeshThreshold, int pointSmoothing) {
-	CudaAlogrithm::depthMap2point(
-		&planemesh.cuda_vbo_resource,
-		planemesh.cudaDepthData, &image_cuda,
-		camera->width, camera->height,
-		camera->intri.fx, camera->intri.fy, camera->intri.ppx, camera->intri.ppy,
-		camera->intri.depth_scale, camera->farPlane);
-	
-	CudaAlogrithm::planePointsLaplacianSmoothing(
-		&planemesh.cuda_vbo_resource,
-		camera->width, camera->height, pointSmoothing
-	);
+	if (create3d) {
+		CudaAlogrithm::depthMap2point(
+			&planemesh.cuda_vbo_resource,
+			planemesh.cudaDepthData, &image_cuda,
+			camera->width, camera->height,
+			camera->intri.fx, camera->intri.fy, camera->intri.ppx, camera->intri.ppy,
+			camera->intri.depth_scale, camera->farPlane);
 
-	CudaAlogrithm::planeVertexNormalEstimate(
-		&planemesh.cuda_vbo_resource,
-		camera->width, camera->height
-	);
+		CudaAlogrithm::planePointsLaplacianSmoothing(
+			&planemesh.cuda_vbo_resource,
+			camera->width, camera->height, pointSmoothing
+		);
 
-	CudaAlogrithm::depthMapTriangulate(
-		&planemesh.cuda_vbo_resource,
-		&planemesh.cuda_ibo_resource,
-		camera->width,
-		camera->height,
-		planemesh.cudaIndicesCount,
-		planeMeshThreshold
-	);
+		CudaAlogrithm::planeVertexNormalEstimate(
+			&planemesh.cuda_vbo_resource,
+			camera->width, camera->height
+		);
+
+		CudaAlogrithm::depthMapTriangulate(
+			&planemesh.cuda_vbo_resource,
+			&planemesh.cuda_ibo_resource,
+			camera->width,
+			camera->height,
+			planemesh.cudaIndicesCount,
+			planeMeshThreshold
+		);
+	}
 }
 
 void CameraGL::saveWrappedResult() {
@@ -126,12 +137,16 @@ void CameraGL::saveWrappedResult() {
 }
 
 void CameraGL::save() {
+	unsigned char* colorRaw = new unsigned char[camera->width*camera->height * INPUT_COLOR_CHANNEL];
+	glBindTexture(GL_TEXTURE_2D, image);
+	glGetTexImage(GL_TEXTURE_2D, 0, GL_BGRA, GL_UNSIGNED_BYTE, colorRaw);
 	JsonUtils::saveRealsenseJson(
 		camera->serial,
 		camera->width, camera->height,
 		camera->intri.fx, camera->intri.fy, camera->intri.ppx, camera->intri.ppy,
-		camera->intri.depth_scale, camera->p_depth_frame, camera->p_color_frame
+		camera->intri.depth_scale, camera->p_depth_frame, colorRaw
 	);
+	free(colorRaw);
 }
 
 void CameraGL::addui() {
@@ -147,12 +162,13 @@ void CameraGL::addui() {
 	ImGui::Checkbox(KEY("calibrated"), &(camera->calibrated));
 	ImGui::ColorEdit3(KEY("color"), (float*)&color); // Edit 3 floats representing a color
 	ImGui::SliderFloat(KEY("clip-z"), &camera->farPlane, 0.5f, 15.0f);
+	ImGui::SliderFloat(KEY("clip-floor"), &camera->point2floorDistance, -0.1f, 0.2f);
 }
 
 // render single realsense mesh
 void CameraGL::renderMesh(glm::mat4& mvp, GLuint& program) {
 	auto render = [this, mvp, program](GLuint& vao, int& count) {
-		glm::mat4 m = mvp * camera->modelMat;
+		glm::mat4 m = mvp * getModelMat();
 		ImguiOpeGL3App::renderElements(m, 0, program, vao, count * 3, GL_FILL);
 	};
 
@@ -163,7 +179,7 @@ void CameraGL::renderFrustum(
 	glm::mat4 worldMVP, glm::vec3 camColor,
 	GLuint& vao, GLuint& vbo,GLuint render_vertexColor_program,GLuint render_Texture_program
 ) {
-	glm::mat4 deviceMVP = worldMVP * camera->modelMat;
+	glm::mat4 deviceMVP = worldMVP * getModelMat();
 
 	// render camera frustum
 	ImguiOpeGL3App::genCameraHelper(

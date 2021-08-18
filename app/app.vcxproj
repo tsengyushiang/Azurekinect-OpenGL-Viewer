@@ -155,6 +155,7 @@
     <ClCompile Include="src\CameraManager\CameraManager.cpp" />
     <ClCompile Include="src\cuda\CudaGLDepth2PlaneMesh.cpp" />
     <ClCompile Include="src\cuda\CudaOpenGLUtils.cpp" />
+    <ClCompile Include="src\eigen\EigenUtils.cpp" />
     <ClCompile Include="src\ExtrinsicCalibrator\CorrespondPointCollector.cpp" />
     <ClCompile Include="src\ExtrinsicCalibrator\ExtrinsicCalibrator.cpp" />
     <ClCompile Include="src\gl3w\gl3w.c" />
@@ -192,6 +193,7 @@
     <ClInclude Include="src\config.h" />
     <ClInclude Include="src\cuda\CudaOpenGLUtils.h" />
     <ClInclude Include="src\cuda\cudaUtils.cuh" />
+    <ClInclude Include="src\eigen\EigenUtils.h" />
     <ClInclude Include="src\ExtrinsicCalibrator\CorrespondPointCollector.h" />
     <ClInclude Include="src\ExtrinsicCalibrator\ExtrinsicCalibrator.h" />
     <ClInclude Include="src\gl3w\gl3w.h" />
@@ -207,6 +209,7 @@
     <ClInclude Include="src\InputCamera\example-realsense.h" />
     <ClInclude Include="src\InputCamera\InputBase.h" />
     <ClInclude Include="src\InputCamera\JsonData.h" />
+    <ClInclude Include="src\InputCamera\MultiDeviceCapturer.h" />
     <ClInclude Include="src\InputCamera\Realsense.h" />
     <ClInclude Include="src\json\jsonUtils.h" />
     <ClInclude Include="src\opencv\opecv-utils.h" />
@@ -233,6 +236,7 @@
     <CudaCompile Include="src\cuda\depthMap2pointcloud.cu" />
     <CudaCompile Include="src\cuda\depthMapTriangulate.cu" />
     <CudaCompile Include="src\cuda\depthVisualize.cu" />
+    <CudaCompile Include="src\cuda\detphclipping.cu" />
     <CudaCompile Include="src\cuda\fillDepthWithDilation.cu" />
     <CudaCompile Include="src\cuda\maskErosion.cu" />
     <CudaCompile Include="src\cuda\planeVertexNormalEstimate.cu" />

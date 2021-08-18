@@ -1,5 +1,6 @@
 #include "./jsonUtils.h"
 #include "../InputCamera/InputBase.h"
+#include <opencv2/core/utils/filesystem.hpp>
 
 int SaveFileCount = 0;
 
@@ -23,8 +24,12 @@ void JsonUtils::loadCameraPoses(
 	std::ifstream i(filename);
 	json j;
 	i >> j;
-	j = j["camExtrinsics"];
+	try {
+		j = j["camExtrinsics"];
+	}
+	catch (...) {
 
+	}
 	for (json cam : j) {
 		poses.push_back(cam);
 	}
@@ -35,28 +40,37 @@ void JsonUtils::loadCameraPoses(
 void JsonUtils::loadVirtualCam(
 	std::string filename,
 	std::vector<Jsonformat::CamPose>& poses,
-	int& width, int& height, float& farPlane,
+	int& width, int& height,
 	float& fx, float& fy, float& ppx, float& ppy
 ) {
 	// write prettified JSON to another file
 	std::ifstream i(filename);
 	json j;
 	i >> j;
-	width = j["width"];
-	height = j["height"];
-	farPlane = j["farPlane"];
-	fx = j["fx"];
-	fy = j["fy"];
-	ppx = j["ppx"];
-	ppy = j["ppy"];
+	std::string frameFileName = j["realCamsRef"][0];
 
 	json extrinsics = j["camExtrinsics"];
 
 	for (json cam : extrinsics) {
 		poses.push_back(cam);
 	}
-
 	i.close();
+
+	std::string directory;
+
+	directory = filename.substr(0, filename.rfind('\\')) + "\\" + frameFileName.substr(2, frameFileName.size());
+
+	std::ifstream framefile(directory);
+	json frameJson;
+	framefile >> frameJson;
+	width = frameJson["width"];
+	height = frameJson["height"];
+	fx = frameJson["fx"];
+	fy = frameJson["fy"];
+	ppx = frameJson["ppx"];
+	ppy = frameJson["ppy"];
+	framefile.close();
+
 }
 
 void JsonUtils::saveCameraPoses(
@@ -142,12 +156,20 @@ void JsonUtils::saveRealsenseJson(
 ) {
 	std::vector<float> depthmap_raw;
 	std::vector<unsigned char> colormap_raw;
-
+	std::vector<unsigned char> mask_raw;
+	for (int i = 0; i < height; i++) {
+		for (int j = 0; j < width; j++) {
+			int cindex = (height-i-1) * width + j;
+			int index = i * width + j;
+			depthmap_raw.push_back(depthmap[index]);
+			colormap_raw.push_back(colormap[cindex * INPUT_COLOR_CHANNEL + 0]);
+			colormap_raw.push_back(colormap[cindex * INPUT_COLOR_CHANNEL + 1]);
+			colormap_raw.push_back(colormap[cindex * INPUT_COLOR_CHANNEL + 2]);
+			mask_raw.push_back(colormap[cindex * INPUT_COLOR_CHANNEL + 3]);
+		}
+	}
 	for (int i = 0; i < width * height; i++) {
-		depthmap_raw.push_back(depthmap[i]);
-		colormap_raw.push_back(colormap[i * INPUT_COLOR_CHANNEL + 0]);
-		colormap_raw.push_back(colormap[i * INPUT_COLOR_CHANNEL + 1]);
-		colormap_raw.push_back(colormap[i * INPUT_COLOR_CHANNEL + 2]);
+		
 	}
 
 	json j = {
@@ -160,6 +182,7 @@ void JsonUtils::saveRealsenseJson(
 		{"depthscale",depthscale},
 		{"colormap_raw",colormap_raw},
 		{"depthmap_raw",depthmap_raw},
+		{"yzCullingMask",mask_raw},
 		{"frameLength",1},
 	};
 

@@ -44,7 +44,8 @@ void VirtualCam::addUI() {
 			// action
 			std::vector<Jsonformat::CamPose> camRoute;
 			JsonUtils::loadVirtualCam(filePathName, camRoute,
-				w, h, farplane, fx, fy, ppx, ppy);
+				w, h, fx, fy, ppx, ppy);
+			farplane = 10;
 			for (auto cam : camRoute) {
 				modelMats.push_back(glm::mat4(
 					cam.extrinsic[0], cam.extrinsic[4], cam.extrinsic[8], cam.extrinsic[12],

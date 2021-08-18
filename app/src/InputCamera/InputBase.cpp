@@ -10,6 +10,8 @@ InputBase::InputBase(int cw, int ch, int dw, int dh)
     p_color_frame = (unsigned char*)calloc(INPUT_COLOR_CHANNEL * width * height, sizeof(unsigned char));
 
     modelMat = glm::mat4(1.0);
+    esitmatePlaneCenter = glm::vec3(0.0,0.0,0.0);
+    esitmatePlaneNormal = glm::vec3(0.0,1.0,0.0);
 }
 
 InputBase::~InputBase() {

@@ -50,6 +50,7 @@ class RealsenseDepthSythesisApp :public ImguiOpeGL3App {
 
 public:
 	RealsenseDepthSythesisApp():ImguiOpeGL3App(), camManager(){
+		//OpenCVUtils::saveMarkerBoard();
 	}
 	~RealsenseDepthSythesisApp() {
 		camManager.destory();
@@ -76,6 +77,8 @@ public:
 				currentRecordFrame = -1;
 			});
 		}
+
+		camManager.recordFrame();
 	}
 	void addGui() override {
 
@@ -227,7 +230,7 @@ public:
 		camManager.deleteIdleCam();
 
 		camManager.getAllDevice([this](auto device) {
-			device->updateImages(chromaKeyColor, chromaKeyColorThreshold, maskErosion, autoDepthDilation, curFrame);
+			device->updateImages(chromaKeyColor, chromaKeyColorThreshold, maskErosion, autoDepthDilation);
 		});
 
 		camManager.getFoward3DWrappingDevice([this](auto device) {
@@ -284,10 +287,27 @@ public:
 		render3dworld();
 		glViewport(0, 0, display_w, display_h);
 
+		glm::vec2 viewportPlaceHolderUp[] = {
+			glm::vec2(-0.25, 0.25),
+			glm::vec2(-0.75 + 0 * 0.5, -0.75),
+			glm::vec2(-0.75 + 1 * 0.5, -0.75),
+			glm::vec2(-0.75 + 2 * 0.5, -0.75),
+			glm::vec2(-0.75 + 3 * 0.5, -0.75),
+		};
 
-		camManager.getInputDebugDevice([this](auto cam) {
-			renderScreenViewport(cam.image, glm::vec2(-0.25, 0.25), virtualcam->color,1.0);
-			renderScreenViewport(cam.depthvis, glm::vec2(-0.25, 0.75), virtualcam->color,1.0);
+		glm::vec2 viewportPlaceHolderDown[] = {
+			glm::vec2(-0.25, 0.75),
+			glm::vec2(-0.75 + 0 * 0.5, -0.25),
+			glm::vec2(-0.75 + 1 * 0.5, -0.25),
+			glm::vec2(-0.75 + 2 * 0.5, -0.25),
+			glm::vec2(-0.75 + 3 * 0.5, -0.25),
+		};
+
+		int index = 0;
+		camManager.getInputDebugDevice([this,&index,&viewportPlaceHolderDown,&viewportPlaceHolderUp](auto cam) {
+			renderScreenViewport(cam.image, viewportPlaceHolderUp[index], virtualcam->color,1.0);
+			renderScreenViewport(cam.depthvis, viewportPlaceHolderDown[index], virtualcam->color,1.0);
+			index++;
 		});		
 		
 		camManager.getOutputDebugDevice([this](auto cam) {

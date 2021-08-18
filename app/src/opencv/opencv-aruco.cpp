@@ -1,6 +1,6 @@
 #include "opecv-utils.h"
 
-std::vector<glm::vec2> OpenCVUtils::opencv_detect_aruco_from_RealsenseRaw(int w, int h,const uchar* p_color_frame, int colorChannel) {
+std::vector<glm::vec2> OpenCVUtils::getArucoMarkerCorners(int w, int h,const uchar* p_color_frame, int colorChannel) {
 
     cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
     cv::Mat image(cv::Size(w, h), colorChannel == 3 ? CV_8UC3 : CV_8UC4, (void*)p_color_frame, cv::Mat::AUTO_STEP);
@@ -22,4 +22,12 @@ std::vector<glm::vec2> OpenCVUtils::opencv_detect_aruco_from_RealsenseRaw(int w,
         }       
     }
     return corner2d;
+}
+
+void OpenCVUtils::saveMarkerBoard() {
+    cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
+    cv::Ptr<cv::aruco::GridBoard> board = cv::aruco::GridBoard::create(5, 7, 0.04, 0.01, dictionary);
+    cv::Mat boardImage;
+    board->draw(cv::Size(600, 500), boardImage, 10, 1);
+    cv::imwrite("markboard.png", boardImage);
 }

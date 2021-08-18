@@ -11,7 +11,7 @@ __global__ void depthVisualize_kernel(
     uchar4 pixelCenter = { 0,0,0,0 };
     surf2Dread(&pixelCenter, mask, x * sizeof(uchar4), y);
     float depth = float(depthRaw[index]) * depthScale / far * 255;
-    bool isCulled = (depth > 255) || (pixelCenter.w == 0);
+    bool isCulled = pixelCenter.w == 0;
 
     uchar4 pixel = {
         isCulled ? 255:depth,

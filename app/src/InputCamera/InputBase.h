@@ -3,9 +3,11 @@
 #include <thread>
 #include <functional>
 #include <string>
+#include <fstream>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <opencv2/highgui/highgui.hpp>  // Video write
 
 #define INPUT_COLOR_CHANNEL 4
 
@@ -33,6 +35,9 @@ public:
     ~InputBase();
 
     glm::mat4 modelMat;
+    glm::vec3 esitmatePlaneCenter;
+    glm::vec3 esitmatePlaneNormal;
+
     bool calibrated = false;
     Intrinsic intri;
     std::string serial;
@@ -47,6 +52,7 @@ public:
     uint16_t* p_depth_frame;
     unsigned char* p_color_frame;
     float farPlane = 5.0;
+    float point2floorDistance=100;
 
     bool frameNeedsUpdate = false;
     virtual bool fetchframes(std::function<void(

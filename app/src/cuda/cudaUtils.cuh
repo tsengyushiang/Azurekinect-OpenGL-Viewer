@@ -43,5 +43,10 @@ public:
 	);
 
 	static void depthVisualize(cudaGraphicsResource_t* mask, cudaGraphicsResource_t* cudaTexture,
-		uint16_t* colorRaw, unsigned int w, unsigned int h, float depthScale,float farplane);
+		uint16_t* colorRaw, unsigned int w, unsigned int h, float depthScale,float farplane);	
+
+	static void clipFloorAndFarDepth(cudaGraphicsResource_t* mask,
+		uint16_t* colorRaw, unsigned int w, unsigned int h, 
+		float fx, float fy, float ppx, float ppy, float depthScale, float farplane,
+		glm::vec3 planeCenter, glm::vec3 planeNormal,float planeCullingDistance);
 };
