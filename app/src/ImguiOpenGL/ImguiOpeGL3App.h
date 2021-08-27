@@ -48,7 +48,7 @@ public :
 	unsigned int depthBuffer;
 
 	GLFrameBuffer(int w, int h);
-	void render(std::function<void()> callback);
+	void render(std::function<void()> callback, int CULLINGTYPE = GL_FRONT);
 	unsigned char* getRawColorData();
 };
 
@@ -58,12 +58,18 @@ public:
 
 	//---------------------following method implement in ImguiOpeGL3App.cpp
 
+	GLFrameBuffer* main;
 	GLFWwindow* window;
-	void initImguiOpenGL3(int width = 1280, int height = 720);
+	void initImguiOpenGL3(int width = 1920, int height = 1080);
+	~ImguiOpeGL3App() {
+		if (main)free(main);
+		if (window) free(window);
+	};
 	virtual void initGL();
 	virtual void mainloop();
 	virtual void framebufferRender();
 	virtual void addGui();
+	virtual void addMenu();
 	virtual void mousedrag(float,float);
 	virtual void onBeforeRender();
 	virtual void onAfterRender();

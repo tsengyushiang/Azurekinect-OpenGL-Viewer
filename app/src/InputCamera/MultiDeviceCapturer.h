@@ -42,7 +42,7 @@ public:
             printf("Azurekinect %s is connected.\n", next_device.get_serialnum());
             // If you want to synchronize cameras, you need to manually set both their exposures
             next_device.set_color_control(K4A_COLOR_CONTROL_EXPOSURE_TIME_ABSOLUTE,
-                                          K4A_COLOR_CONTROL_MODE_MANUAL,
+                                          K4A_COLOR_CONTROL_MODE_AUTO,
                                           color_exposure_usec);
             // This setting compensates for the flicker of lights due to the frequency of AC power in your region. If
             // you are in an area with 50 Hz power, this may need to be updated (check the docs for
@@ -130,101 +130,6 @@ public:
             return captures;
         }
 
-        bool have_synced_images = false;
-        std::chrono::system_clock::time_point start = std::chrono::system_clock::now();
-        while (!have_synced_images)
-        {
-            // Timeout if this is taking too long
-            int64_t duration_ms =
-                std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start).count();
-            if (duration_ms > WAIT_FOR_SYNCHRONIZED_CAPTURE_TIMEOUT)
-            {
-                printf("ERROR: Timedout waiting for synchronized captures\n");
-                exit(1);
-            }
-
-            k4a::image master_color_image = captures[0].get_color_image();
-            std::chrono::microseconds master_color_image_time = master_color_image.get_device_timestamp();
-
-            for (size_t i = 0; i < subordinate_devices.size(); ++i)
-            {
-                k4a::image sub_image;
-                if (compare_sub_depth_instead_of_color)
-                {
-                    sub_image = captures[i + 1].get_depth_image(); // offset of 1 because master capture is at front
-                }
-                else
-                {
-                    sub_image = captures[i + 1].get_color_image(); // offset of 1 because master capture is at front
-                }
-
-                if (master_color_image && sub_image)
-                {
-                    std::chrono::microseconds sub_image_time = sub_image.get_device_timestamp();
-                    // The subordinate's color image timestamp, ideally, is the master's color image timestamp plus the
-                    // delay we configured between the master device color camera and subordinate device color camera
-                    std::chrono::microseconds expected_sub_image_time =
-                        master_color_image_time +
-                        std::chrono::microseconds{ sub_config.subordinate_delay_off_master_usec } +
-                        std::chrono::microseconds{ sub_config.depth_delay_off_color_usec };
-                    std::chrono::microseconds sub_image_time_error = sub_image_time - expected_sub_image_time;
-                    // The time error's absolute value must be within the permissible range. So, for example, if
-                    // MAX_ALLOWABLE_TIME_OFFSET_ERROR_FOR_IMAGE_TIMESTAMP is 2, offsets of -2, -1, 0, 1, and -2 are
-                    // permitted
-                    if (sub_image_time_error < -MAX_ALLOWABLE_TIME_OFFSET_ERROR_FOR_IMAGE_TIMESTAMP)
-                    {
-                        // Example, where MAX_ALLOWABLE_TIME_OFFSET_ERROR_FOR_IMAGE_TIMESTAMP is 1
-                        // time                    t=1  t=2  t=3
-                        // actual timestamp        x    .    .
-                        // expected timestamp      .    .    x
-                        // error: 1 - 3 = -2, which is less than the worst-case-allowable offset of -1
-                        // the subordinate camera image timestamp was earlier than it is allowed to be. This means the
-                        // subordinate is lagging and we need to update the subordinate to get the subordinate caught up
-                        log_lagging_time("sub", captures[0], captures[i + 1]);
-                        subordinate_devices[i].get_capture(&captures[i + 1],
-                                                           std::chrono::milliseconds{ K4A_WAIT_INFINITE });
-                        break;
-                    }
-                    else if (sub_image_time_error > MAX_ALLOWABLE_TIME_OFFSET_ERROR_FOR_IMAGE_TIMESTAMP)
-                    {
-                        // Example, where MAX_ALLOWABLE_TIME_OFFSET_ERROR_FOR_IMAGE_TIMESTAMP is 1
-                        // time                    t=1  t=2  t=3
-                        // actual timestamp        .    .    x
-                        // expected timestamp      x    .    .
-                        // error: 3 - 1 = 2, which is more than the worst-case-allowable offset of 1
-                        // the subordinate camera image timestamp was later than it is allowed to be. This means the
-                        // subordinate is ahead and we need to update the master to get the master caught up
-                        log_lagging_time("master", captures[0], captures[i + 1]);
-                        master_device.get_capture(&captures[0], std::chrono::milliseconds{ K4A_WAIT_INFINITE });
-                        break;
-                    }
-                    else
-                    {
-                        // These captures are sufficiently synchronized. If we've gotten to the end, then all are
-                        // synchronized.
-                        if (i == subordinate_devices.size() - 1)
-                        {
-                            log_synced_image_time(captures[0], captures[i + 1]);
-                            have_synced_images = true; // now we'll finish the for loop and then exit the while loop
-                        }
-                    }
-                }
-                else if (!master_color_image)
-                {
-                    printf("Master image was bad!\n");
-                    master_device.get_capture(&captures[0], std::chrono::milliseconds{ K4A_WAIT_INFINITE });
-                    break;
-                }
-                else if (!sub_image)
-                {
-                    printf("Subordinate image was bad!\n");
-                    subordinate_devices[i].get_capture(&captures[i + 1],
-                                                       std::chrono::milliseconds{ K4A_WAIT_INFINITE });
-                    break;
-                }
-            }
-        }
-        // if we've made it to here, it means that we have synchronized captures.
         return captures;
     }
 

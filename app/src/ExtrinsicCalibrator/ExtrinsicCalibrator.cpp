@@ -1,7 +1,13 @@
 #include "./ExtrinsicCalibrator.h"
 
 void ExtrinsicCalibrator::addUI() {
-	ImGui::Checkbox("calibrateFloorMode",&calibrateFloorMode);
+	if (ImGui::Button("Run floor calibarte use corner")) {
+		calibrateFloorMode1 = true;
+	}
+	if (ImGui::Button("Run floor calibarte use region")) {
+		calibrateFloorMode2 = true;
+	}
+
 	ImGui::SliderFloat("Distance Threshold", &collectthreshold, 0.05f, 0.3f);
 	ImGui::SliderInt("ExpectCollect Point Count", &collectPointCout, 3, 50);
 	if (calibrator != nullptr) {
@@ -9,12 +15,20 @@ void ExtrinsicCalibrator::addUI() {
 			delete calibrator;
 			calibrator = nullptr;
 		}
+
+		ImGui::SliderInt("ICP uniformDepthSample", &uniformDepthSample, 1, 10);
+		if (ImGui::Button("Run ICP")) {
+			auto mat = runIcp(calibrator->targetcam, calibrator->sourcecam, uniformDepthSample);
+			calibrator->targetcam->modelMat = mat * calibrator->targetcam->modelMat;
+		}
 	}
 }
 
-void ExtrinsicCalibrator::fitMarkersOnEstimatePlane(InputBase* camera) {
+void ExtrinsicCalibrator::fitMarkersOnEstimatePlane(InputBase* camera, 
+	std::function<std::vector<glm::vec2>(int,int,uchar*,int)> findMarkerPoints) 
+{
 
-	std::vector<glm::vec2> corners = OpenCVUtils::getArucoMarkerCorners(
+	std::vector<glm::vec2> corners = findMarkerPoints(
 		camera->width,
 		camera->height,
 		camera->p_color_frame,
@@ -28,19 +42,20 @@ void ExtrinsicCalibrator::fitMarkersOnEstimatePlane(InputBase* camera) {
 			points.push_back(Eigen::Vector3d(point.x,point.y,point.z));
 		}
 	}
-
+	std::cout << "find " << points.size() << " points" << std::endl;
 	if (points.size() > 3) {
 		auto result = EigenUtils::best_plane_from_points(points);
 		
 		glm::vec3 centroid = glm::vec3(-result.centroid[0], -result.centroid[1], -result.centroid[2]);
 		glm::vec3 planenormal = glm::vec3(result.plane_normal[0], result.plane_normal[1], result.plane_normal[2]);
-		const glm::vec3 alignAxis = glm::vec3(0,1,0); // in my case (1, 0, 0)
+		const glm::vec3 alignAxis = glm::vec3(0, -1 ,0); // in my case (1, 0, 0)
+		
 		if ((planenormal.x * centroid.x + planenormal.y * centroid.y + planenormal.z * centroid.z) > 0) {
 			planenormal = planenormal* -1.0f;
 		}
 		glm::vec3 v = glm::cross(alignAxis, planenormal);
 		float angle = acos(glm::dot(alignAxis, planenormal) / (glm::length(alignAxis) * glm::length(planenormal)));
-		glm::mat4 rotmat = glm::rotate(glm::mat4(1.0), angle, v);
+		glm::mat4 rotmat = glm::rotate(glm::mat4(1.0), -angle, v);
 		camera->esitmatePlaneCenter = -centroid;
 		camera->esitmatePlaneNormal = planenormal;
 		// calculate rotated plane normal to know error to xz-plane
@@ -49,6 +64,31 @@ void ExtrinsicCalibrator::fitMarkersOnEstimatePlane(InputBase* camera) {
 
 		camera->modelMat = rotmat * glm::translate(glm::mat4(1.0), centroid);
 	}
+}
+
+glm::mat4 ExtrinsicCalibrator::runIcp(InputBase* pcdSource, InputBase* pcdTarget, int step) {
+
+	std::vector<glm::vec3> sourcePoint;
+	for (int i = 0; i < pcdSource->width; i+= step) {
+		for (int j = 0; j < pcdSource->height; j+= step) {
+			glm::vec3 point = pcdSource->colorPixel2point(glm::vec2(i, j));
+			if (point.z == 0)continue;
+			glm::vec4 point_g = pcdSource->modelMat * glm::vec4(point.x, point.y, point.z, 1.0);
+			sourcePoint.push_back(point_g);
+		}
+	}
+
+	std::vector<glm::vec3> targetPoint;
+	for (int i = 0; i < pcdTarget->width; i+= step) {
+		for (int j = 0; j < pcdTarget->height; j+= step) {
+			glm::vec3 point = pcdTarget->colorPixel2point(glm::vec2(i, j));
+			if (point.z == 0)continue;
+			glm::vec4 point_g = pcdTarget->modelMat * glm::vec4(point.x, point.y, point.z, 1.0);
+			targetPoint.push_back(point_g);
+		}
+	}
+
+	return pcl_icp(icp_correspondThreshold, sourcePoint, targetPoint);
 }
 
 
@@ -63,8 +103,14 @@ void ExtrinsicCalibrator::waitCalibrateCamera(
 	std::vector<CameraGL>::iterator device,
 	std::vector<CameraGL>& allDevice
 ) {
-	if (calibrateFloorMode) {
-		fitMarkersOnEstimatePlane(device->camera);
+	if (calibrateFloorMode1) {
+		fitMarkersOnEstimatePlane(device->camera, OpenCVUtils::getArucoMarkerCorners);
+		calibrateFloorMode1 = false;
+	}
+
+	if (calibrateFloorMode2) {
+		fitMarkersOnEstimatePlane(device->camera, OpenCVUtils::getArucoMarkerConvexRegion);
+		calibrateFloorMode2 = false;
 	}
 
 	if (!device->camera->calibrated) {
@@ -97,8 +143,6 @@ void ExtrinsicCalibrator::collectCalibratePoints() {
 	if (cornerSrc.size() > 0 && cornerTrg.size() > 0) {
 		if (calibrator->vaildCount == calibrator->size) {
 			calibrator->calibrate();
-			delete calibrator;
-			calibrator = nullptr;
 		}
 		else {
 			glm::vec3 centerSrc = glm::vec3(0, 0, 0);

@@ -6,6 +6,8 @@
 #include "../cuda/cudaUtils.cuh"
 #include "../json/jsonUtils.h"
 
+#define CamIterator std::vector<CameraGL>::iterator&
+
 class CameraGL {
 	
 	GLFrameBuffer maskInVirtualView;
@@ -40,7 +42,7 @@ public:
 	bool create3d = true;
 	CameraGL(InputBase* cam);
 	void destory();
-	void save();
+	unsigned char* getProcessedColorFrame();
 	void saveWrappedResult();
 	void addui();
 	void updateImages(ImVec4 chromaKeyColor, float chromaKeyColorThreshold,

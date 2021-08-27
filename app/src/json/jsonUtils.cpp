@@ -2,8 +2,6 @@
 #include "../InputCamera/InputBase.h"
 #include <opencv2/core/utils/filesystem.hpp>
 
-int SaveFileCount = 0;
-
 template<typename T>
 void Jsonformat::to_json(json& j, const T& p) {
 	j = json{ {"id", p.id}, {"extrinsic", p.extrinsic} };
@@ -88,18 +86,37 @@ void JsonUtils::saveCameraPoses(
 }
 
 
-void JsonUtils::loadRealsenseJson(
+void JsonUtils::loadResolution(
 	std::string filename,
 	int& width, int& height
 ) {
+	// assume is single frame file
 	std::ifstream i(filename);
 	json j;
-	i >> j;
+	i >> j;	
+	
+	if (j.contains("width") && j.contains("height")) {
+		width = j["width"];
+		height = j["height"];
+		i.close();
+		return;
+	}		
+	else {
+		i.close();
 
-	width = j["width"];
-	height = j["height"];
+		// not single frame file
+		std::string datafilename = j["realCamsRef"][0];
 
-	i.close();
+		std::string folderName = filename.substr(0, filename.find_last_of("\\/"));
+		std::ifstream frame(cv::utils::fs::join(folderName, datafilename));
+		json data;
+		frame >> data;
+
+		width = data["width"];
+		height = data["height"];
+		frame.close();
+	}
+
 }
 
 
@@ -120,8 +137,9 @@ void JsonUtils::loadRealsenseJson(
 	fy = j["fy"];
 	ppx = j["ppx"];
 	ppy = j["ppy"];
-	frameLength = j["frameLength"];
+	frameLength = 1;
 
+	std::cout << std::endl << filename<<" has : "<< depthscale<<" "<< width << " " << height <<"..."<< std::endl;
 	free(*depthmap);
 	free(*colormap);
 	*depthmap = (uint16_t*)calloc(width * height * frameLength, sizeof(uint16_t));
@@ -130,7 +148,6 @@ void JsonUtils::loadRealsenseJson(
 	const int INPUT_JSON_COLOR_CHANNEL = 3;
 	for (int frame = 0; frame < frameLength; frame++) {
 
-		std::cout << "frame" << frame << std::endl;
 		for (int i = 0; i < width * height; i++) {
 			int index = frame * width * height + i;
 			(*depthmap)[index] = j["depthmap_raw"][index];
@@ -148,28 +165,83 @@ void JsonUtils::loadRealsenseJson(
 	i.close();
 }
 
+void JsonUtils::saveMultiCamSyncInfo(
+	std::string filename,
+	std::vector<std::string> camTimefilenames
+) {
+	json j = {
+		{"realCamsRef",camTimefilenames},
+		{"realCamNum",camTimefilenames.size()}
+	};
+
+	// write prettified JSON to another file
+	std::ofstream o(filename + ".json");
+	o << std::setw(4) << j << std::endl;
+	o.close();
+}
+
+bool JsonUtils::loadSinglCamTimeSequence(
+	std::string filename,
+	std::vector<std::string>& datafilenames
+) {
+	std::ifstream i(filename);
+	json j;
+	i >> j;
+
+	if (!j.contains("realCamsRef")) {
+		i.close();
+		return false;
+	}
+	else {
+		datafilenames.clear();
+		std::string folderName = filename.substr(0, filename.find_last_of("\\/"));
+		for (json cam : j["realCamsRef"]) {
+			std::cout << cv::utils::fs::join(folderName, cam) << std::endl;
+			datafilenames.push_back(cv::utils::fs::join(folderName, cam));
+		}
+	}
+
+	i.close();
+	return true;
+}
+
+void JsonUtils::saveSingleCamTimeInfo(
+	std::string filename,
+	std::vector<std::string> datafilenames
+) {
+	json j = {
+		{"realCamsRef",datafilenames},
+		{"totalFrame",datafilenames.size()},
+	};
+
+	// write prettified JSON to another file
+	std::ofstream o(filename + ".json");
+	o << std::setw(4) << j << std::endl;
+	o.close();
+}
+
 void JsonUtils::saveRealsenseJson(
 	std::string filename,
 	int width, int height,
 	float fx, float fy, float ppx, float ppy,
-	float depthscale, const unsigned short* depthmap, const unsigned char* colormap
+	float depthscale, const unsigned short* depthmap, const unsigned char* colormap,
+	float visulizeFarplane
 ) {
 	std::vector<float> depthmap_raw;
 	std::vector<unsigned char> colormap_raw;
 	std::vector<unsigned char> mask_raw;
+
 	for (int i = 0; i < height; i++) {
 		for (int j = 0; j < width; j++) {
 			int cindex = (height-i-1) * width + j;
 			int index = i * width + j;
+
 			depthmap_raw.push_back(depthmap[index]);
 			colormap_raw.push_back(colormap[cindex * INPUT_COLOR_CHANNEL + 0]);
 			colormap_raw.push_back(colormap[cindex * INPUT_COLOR_CHANNEL + 1]);
 			colormap_raw.push_back(colormap[cindex * INPUT_COLOR_CHANNEL + 2]);
 			mask_raw.push_back(colormap[cindex * INPUT_COLOR_CHANNEL + 3]);
 		}
-	}
-	for (int i = 0; i < width * height; i++) {
-		
 	}
 
 	json j = {
@@ -186,12 +258,12 @@ void JsonUtils::saveRealsenseJson(
 		{"frameLength",1},
 	};
 
-	cv::Mat image(cv::Size(width, height), INPUT_COLOR_CHANNEL==3? CV_8UC3 : CV_8UC4, (void*)colormap, cv::Mat::AUTO_STEP);
-	cv::imwrite(filename + std::to_string(SaveFileCount)+".png", image);
+	cv::Mat image(cv::Size(width, height), CV_8UC3, (void*)colormap_raw.data(), cv::Mat::AUTO_STEP);
+	cv::imwrite(filename + +".color.png", image);
 
 	// write prettified JSON to another file
-	std::ofstream o(filename + std::to_string(SaveFileCount++) +".json");
-	o << std::setw(4) << j << std::endl;
+	std::ofstream o(filename +".json");
+	o << j << std::endl;
 	o.close();
 }
 

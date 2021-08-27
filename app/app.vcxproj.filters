@@ -161,6 +161,12 @@
     <ClCompile Include="src\eigen\EigenUtils.cpp">
       <Filter>來源檔案\eigen</Filter>
     </ClCompile>
+    <ClCompile Include="src\CameraManager\CameraRecorder.cpp">
+      <Filter>來源檔案\CameraManager</Filter>
+    </ClCompile>
+    <ClCompile Include="src\pcl\icp.cpp">
+      <Filter>來源檔案\pcl</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -249,6 +255,9 @@
     </ClInclude>
     <ClInclude Include="src\eigen\EigenUtils.h">
       <Filter>來源檔案\eigen</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CameraManager\CameraRecorder.h">
+      <Filter>來源檔案\CameraManager</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -1,8 +1,34 @@
 #include "./CameraManager.h"
 
+namespace ImGui
+{
+	static auto vector_getter = [](void* vec, int idx, const char** out_text)
+	{
+		auto& vector = *static_cast<std::vector<std::string>*>(vec);
+		if (idx < 0 || idx >= static_cast<int>(vector.size())) { return false; }
+		*out_text = vector.at(idx).c_str();
+		return true;
+	};
+
+	bool ComboVec(const char* label, int* currIndex, std::vector<std::string>& values)
+	{
+		if (values.empty()) { return false; }
+		return Combo(label, currIndex, vector_getter,
+			static_cast<void*>(&values), values.size());
+	}
+
+	bool ListBoxVec(const char* label, int* currIndex, std::vector<std::string>& values)
+	{
+		if (values.empty()) { return false; }
+		return ListBox(label, currIndex, vector_getter,
+			static_cast<void*>(&values), values.size());
+	}
+
+}
+
 CameraManager::CameraManager() {
 	Realsense::updateAvailableSerialnums(ctx);
-	AzureKinect::startDevices();
+	AzureKinect::updateAvailableSerialnums();
 }
 
 void CameraManager::destory() {
@@ -53,7 +79,7 @@ void CameraManager::setExtrinsicsUI() {
 		// close
 		ImGuiFileDialog::Instance()->Close();
 	}
-
+	ImGui::SameLine();
 	if (ImGui::Button("save camera pose")) {
 		std::vector<Jsonformat::CamPose> setting;
 		getAllDevice([&setting](auto device) {
@@ -76,14 +102,7 @@ void CameraManager::addDepthAndTextureControlsUI() {
 	auto KEY = [this](std::string keyword,InputBase* camera)->const char* {
 		return (camera->serial + std::string("##") + keyword).c_str();
 	};
-
-	ImGui::Text("ShowInput : ");
-	for (int i = 0; i < cameras.size(); i++) {
-		ImGui::RadioButton(KEY("showInput", cameras[i].camera), &debugInputDeviceIndex, i);
-	}
-	ImGui::RadioButton("None##showInput", &debugInputDeviceIndex, -1);	
-	ImGui::RadioButton("All##showInput", &debugInputDeviceIndex, -2);	
-	
+		
 	ImGui::Text("ShowOutput : ");
 	for (int i = 0; i < cameras.size(); i++) {
 		ImGui::RadioButton(KEY("showOutput", cameras[i].camera), &debugOutputDeviceIndex, i);
@@ -105,13 +124,17 @@ void CameraManager::addDepthAndTextureControlsUI() {
 
 void CameraManager::recordFrame() {
 
-	const int MAXCAPTUREFRAME = 1000;
+	const int MAXCAPTUREFRAME = 5000;
 	if (cameras.size() > 0 && recording) {
 		
 		if(recordFrameCount==0){
 			for (auto cam : cameras) {
+				cam.camera->startRecord(MAXCAPTUREFRAME);
+				/*
+				//one file one cam
 				record_color_frames.push_back(fopen(std::string(cam.camera->serial + "color.bin").c_str(), "wb"));
 				record_depth_frames.push_back(fopen(std::string(cam.camera->serial + "depth.bin").c_str(), "wb"));
+				*/
 			}
 		}
 
@@ -120,22 +143,35 @@ void CameraManager::recordFrame() {
 
 			int width = cam->width;
 			int height = cam->height;
-
+			
+			int maxCache = cam->MAXCACHE;
+			//record to cache
+			memcpy((void*)cam->color_cache[recordFrameCount%maxCache], cam->p_color_frame, INPUT_COLOR_CHANNEL * width * height * sizeof(uchar));
+			memcpy((void*)cam->depth_cache[recordFrameCount%maxCache], cam->p_depth_frame, width * height * sizeof(uint16_t));
+			cam->curRecordFrame++;
+			/*
 			fwrite(
-				cam->p_color_frame, 1,
-				INPUT_COLOR_CHANNEL * width * height * sizeof(unsigned char),
+				cam->p_color_frame,
+				INPUT_COLOR_CHANNEL * width * height * sizeof(unsigned char), 
+				1,
 				record_color_frames[i]
 			);
 			fflush(record_color_frames[i]);
 			fwrite(
-				cam->p_depth_frame, 1,
-				width * height * sizeof(uint16_t),
+				cam->p_depth_frame, 
+				width * height * sizeof(uint16_t), 
+				1,
 				record_depth_frames[i]
 			);
 			fflush(record_depth_frames[i]);
+			*/
 
 		}
-		recordFrameCount++;
+
+		if (recordFrameCount+1 < MAXCAPTUREFRAME) {
+			recordFrameCount++;
+		}
+		/*
 		if (recordFrameCount >= MAXCAPTUREFRAME) {
 			recordFrameCount = 0;
 			recording = false;
@@ -146,11 +182,11 @@ void CameraManager::recordFrame() {
 				record_depth_frames.clear();
 			}
 		}
+		*/
 	}
 }
 
-void CameraManager::addCameraUI() {
-
+void CameraManager::addLocalFileUI() {
 	if (ImGui::Button("Add Camera Frame(s)"))
 		ImGuiFileDialog::Instance()->OpenDialog("Add Camera Frame(s)", "Add Camera Frame(s)", ".json", ".", 0);
 	if (ImGuiFileDialog::Instance()->Display("Add Camera Frame(s)"))
@@ -160,23 +196,29 @@ void CameraManager::addCameraUI() {
 		{
 			auto filePathMap = ImGuiFileDialog::Instance()->GetSelection();
 			for (auto nameAndPath : filePathMap) {
-				addJsonDevice(nameAndPath.first.substr(0, nameAndPath.first.size() - 5),nameAndPath.second);
+				jsonDataLen = addJsonDevice(nameAndPath.first.substr(0, nameAndPath.first.size() - 5), nameAndPath.second);
 			}
 		}
 		// close
 		ImGuiFileDialog::Instance()->Close();
 	}
 
-	// list all usb3.0 realsense device
-	if (ImGui::Button("Refresh")) {
-		Realsense::updateAvailableSerialnums(ctx);
-	}
-	ImGui::SameLine();
-	if (ImGui::Button("snapshot all")) {
+	// time control
+	{
+		std::vector<std::string> index;
+		for (int i = 0; i < jsonDataLen; i++) {
+			index.push_back(std::to_string(i));
+		}
+		ImGui::ListBoxVec("Time", &time, index);
 		for (auto device = cameras.begin(); device != cameras.end(); device++) {
-			device->save();
+			device->camera->syncTime = time;
 		}
 	}
+}
+
+void CameraManager::addCameraUI() {
+		
+	camRecroder.addGUI(cameras);
 
 	if (ImGui::Button("Toggle create point cloud or not")) {
 		for (auto device = cameras.begin(); device != cameras.end(); device++) {
@@ -187,17 +229,19 @@ void CameraManager::addCameraUI() {
 		recording = !recording;
 	}
 
+	if (ImGui::Button("Refresh")) {
+		Realsense::updateAvailableSerialnums(ctx);
+		AzureKinect::updateAvailableSerialnums();
+	}
 	ImGui::Text("AzureKinect device :");
-	//waiting Azure kinect activated device
-	if (!AzureKinect::alreadyStart) {
-		if (ImGui::Button("StartAllAzureKinect")) {
-			AzureKinect::alreadyStart = true;
-			for (int i = 0; i < AzureKinect::capturer->subordinate_devices.size() + 1; i++) {
-				addAzuekinect(i);
-			}
+	ImGui::RadioButton("Master##azurekinect", &AzureKinect::ui_isMaster, 1);
+	ImGui::SameLine();
+	ImGui::RadioButton("Sub##azurekinect", &AzureKinect::ui_isMaster, 0);
+	for (int i = 0; i < AzureKinect::availableSerialnums.size(); i++) {
+		if (ImGui::Button((AzureKinect::availableSerialnums[i]+"##azurekinect").c_str())) {
+			addAzuekinect(i);
 		}
 	}
-	
 
 	ImGui::Text("Realsense device :");
 	// waiting realsense active device
@@ -240,34 +284,28 @@ void CameraManager::addCameraUI() {
 	}	
 }
 
-void CameraManager::addJsonDevice(std::string serial, std::string filePath) {
+int CameraManager::addJsonDevice(std::string serial, std::string filePath) {
 
 	int w, h;
-	JsonUtils::loadRealsenseJson(filePath, w, h);
+	JsonUtils::loadResolution(filePath, w, h);
 	
 	JsonData* camera = new JsonData(w,h);
 	camera->serial = serial;
 	
-	JsonUtils::loadRealsenseJson(filePath,
-		camera->width,
-		camera->height,
-		camera->intri.fx,
-		camera->intri.fy,
-		camera->intri.ppx,
-		camera->intri.ppy,
-		camera->frameLength,
-		camera->intri.depth_scale,
-		&camera->p_depth_frame,
-		&camera->p_color_frame);
+	if (!JsonUtils::loadSinglCamTimeSequence(filePath, camera->framefiles)){
+		camera->framefiles.push_back(filePath);
+	}
 
 	CameraGL device(camera);
 
 	cameras.push_back(device);
+
+	return camera->framefiles.size();
 }
 
 void CameraManager::addAzuekinect(int index) {
 	AzureKinect* azureKinect = new AzureKinect();
-	azureKinect->runDevice(index);
+	azureKinect->runDevice(index,AzureKinect::ui_isMaster);
 	CameraGL device(azureKinect);
 	cameras.push_back(device);
 }
@@ -282,16 +320,6 @@ void CameraManager::addRealsense(std::string serial,int cw,int ch,int dw,int dh)
 	catch (...) {
 		std::cout << "Add device { " << serial << " } Error: use offical viewer check your deivce first." << std::endl;
 	}
-}
-
-void CameraManager::getInputDebugDevice(std::function<void(CameraGL)> callback) {
-	if (debugInputDeviceIndex == -2) {
-		for (int i = 0; i < cameras.size();i++) {
-			callback(cameras[i]);
-		}
-	}
-	if (debugInputDeviceIndex < 0 || debugInputDeviceIndex >= cameras.size())return;
-	callback(cameras[debugInputDeviceIndex]);
 }
 
 void CameraManager::getOutputDebugDevice(std::function<void(CameraGL)> callback) {

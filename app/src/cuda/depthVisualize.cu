@@ -17,7 +17,7 @@ __global__ void depthVisualize_kernel(
         isCulled ? 255:depth,
         isCulled ? 0 : depth,
         isCulled ? 0 : depth,
-        1.0
+        255.0
     };
     //Write the new pixel color to the 
     surf2Dwrite(pixel, output, x * sizeof(uchar4), y);

@@ -4,10 +4,12 @@
 #include <functional>
 #include <string>
 #include <fstream>
+#include <iostream>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <opencv2/highgui/highgui.hpp>  // Video write
+using namespace std;
 
 #define INPUT_COLOR_CHANNEL 4
 
@@ -22,8 +24,12 @@ typedef struct intrinsic {
 
 class InputBase
 {
+private:
+    void keepTryingSave();
 
 public:
+    int syncTime = 0;
+    int currentTime = -1;
 
     InputBase(
         int cw,
@@ -51,6 +57,20 @@ public:
 
     uint16_t* p_depth_frame;
     unsigned char* p_color_frame;
+
+    uint16_t** depth_cache;
+    unsigned char** color_cache;
+    const int MAXCACHE = 1000;
+
+    int curRecordFrame=0;
+    int curSaveFrame = 0;
+    int maxSave = 0;
+    bool isRecording;
+    thread* recordThread;
+    FILE* recordColorFile;
+    FILE* recordDepthFile;
+    void startRecord(int);
+
     float farPlane = 5.0;
     float point2floorDistance=100;
 

@@ -45,6 +45,9 @@ void ImguiOpeGL3App::mousedrag(float dx,float dy) {
         }
     }       
 }
+void ImguiOpeGL3App::addMenu() {
+    ImGui::Text("Inherit addMenu() to add custum ui.");               // Display some text (you can use a format strings too)
+}
 void ImguiOpeGL3App::addGui() {
     ImGui::Text("Inherit addGui() to add custum ui.");               // Display some text (you can use a format strings too)
 }
@@ -98,7 +101,7 @@ void ImguiOpeGL3App::initImguiOpenGL3(int width, int height) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
-
+    io.ConfigWindowsMoveFromTitleBarOnly = true;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
@@ -113,6 +116,7 @@ void ImguiOpeGL3App::initImguiOpenGL3(int width, int height) {
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
     initGL();
+    main = new GLFrameBuffer(width, height);
 
     // Our state
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
@@ -133,47 +137,68 @@ void ImguiOpeGL3App::initImguiOpenGL3(int width, int height) {
         glViewport(0, 0, display_w, display_h);
         setcamera(display_w, display_h);
 
-        mainloop();
-
         // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        
-        if (!ImGui::IsAnyItemActive() && ImGui::IsMouseDragging(0)) {
-            ImVec2 mousedelta = ImGui::GetMouseDragDelta();
-            mousedrag(mousedelta.x, mousedelta.y);
+        // render OpenGL in GUI
+        ImGui::Begin("OpenGL");
+        {
+            main->render([this,&clear_color]() {
+                glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                mainloop();
+            }, GL_BACK);
+
+            if (ImGui::IsWindowFocused() && ImGui::IsMouseDragging(0)) {
+                ImVec2 mousedelta = ImGui::GetMouseDragDelta();
+                mousedrag(mousedelta.x, mousedelta.y);
+            }
+
+            // Using a Child allow to fill all the space of the window.
+            // It also alows customization
+            // Get the size of the child (i.e. the whole draw size of the windows).
+            ImVec2 wsize = ImGui::GetWindowSize();
+            ImGui::Image((ImTextureID)main->texColorBuffer, wsize, ImVec2(0, 1), ImVec2(1, 0));
         }
+        ImGui::End();
 
         // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
         {
-            static float f = 0.0f;
-            static int counter = 0;
+            try {
+                static float f = 0.0f;
+                static int counter = 0;
 
-            ImGui::Begin("ImguiOpeGL3App : ");                          // Create a window called "Hello, world!" and append into it.
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+                ImGui::Begin("Menu : ");                          // Create a window called "Hello, world!" and append into it.
+                ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
-            if (ImGui::CollapsingHeader("OpenGL World")) {
+                if (ImGui::CollapsingHeader("OpenGL World")) {
 
-                ImGui::ColorEdit3("background color", (float*)&clear_color); // Edit 3 floats representing a color
+                    ImGui::ColorEdit3("background color", (float*)&clear_color); // Edit 3 floats representing a color
 
-                ImGui::Text("Time : %d", time);
-                ImGui::Text("Camera parameters : ");
-                ImGui::SliderFloat("fov", &fov, 30.0f, 80.0f);
-                ImGui::SliderFloat("distance", &distance, distancemin, distanceMax);
-                ImGui::SliderFloat("lookAt-X", &lookAtPoint.x, -10.0f, 10.0f);
-                ImGui::SliderFloat("lookAt-Y", &lookAtPoint.y, -10.0f, 10.0f);
-                ImGui::SliderFloat("lookAt-Z", &lookAtPoint.z, -10.0f, 10.0f);
+                    ImGui::Text("Time : %d", time);
+                    ImGui::Text("Camera parameters : ");
+                    ImGui::SliderFloat("fov", &fov, 30.0f, 80.0f);
+                    ImGui::SliderFloat("distance", &distance, distancemin, distanceMax);
+                    ImGui::SliderFloat("lookAt-X", &lookAtPoint.x, -10.0f, 10.0f);
+                    ImGui::SliderFloat("lookAt-Y", &lookAtPoint.y, -10.0f, 10.0f);
+                    ImGui::SliderFloat("lookAt-Z", &lookAtPoint.z, -10.0f, 10.0f);
 
-                ImGui::Text("Mouse dragging : ");
-                ImGui::SliderFloat("autoRotateSpeed", &autoRotateSpeed, 0.0, 1e-1);
-                ImGui::SliderFloat("sensity", &sensity, 1e-1, 1e-3);
-                ImGui::SliderFloat("PolarAngle", &PolarAngle, PolarAnglemin, PolarAngleMax);
-                ImGui::SliderFloat("AzimuthAngle", &AzimuthAngle, AzimuthAnglemin, AzimuthAngleMax);
-            }                        
-            addGui();
-            ImGui::End();
+                    ImGui::Text("Mouse dragging : ");
+                    ImGui::SliderFloat("autoRotateSpeed", &autoRotateSpeed, 0.0, 1e-1);
+                    ImGui::SliderFloat("sensity", &sensity, 1e-1, 1e-3);
+                    ImGui::SliderFloat("PolarAngle", &PolarAngle, PolarAnglemin, PolarAngleMax);
+                    ImGui::SliderFloat("AzimuthAngle", &AzimuthAngle, AzimuthAnglemin, AzimuthAngleMax);
+                }
+                addMenu();
+                ImGui::End();
+                addGui();
+
+            }
+            catch (std::exception const& e) {
+                std::cout << e.what()<<std::endl;
+            }
         }
 
         // Rendering

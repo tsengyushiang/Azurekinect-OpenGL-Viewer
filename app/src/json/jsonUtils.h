@@ -21,11 +21,28 @@ namespace Jsonformat {
 class JsonUtils {
 
 public:
+
+	static void saveMultiCamSyncInfo(
+		std::string filename,
+		std::vector<std::string> camTimefilenames
+	);
+
+	static void saveSingleCamTimeInfo(
+		std::string filename,
+		std::vector<std::string> datafilenames
+	);
+
+	static bool loadSinglCamTimeSequence(
+		std::string filename,
+		std::vector<std::string>& datafilenames
+	);
+
 	static void saveRealsenseJson(
 		std::string filename, 
 		int width,int height,
 		float fx,float fy,float ppx,float ppy,
-		float depthscale, const unsigned short* depthmap,const unsigned char* colormap
+		float depthscale, const unsigned short* depthmap,const unsigned char* colormap,
+		float visulizeFarplane
 	);
 	static void saveRealsenseJson(
 		std::string filename, 
@@ -41,7 +58,7 @@ public:
 		float& fx, float& fy, float& ppx, float& ppy,
 		int& frameLength, float& depthscale, uint16_t** depthmap, unsigned char** colormap
 	);
-	static void loadRealsenseJson(
+	static void loadResolution(
 		std::string filename,
 		int& width, int& height
 	);

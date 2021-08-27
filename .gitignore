@@ -9,3 +9,10 @@ install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 _deps
+
+*.json
+*.png
+*.jpg
+*.7z
+*.avi
+app/imgui.ini

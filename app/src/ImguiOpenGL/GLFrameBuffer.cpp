@@ -43,14 +43,14 @@ GLFrameBuffer::GLFrameBuffer(int w,int h):
     GLFrameBuffer::createFrameBuffer(&framebuffer, &texColorBuffer, &depthBuffer, &rbo, w, h);
 }
 
-void GLFrameBuffer::render(std::function<void()> callback) {
+void GLFrameBuffer::render(std::function<void()> callback, int CULLINGTYPE) {
 
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
     glViewport(0, 0, width, height);
     glClearColor(0, 0, 0, 0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // we're not using the stencil buffer now
     glEnable(GL_DEPTH_TEST);
-    glCullFace(GL_FRONT);
+    glCullFace(CULLINGTYPE);
 
 	callback();
 

@@ -18,6 +18,12 @@
 #include <pcl/surface/gp3.h>
 #include <fstream>
 
+#include <pcl/io/pcd_io.h>
+#include <pcl/point_types.h>
+#include <pcl/registration/icp.h>
+
+glm::mat4 pcl_icp(float correspondThreshold, std::vector<glm::vec3> sourcePoints, std::vector<glm::vec3> targetPoints);
+
 void pcl_rigid_transform_from_correspondPoints();
 
 glm::mat4 pcl_pointset_rigid_calibrate(int size, std::vector<glm::vec3> srcPoint,std::vector<glm::vec3> dstPoints);

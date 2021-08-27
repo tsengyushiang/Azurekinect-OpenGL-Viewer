@@ -11,7 +11,7 @@
 #include <opencv2/core/utils/filesystem.hpp>
 #include <filesystem>
 
-class RealsenseDepthSythesisApp :public ImguiOpeGL3App {
+class FowardWarppingApp :public ImguiOpeGL3App {
 	GLuint vao, vbo;
 
 	GLuint shader_program;
@@ -49,10 +49,10 @@ class RealsenseDepthSythesisApp :public ImguiOpeGL3App {
 	int curFrame = 0;
 
 public:
-	RealsenseDepthSythesisApp():ImguiOpeGL3App(), camManager(){
+	FowardWarppingApp():ImguiOpeGL3App(), camManager(){
 		//OpenCVUtils::saveMarkerBoard();
 	}
-	~RealsenseDepthSythesisApp() {
+	~FowardWarppingApp() {
 		camManager.destory();
 		glDeleteVertexArrays(1, &vao);
 		glDeleteBuffers(1, &vbo);
@@ -81,6 +81,68 @@ public:
 		camManager.recordFrame();
 	}
 	void addGui() override {
+		// input cameras	
+		{
+			ImGui::Begin("Input Cameras");
+			{
+				// Using a Child allow to fill all the space of the window.
+				// It also alows customization
+				ImGui::BeginChild("Textures");
+				// Get the size of the child (i.e. the whole draw size of the windows).
+				ImVec2 wsize = ImGui::GetWindowSize();
+				float inputCount = camManager.size();
+				wsize.x /= inputCount;
+				wsize.y /= 2;
+				// Because I use the texture from OpenGL, I need to invert the V from the UV.
+				camManager.getAllDevice([&wsize](auto cam) {
+					ImGui::Image((ImTextureID)cam->depthvis, ImVec2(wsize.x, wsize.y), ImVec2(0, 1), ImVec2(1, 0));
+					ImGui::SameLine();
+					});
+				ImGui::Text("Depth");
+
+				camManager.getAllDevice([&wsize](auto cam) {
+					ImGui::Image((ImTextureID)cam->image, ImVec2(wsize.x, wsize.y), ImVec2(0, 1), ImVec2(1, 0));
+					ImGui::SameLine();
+					});
+				ImGui::Text("Color");
+
+				ImGui::EndChild();
+			}
+			ImGui::End();
+		}
+
+		// output warpping result and meta data
+		{
+			ImGui::Begin("Warpping Result");
+			{
+				// Using a Child allow to fill all the space of the window.
+				// It also alows customization
+				ImGui::BeginChild("Textures");
+				// Get the size of the child (i.e. the whole draw size of the windows).
+				ImVec2 wsize = ImGui::GetWindowSize();
+				float inputCount = camManager.size();
+				wsize.y /= 2;
+				camManager.getOutputDebugDevice([this, &wsize](auto cam) {
+					ImGui::Image((ImTextureID)cam.getFrameBuffer(CameraGL::FrameBuffer::AFTERDISCARD)->texColorBuffer, ImVec2(wsize.x, wsize.y), ImVec2(0, 1), ImVec2(1, 0));
+				});
+				wsize.x /= 2;
+				wsize.y /= 2;
+				camManager.getOutputDebugDevice([this,&wsize](auto cam) {
+					ImGui::Image((ImTextureID)cam.getFrameBuffer(CameraGL::FrameBuffer::MASK)->texColorBuffer, ImVec2(wsize.x, wsize.y), ImVec2(0, 1), ImVec2(1, 0));
+					ImGui::SameLine();
+					ImGui::Image((ImTextureID)cam.getFrameBuffer(CameraGL::FrameBuffer::COSWEIGHT)->texColorBuffer, ImVec2(wsize.x, wsize.y), ImVec2(0, 1), ImVec2(1, 0));
+
+					ImGui::Image((ImTextureID)cam.getFrameBuffer(CameraGL::FrameBuffer::MESHNORMAL)->depthBuffer, ImVec2(wsize.x, wsize.y), ImVec2(0, 1), ImVec2(1, 0));
+					ImGui::SameLine();
+					ImGui::Image((ImTextureID)cam.getFrameBuffer(CameraGL::FrameBuffer::MESHNORMAL)->texColorBuffer, ImVec2(wsize.x, wsize.y), ImVec2(0, 1), ImVec2(1, 0));
+				});
+				ImGui::EndChild();
+			}
+			ImGui::End();
+		}
+
+	}
+	void addMenu() override {
 
 		if (ImGui::CollapsingHeader("Reconstruct & Texture :")) {
 			ImGui::Text("Preprocessing:");
@@ -95,7 +157,7 @@ public:
 			ImGui::SliderFloat("cullTriangleThreshold", &cullTriangleThreshold, 0, 1);
 
 		}
-		if (ImGui::CollapsingHeader("Camera Extrinsics Calibrator")) {
+		if (ImGui::CollapsingHeader("Camera Extrinsics Calibrator")) {			
 			//aruco calibrate feature point collector params
 			camPoseCalibrator.addUI();
 		}
@@ -103,8 +165,11 @@ public:
 			virtualcam->addUI();
 			animator.addUI(virtualcam->pose);
 		}
-		if (ImGui::CollapsingHeader("Cameras Manager")) {
+		if (ImGui::CollapsingHeader("Local File Manager")) {
 			camManager.setExtrinsicsUI();
+			camManager.addLocalFileUI();
+		}
+		if (ImGui::CollapsingHeader("Cameras Manager")) {
 			camManager.addCameraUI();
 		}
 		if (ImGui::CollapsingHeader("Debug Option")) {
@@ -146,32 +211,6 @@ public:
 		virtualcam->fy = 913.079833984375;
 		virtualcam->ppx = 960.0040283203125;
 		virtualcam->ppy = 552.7597045898438;
-	}
-
-	// virtual mesh project depth to real camera (prepared for projective texture)
-	void renderScreenViewport(GLuint texture, glm::vec2 offset, glm::vec3 color,float debug = 0, glm::vec2 scale=glm::vec2(0.25,0.25)) {
-		ImguiOpeGL3App::genCameraHelper(
-			vao,vbo,
-			1, 1, 0.5, 0.5, 0.5, 0.5, glm::vec3(1, 1, 0), 1.0, true
-		);
-
-		std::string uniformNames[] = { "color" };
-		GLuint texturedepth[] = { texture };
-		ImguiOpeGL3App::activateTextures(texture_shader_program, uniformNames, texturedepth, 1);
-		glm::mat4 screenDepthMVP =
-			glm::scale(
-				glm::translate(
-					glm::mat4(1.0),
-					glm::vec3(offset.x, offset.y, 0.0)
-				),
-				glm::vec3(scale.x, scale.y, 1e-3)
-			);
-		
-		std::string outlinerRGB[] = { "outliner_r","outliner_g" ,"outliner_b","debug" };
-		float values[] = { color.x,color.y,color.z,debug };
-		ImguiOpeGL3App::setUniformFloats(texture_shader_program, outlinerRGB, values, 4);
-
-		ImguiOpeGL3App::render(screenDepthMVP, pointsize, texture_shader_program, vao, 3 * 4, GL_TRIANGLES);
 	}
 
 	void updateForwardWrappingTexture(GLuint shader, VirtualCam* virtualcam, bool drawIndex,CameraGL::FrameBuffer type) {
@@ -240,7 +279,8 @@ public:
 		updateForwardWrappingTexture(screen_MeshMask_shader_program,virtualcam,false,CameraGL::FrameBuffer::MASK);
 		updateForwardWrappingTexture(screen_facenormal_shader_program,virtualcam,false, CameraGL::FrameBuffer::MESHNORMAL);
 		updateForwardWrappingTexture(screen_cosWeight_shader_program,virtualcam,false, CameraGL::FrameBuffer::COSWEIGHT);
-		updateForwardWrappingTexture(screen_cosWeightDiscard_shader_program,virtualcam,false, CameraGL::FrameBuffer::AFTERDISCARD);
+		updateForwardWrappingTexture(screen_cosWeightDiscard_shader_program,virtualcam,false, CameraGL::FrameBuffer::AFTERDISCARD);	
+
 	}
 	
 	void render3dworld() {
@@ -280,49 +320,12 @@ public:
 			glm::mat4 vmodelMat = virtualcam->getModelMat(lookAtPoint, curFrame);
 			camManager.updateProjectTextureWeight(vmodelMat);
 		}
-
-		int display_w, display_h;
-		glfwGetFramebufferSize(window, &display_w, &display_h);
-		glViewport(0, 0, display_w/2, display_h/2);
 		render3dworld();
-		glViewport(0, 0, display_w, display_h);
-
-		glm::vec2 viewportPlaceHolderUp[] = {
-			glm::vec2(-0.25, 0.25),
-			glm::vec2(-0.75 + 0 * 0.5, -0.75),
-			glm::vec2(-0.75 + 1 * 0.5, -0.75),
-			glm::vec2(-0.75 + 2 * 0.5, -0.75),
-			glm::vec2(-0.75 + 3 * 0.5, -0.75),
-		};
-
-		glm::vec2 viewportPlaceHolderDown[] = {
-			glm::vec2(-0.25, 0.75),
-			glm::vec2(-0.75 + 0 * 0.5, -0.25),
-			glm::vec2(-0.75 + 1 * 0.5, -0.25),
-			glm::vec2(-0.75 + 2 * 0.5, -0.25),
-			glm::vec2(-0.75 + 3 * 0.5, -0.25),
-		};
-
-		int index = 0;
-		camManager.getInputDebugDevice([this,&index,&viewportPlaceHolderDown,&viewportPlaceHolderUp](auto cam) {
-			renderScreenViewport(cam.image, viewportPlaceHolderUp[index], virtualcam->color,1.0);
-			renderScreenViewport(cam.depthvis, viewportPlaceHolderDown[index], virtualcam->color,1.0);
-			index++;
-		});		
-		
-		camManager.getOutputDebugDevice([this](auto cam) {
-			renderScreenViewport(cam.getFrameBuffer(CameraGL::FrameBuffer::AFTERDISCARD)->texColorBuffer, glm::vec2(0.5, 0.5), virtualcam->color, 0, glm::vec2(0.5, 0.5));
-			renderScreenViewport(cam.getFrameBuffer(CameraGL::FrameBuffer::MASK)->texColorBuffer, glm::vec2(0.25, -0.25), virtualcam->color, 0, glm::vec2(0.25, 0.25));
-			renderScreenViewport(cam.getFrameBuffer(CameraGL::FrameBuffer::MESHNORMAL)->depthBuffer, glm::vec2(0.25, -0.75), virtualcam->color, 0, glm::vec2(0.25, 0.25));
-			renderScreenViewport(cam.getFrameBuffer(CameraGL::FrameBuffer::COSWEIGHT)->texColorBuffer, glm::vec2(0.75, -0.25), virtualcam->color, 0, glm::vec2(0.25, 0.25));
-			renderScreenViewport(cam.getFrameBuffer(CameraGL::FrameBuffer::MESHNORMAL)->texColorBuffer, glm::vec2(0.75, -0.75), virtualcam->color, 0, glm::vec2(0.25, 0.25));
-		});
-
 		curFrame++;
 	}
 };
 
 int main() {
-	RealsenseDepthSythesisApp viewer;
+	FowardWarppingApp viewer;
 	viewer.initImguiOpenGL3();
 }

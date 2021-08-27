@@ -10,20 +10,28 @@
 
 class AzureKinect :public InputBase {
 
-    k4a::calibration calibration;
-    k4a::transformation* depth_to_color;
+    k4a_device_t device;
+    k4a_device_configuration_t camera_configuration;
+    k4a_calibration_t calibration;
+    k4a_transformation_t transformation;
+    k4a_image_t transformed_depth_image = NULL;
+
 
 public:
-    AzureKinect(int w=1280, int h=720);
+    AzureKinect(int w=2048, int h=1536);
     ~AzureKinect();
 
-    void runDevice(int index);
+    void runDevice(int index, bool isMaster);
 
     std::thread autoUpdate;
     void getLatestFrame();
 
     int indexOfMultiDeviceCapturer = -1;
     static MultiDeviceCapturer* capturer;
-    static bool alreadyStart;
+    static int alreadyStart;
     static void startDevices();
+
+    static int ui_isMaster;
+    static std::vector<std::string> availableSerialnums;
+    static void updateAvailableSerialnums();
 };

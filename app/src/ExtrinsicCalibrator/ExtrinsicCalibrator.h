@@ -4,6 +4,7 @@
 #include "../opencv/opecv-utils.h"
 #include "../CameraManager/CameraGL.h"
 #include "../eigen/EigenUtils.h"
+#include "../pcl/examples-pcl.h"
 
 typedef struct calibrateResult {
 	std::vector<glm::vec3> points;
@@ -17,7 +18,13 @@ class ExtrinsicCalibrator {
 	CorrespondPointCollector* calibrator = nullptr;
 	int collectPointCout = 15;
 	float collectthreshold = 0.1f;
-	bool calibrateFloorMode = false;
+
+	bool calibrateFloorMode1 = false; // corner only
+	bool calibrateFloorMode2 = false; // covered region
+
+	float icp_correspondThreshold = 0.05;
+	int uniformDepthSample = 2;
+	glm::mat4 runIcp(InputBase* pcdSource, InputBase* pcdTarget,int step);
 
 public :
 
@@ -28,7 +35,8 @@ public :
 	void waitCalibrateCamera(std::vector<CameraGL>::iterator device, std::vector<CameraGL>& allDevice);
 	void collectCalibratePoints();
 	void alignDevice2calibratedDevice(InputBase* uncalibratedCam, std::vector<CameraGL>& allDevice);
-	void fitMarkersOnEstimatePlane(InputBase* camera);
+	void fitMarkersOnEstimatePlane(InputBase* camera,
+		std::function<std::vector<glm::vec2>(int, int, uchar*, int)> findMarkerPoints);
 	CalibrateResult putAruco2Origion(InputBase* camera);
 	bool checkIsCalibrating(std::string serial, glm::vec3& index);
 };

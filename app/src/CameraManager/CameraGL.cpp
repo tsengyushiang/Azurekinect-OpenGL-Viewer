@@ -136,17 +136,11 @@ void CameraGL::saveWrappedResult() {
 	}
 }
 
-void CameraGL::save() {
+unsigned char* CameraGL::getProcessedColorFrame() {
 	unsigned char* colorRaw = new unsigned char[camera->width*camera->height * INPUT_COLOR_CHANNEL];
 	glBindTexture(GL_TEXTURE_2D, image);
 	glGetTexImage(GL_TEXTURE_2D, 0, GL_BGRA, GL_UNSIGNED_BYTE, colorRaw);
-	JsonUtils::saveRealsenseJson(
-		camera->serial,
-		camera->width, camera->height,
-		camera->intri.fx, camera->intri.fy, camera->intri.ppx, camera->intri.ppy,
-		camera->intri.depth_scale, camera->p_depth_frame, colorRaw
-	);
-	free(colorRaw);
+	return colorRaw;
 }
 
 void CameraGL::addui() {
