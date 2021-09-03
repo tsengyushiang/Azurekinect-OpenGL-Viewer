@@ -4,8 +4,7 @@
 __global__ void depthMap2point_kernel(
     float* pos, 
     unsigned short* depthRaw, cudaSurfaceObject_t colorRaw,
-    unsigned int w, unsigned int h,
-    float fx, float fy, float ppx, float ppy, float depthScale, float depthThreshold)
+    unsigned int w, unsigned int h, float* xy_table, float depthScale, float depthThreshold)
 {
     unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
     unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -19,8 +18,8 @@ __global__ void depthMap2point_kernel(
     if (depthValue < depthThreshold && pixel.w!=0) {
 
         // write output vertex
-        pos[index * ATTRIBUTESIZE + ATTRIBUTE_OFFSET_VERTEX + 0] = (x - ppx) / fx * depthValue;
-        pos[index * ATTRIBUTESIZE + ATTRIBUTE_OFFSET_VERTEX + 1] = (y - ppy) / fy * depthValue;
+        pos[index * ATTRIBUTESIZE + ATTRIBUTE_OFFSET_VERTEX + 0] = xy_table[index * 2] * depthValue;
+        pos[index * ATTRIBUTESIZE + ATTRIBUTE_OFFSET_VERTEX + 1] = xy_table[index * 2 + 1] * depthValue;
         pos[index * ATTRIBUTESIZE + ATTRIBUTE_OFFSET_VERTEX + 2] = depthValue;
 
         pos[index * ATTRIBUTESIZE + ATTRIBUTE_OFFSET_UV + 0] = float(x) / float(w);
@@ -36,19 +35,17 @@ __global__ void depthMap2point_kernel(
 
 void launch_kernel(float* pos,
     unsigned short* depthRaw, cudaSurfaceObject_t colorRaw,
-    unsigned int w, unsigned int h,
-    float fx, float fy, float ppx, float ppy, float depthScale, float depthThreshold)
+    unsigned int w, unsigned int h, float* xy_table, float depthScale, float depthThreshold)
 {
     // execute the kernel
     dim3 block(8, 8, 1);
     dim3 grid(w / block.x, h / block.y, 1);
-    depthMap2point_kernel << < grid, block >> > (pos, depthRaw, colorRaw, w, h, fx, fy, ppx, ppy, depthScale, depthThreshold);
+    depthMap2point_kernel << < grid, block >> > (pos, depthRaw, colorRaw, w, h, xy_table, depthScale, depthThreshold);
 }
 
 void CudaAlogrithm::depthMap2point(struct cudaGraphicsResource** vbo_resource,
     unsigned short* depthRaw, cudaGraphicsResource_t* cudaTexture,
-    unsigned int w, unsigned int h,
-    float fx, float fy, float ppx, float ppy, float depthScale, float depthThreshold)
+    unsigned int w, unsigned int h,float* xy_table,float depthScale, float depthThreshold)
 {
     // map OpenGL buffer object for writing from CUDA
     float* dptr;
@@ -69,7 +66,7 @@ void CudaAlogrithm::depthMap2point(struct cudaGraphicsResource** vbo_resource,
     cudaCreateSurfaceObject(&surfObject, &resDesc);
     // You now have a CUDA Surface object that refers to the GL texture.
     // Write to the Surface using CUDA.
-    launch_kernel(dptr, depthRaw, surfObject, w, h, fx, fy, ppx, ppy, depthScale, depthThreshold);
+    launch_kernel(dptr, depthRaw, surfObject, w, h, xy_table, depthScale, depthThreshold);
     
     cudaDestroySurfaceObject(surfObject);
     cudaGraphicsUnmapResources(1, cudaTexture, 0);

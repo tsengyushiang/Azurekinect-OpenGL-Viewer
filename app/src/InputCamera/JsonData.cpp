@@ -17,7 +17,11 @@ void JsonData::getLatestFrame() {
 				currentTime = syncTime;
 
 				std::cout << framefiles.size()<<" "<< syncTime << std::endl;
-				JsonUtils::loadRealsenseJson(
+
+				float planecx, planecy, planecz;
+				float planenx, planeny, planenz;
+				float planeThreshold = 0;
+				bool hasXYtable = JsonUtils::loadRealsenseJson(
 					framefiles[currentTime],
 					width,
 					height,
@@ -28,7 +32,27 @@ void JsonData::getLatestFrame() {
 					frameLength,
 					intri.depth_scale,
 					&p_depth_frame,
-					&p_color_frame);
+					&p_color_frame,
+					&xy_table,
+					farPlane,
+					planecx, planecy, planecz,
+					planenx, planeny, planenz,
+					planeThreshold
+					);
+
+				if (hasXYtable) {
+					cudaMemcpy(xy_table_cuda, xy_table, width * height * 2 * sizeof(float), cudaMemcpyHostToDevice);
+					xy_tableReady = true;
+				}
+				else {
+					setXYtable(intri.ppx, intri.ppy, intri.fx, intri.fy);
+				}
+
+				if (!floorEquationGot) {
+					esitmatePlaneCenter = glm::vec3(planecx, planecy, planecz);
+					esitmatePlaneNormal = glm::vec3(planenx, planeny, planenz);
+					point2floorDistance = planeThreshold;
+				}
 
 				frameNeedsUpdate = true;
 			}

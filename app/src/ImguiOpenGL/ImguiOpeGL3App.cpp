@@ -51,6 +51,9 @@ void ImguiOpeGL3App::addMenu() {
 void ImguiOpeGL3App::addGui() {
     ImGui::Text("Inherit addGui() to add custum ui.");               // Display some text (you can use a format strings too)
 }
+bool ImguiOpeGL3App::addOpenGLPanelGui() {
+    return true;
+}
 
 void ImguiOpeGL3App::setcamera(float width, float height) {
 
@@ -68,12 +71,11 @@ void ImguiOpeGL3App::setcamera(float width, float height) {
         lookAtPoint, // and looks at the origin
         glm::vec3(0, 1, 0)  // Head is up (set to 0,-1,0 to look upside-down)
     );
-
     Model = glm::mat4(1.0);
 }
 
 void ImguiOpeGL3App::initImguiOpenGL3(int width, int height) {
-	
+
     // Setup window
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit())
@@ -145,22 +147,32 @@ void ImguiOpeGL3App::initImguiOpenGL3(int width, int height) {
         // render OpenGL in GUI
         ImGui::Begin("OpenGL");
         {
+            bool focused = ImGui::IsWindowFocused();
             main->render([this,&clear_color]() {
                 glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
                 mainloop();
             }, GL_BACK);
 
-            if (ImGui::IsWindowFocused() && ImGui::IsMouseDragging(0)) {
-                ImVec2 mousedelta = ImGui::GetMouseDragDelta();
-                mousedrag(mousedelta.x, mousedelta.y);
-            }
-
             // Using a Child allow to fill all the space of the window.
             // It also alows customization
             // Get the size of the child (i.e. the whole draw size of the windows).
             ImVec2 wsize = ImGui::GetWindowSize();
-            ImGui::Image((ImTextureID)main->texColorBuffer, wsize, ImVec2(0, 1), ImVec2(1, 0));
+
+            float windowWidth = (float)ImGui::GetWindowWidth();
+            float windowHeight = (float)ImGui::GetWindowHeight();
+            ImGui::GetWindowDrawList()->AddImage(
+                (ImTextureID)main->texColorBuffer,
+                ImGui::GetWindowPos(), 
+                ImVec2(ImGui::GetWindowPos().x+ windowWidth, ImGui::GetWindowPos().y+ windowHeight),
+                ImVec2(0, 1), ImVec2(1, 0)
+            );
+            if (!addOpenGLPanelGui()) {
+                if (focused && ImGui::IsMouseDragging(0)) {
+                    ImVec2 mousedelta = ImGui::GetMouseDragDelta();
+                    mousedrag(mousedelta.x, mousedelta.y);
+                }
+            }
         }
         ImGui::End();
 

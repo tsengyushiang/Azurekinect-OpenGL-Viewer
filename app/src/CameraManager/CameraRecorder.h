@@ -10,6 +10,7 @@ typedef struct MannulBufferingFrame {
 	InputBase* camera;
 	unsigned char* colorRaw;
 	uint16_t* p_depth_frame;
+	float* xy_table;
 }MannulBufferingFrame;
 
 class CameraRecorder {

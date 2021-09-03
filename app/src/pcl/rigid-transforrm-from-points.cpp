@@ -15,13 +15,13 @@ glm::mat4 pcl_pointset_rigid_calibrate(int size, std::vector<glm::vec3> srcPoint
 	cloud_out->is_dense = false;
 	cloud_out->resize(cloud_out->width * cloud_out->height);
 
-	for (int i = 0; i < srcPoint.size(); i++) {
+	for (int i = 0; i < size; i++) {
 		cloud_in->points[i].x = srcPoint[i].x;
 		cloud_in->points[i].y = srcPoint[i].y;
 		cloud_in->points[i].z = srcPoint[i].z;
 	}
 
-	for (int i = 0; i < dstPoints.size(); i++) {
+	for (int i = 0; i < size; i++) {
 		cloud_out->points[i].x = dstPoints[i].x;
 		cloud_out->points[i].y = dstPoints[i].y;
 		cloud_out->points[i].z = dstPoints[i].z;

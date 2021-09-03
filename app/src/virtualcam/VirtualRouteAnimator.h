@@ -6,7 +6,7 @@
 class VirtualRouteAnimator {
 	SphericalCamPose startPose = {0,0,0};
 	SphericalCamPose endPose = {0,0,0};
-	int fps, durationSecond;
+	int fps = 30, durationSecond = 3;
 	bool running = false;
 	int currentFrame = 0;
 public:
@@ -18,5 +18,6 @@ public:
 	*/
 	int animeVirtualCamPose(SphericalCamPose& virtualCamPose);
 
+	std::string folder;
 	void addUI(SphericalCamPose& virtualCam);
 };

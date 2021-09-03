@@ -9,6 +9,7 @@
 #include "src/CameraManager/CameraManager.h"
 #include "src/virtualcam/VirtualRouteAnimator.h"
 #include <opencv2/core/utils/filesystem.hpp>
+#include "src/ImguiOpenGL/ImGuiTransformControl.h"
 #include <filesystem>
 
 class FowardWarppingApp :public ImguiOpeGL3App {
@@ -25,8 +26,14 @@ class FowardWarppingApp :public ImguiOpeGL3App {
 	GLuint screen_cosWeightDiscard_shader_program;
 	GLuint cosWeightDiscard_shader_program;
 
-	VirtualCam* virtualcam;
+	TransformContorl transformWidget;
+
+	int nearsetK = 2;
 	VirtualRouteAnimator animator;
+
+	VirtualCam* virtualcam;
+
+	// snapshot warpping result
 	int currentRecordFrame = -1;
 
 	CameraManager camManager;
@@ -35,6 +42,12 @@ class FowardWarppingApp :public ImguiOpeGL3App {
 
 	ExtrinsicCalibrator camPoseCalibrator;
 
+	bool use3D = false;
+	// for better performance when calibration
+	bool preprocessing = false;
+	bool warpping = false;
+
+	bool detectMarkerEveryFrame = false;
 	ImVec4 chromaKeyColor;
 	float chromaKeyColorThreshold=2;
 	int pointsSmoothing = 10;
@@ -43,7 +56,6 @@ class FowardWarppingApp :public ImguiOpeGL3App {
 	float planeMeshThreshold=0;
 	float cullTriangleThreshold = 0.25;
 
-	float projectDepthBias = 3e-2;
 	bool calculatDeviceWeights=false;
 
 	int curFrame = 0;
@@ -66,19 +78,30 @@ public:
 	}
 	void onAfterRender() override {
 		if (currentRecordFrame > -1) {
+
 			// save all animation frames
-			std::string outputFolder = cv::utils::fs::join("./", std::to_string(currentRecordFrame));
+			std::string outputFolder = cv::utils::fs::join(animator.folder, std::to_string(currentRecordFrame));
 			cv::utils::fs::createDirectory(outputFolder);
-			camManager.getFoward3DWrappingDevice([this,&outputFolder](auto cam) {
+
+			camManager.getNearestKcamera(nearsetK, virtualcam->getModelMat(lookAtPoint, curFrame), lookAtPoint, [this, &outputFolder](auto cam) {
 				std::string imgefilename = cv::utils::fs::join(outputFolder, cam->camera->serial + ".png");
-				unsigned char* colorRaw = cam->getFrameBuffer(CameraGL::FrameBuffer::AFTERDISCARD)->getRawColorData();				
+				unsigned char* colorRaw = cam->getFrameBuffer(CameraGL::FrameBuffer::AFTERDISCARD)->getRawColorData();
 				cv::Mat image(cv::Size(cam->camera->width, cam->camera->height), CV_8UC4, (void*)colorRaw, cv::Mat::AUTO_STEP);
 				cv::imwrite(imgefilename, image);
-				currentRecordFrame = -1;
+				currentRecordFrame = -1;				
 			});
 		}
 
 		camManager.recordFrame();
+	}
+	bool addOpenGLPanelGui() override{
+
+		camManager.getAllDevice([this](auto device, auto allDevice) {
+			device->addfloatingSerialGui(Projection * View * Model, device->camera->serial);
+		});
+
+		bool isUsing = transformWidget.addWidget(View, Projection);
+		return isUsing;
 	}
 	void addGui() override {
 		// input cameras	
@@ -115,75 +138,118 @@ public:
 		{
 			ImGui::Begin("Warpping Result");
 			{
+				ImGui::Checkbox("Warpping", &warpping);
 				// Using a Child allow to fill all the space of the window.
 				// It also alows customization
 				ImGui::BeginChild("Textures");
 				// Get the size of the child (i.e. the whole draw size of the windows).
 				ImVec2 wsize = ImGui::GetWindowSize();
 				float inputCount = camManager.size();
-				wsize.y /= 2;
-				camManager.getOutputDebugDevice([this, &wsize](auto cam) {
-					ImGui::Image((ImTextureID)cam.getFrameBuffer(CameraGL::FrameBuffer::AFTERDISCARD)->texColorBuffer, ImVec2(wsize.x, wsize.y), ImVec2(0, 1), ImVec2(1, 0));
-				});
-				wsize.x /= 2;
-				wsize.y /= 2;
-				camManager.getOutputDebugDevice([this,&wsize](auto cam) {
-					ImGui::Image((ImTextureID)cam.getFrameBuffer(CameraGL::FrameBuffer::MASK)->texColorBuffer, ImVec2(wsize.x, wsize.y), ImVec2(0, 1), ImVec2(1, 0));
-					ImGui::SameLine();
-					ImGui::Image((ImTextureID)cam.getFrameBuffer(CameraGL::FrameBuffer::COSWEIGHT)->texColorBuffer, ImVec2(wsize.x, wsize.y), ImVec2(0, 1), ImVec2(1, 0));
+				wsize.y /= inputCount;
 
-					ImGui::Image((ImTextureID)cam.getFrameBuffer(CameraGL::FrameBuffer::MESHNORMAL)->depthBuffer, ImVec2(wsize.x, wsize.y), ImVec2(0, 1), ImVec2(1, 0));
-					ImGui::SameLine();
-					ImGui::Image((ImTextureID)cam.getFrameBuffer(CameraGL::FrameBuffer::MESHNORMAL)->texColorBuffer, ImVec2(wsize.x, wsize.y), ImVec2(0, 1), ImVec2(1, 0));
+				camManager.getAllDevice([&wsize](auto cam) {
+					ImGui::Image((ImTextureID)cam->getFrameBuffer(CameraGL::FrameBuffer::AFTERDISCARD)->texColorBuffer, ImVec2(wsize.x, wsize.y), ImVec2(0, 1), ImVec2(1, 0));
 				});
+
 				ImGui::EndChild();
 			}
 			ImGui::End();
 		}
 
+
 	}
 	void addMenu() override {
 
 		if (ImGui::CollapsingHeader("Reconstruct & Texture :")) {
-			ImGui::Text("Preprocessing:");
+			
+			ImGui::Checkbox("Create3D", &use3D);
+			ImGui::Checkbox("Preprocessing", &preprocessing);
+
 			ImGui::ColorEdit3("chromaKeycolor", (float*)&chromaKeyColor); // Edit 3 floats representing a color
 			ImGui::SliderFloat("chromaKeyColorThreshold", &chromaKeyColorThreshold, 0, 5); // Edit 3 floats representing a color
 			ImGui::SliderInt("MaskErosion", &maskErosion, 0, 50);
 			ImGui::Checkbox("AutoDepthDilation", &autoDepthDilation);
-			ImGui::SliderInt("pointsSmoothing", &pointsSmoothing, 0, 50);
 
 			ImGui::Text("Reconstruct:");
 			ImGui::SliderFloat("planeMeshThreshold", &planeMeshThreshold, 0.0f, 90.0f);
 			ImGui::SliderFloat("cullTriangleThreshold", &cullTriangleThreshold, 0, 1);
+			ImGui::SliderInt("pointsSmoothing", &pointsSmoothing, 0, 50);
 
 		}
-		if (ImGui::CollapsingHeader("Camera Extrinsics Calibrator")) {			
+		if (ImGui::CollapsingHeader("Floor,Extrinsics Calibrator")) {			
 			//aruco calibrate feature point collector params
+
+			if (ImGui::Button("Calibrated floor by conrner")) {
+				camManager.getAllDevice([this](auto device, auto allDevice) {
+					camPoseCalibrator.fitMarkersOnEstimatePlane(device->camera, OpenCVUtils::getArucoMarkerCorners);
+				});
+			}
+
+			if (ImGui::Button("Calibrated floor by region")) {
+				camManager.getAllDevice([this](auto device, auto allDevice) {
+					camPoseCalibrator.fitMarkersOnEstimatePlane(device->camera, OpenCVUtils::getArucoMarkerConvexRegion);
+				});
+			}
+
+			ImGui::Text("Cam-to-cam extrinsics calibrate");
 			camPoseCalibrator.addUI();
+
+			ImGui::Checkbox("detect Marker every frame", &detectMarkerEveryFrame);
+			if (detectMarkerEveryFrame || ImGui::Button("Start/Capture")) {
+
+				bool noCalibratedCam = true;
+				camManager.getAllDevice([this,&noCalibratedCam](auto device, auto allDevice) {
+					if (device->camera->calibrated)noCalibratedCam = false;
+				});
+
+				if (noCalibratedCam) {
+					camManager.getAllDevice([this, &noCalibratedCam](auto device, auto allDevice) {
+						if (allDevice.begin()->camera->serial == device->camera->serial) {
+							device->camera->calibrated = true;
+						}
+					});
+				}
+
+				camManager.getAllDevice([this](auto device, auto allDevice) {
+					camPoseCalibrator.waitCalibrateCamera(device, allDevice);
+				});
+			}
+		}
+		if (ImGui::CollapsingHeader("Manual tune Camera pose")) {
+
+			ImGui::Text("Pick 2 for ICP:");
+			camManager.addManulPick2Gui();
+			if (ImGui::Button("RunICP##manualPicks")) {
+				auto mat = camPoseCalibrator.runIcp(
+					camManager.pickedCams.source, camManager.pickedCams.target, camPoseCalibrator.uniformDepthSample);
+				camManager.pickedCams.source->modelMat = mat * camManager.pickedCams.source->modelMat;
+			}
+
+			ImGui::Text("Transform control:");
+			camManager.getAllDevice([this](auto device) {
+				if(ImGui::Button((device->camera->serial+ "##manualDragPos").c_str())) {
+					transformWidget.attachMatrix4(device->camera->modelMat);
+				}
+			});
+			if (ImGui::Button("Disable##manualDragPos")) {
+				transformWidget.detachMatrix4();
+			}
+			transformWidget.addMenu();
 		}
 		if (ImGui::CollapsingHeader("Virtual camera")) {
 			virtualcam->addUI();
 			animator.addUI(virtualcam->pose);
+			ImGui::SliderInt("Nearest K WarppingResult", &nearsetK, 0, camManager.size());
 		}
-		if (ImGui::CollapsingHeader("Local File Manager")) {
+		if (ImGui::CollapsingHeader("LocalFiles")) {
 			camManager.setExtrinsicsUI();
 			camManager.addLocalFileUI();
 		}
-		if (ImGui::CollapsingHeader("Cameras Manager")) {
-			camManager.addCameraUI();
+		if (ImGui::CollapsingHeader("Recorder")) {
+			camManager.addRecorderUI();
 		}
-		if (ImGui::CollapsingHeader("Debug Option")) {
-			camManager.addDepthAndTextureControlsUI();
-
-			static char url[25] = "virtual-view-color.png";
-			ImGui::InputText("##urlInput", url, 20);
-			ImGui::SameLine();
-			if (ImGui::Button("save virutal view color")) {
-				unsigned char* colorRaw = virtualcam->viewport.getRawColorData();
-				cv::Mat image(cv::Size(virtualcam->w, virtualcam->h), CV_8UC4, (void*)colorRaw, cv::Mat::AUTO_STEP);
-				cv::imwrite(url, image);
-				delete colorRaw;
-			}
+		if (ImGui::CollapsingHeader("Cameras")) {
+			camManager.addCameraUI();
 		}
 	}
 	void initGL() override {
@@ -269,18 +335,23 @@ public:
 		camManager.deleteIdleCam();
 
 		camManager.getAllDevice([this](auto device) {
-			device->updateImages(chromaKeyColor, chromaKeyColorThreshold, maskErosion, autoDepthDilation);
+			device->updateImages(chromaKeyColor, chromaKeyColorThreshold);
+			if(preprocessing)
+				device->imagesPreprocessing(maskErosion, autoDepthDilation);
 		});
 
-		camManager.getFoward3DWrappingDevice([this](auto device) {
-			device->updateMeshwithCUDA(planeMeshThreshold,pointsSmoothing);
-		});
+		if (use3D) {
+			camManager.getFoward3DWrappingDevice([this](auto device) {
+				device->updateMeshwithCUDA(planeMeshThreshold, pointsSmoothing);
+				});
 
-		updateForwardWrappingTexture(screen_MeshMask_shader_program,virtualcam,false,CameraGL::FrameBuffer::MASK);
-		updateForwardWrappingTexture(screen_facenormal_shader_program,virtualcam,false, CameraGL::FrameBuffer::MESHNORMAL);
-		updateForwardWrappingTexture(screen_cosWeight_shader_program,virtualcam,false, CameraGL::FrameBuffer::COSWEIGHT);
-		updateForwardWrappingTexture(screen_cosWeightDiscard_shader_program,virtualcam,false, CameraGL::FrameBuffer::AFTERDISCARD);	
-
+			if (warpping) {
+				updateForwardWrappingTexture(screen_MeshMask_shader_program, virtualcam, false, CameraGL::FrameBuffer::MASK);
+				updateForwardWrappingTexture(screen_facenormal_shader_program, virtualcam, false, CameraGL::FrameBuffer::MESHNORMAL);
+				updateForwardWrappingTexture(screen_cosWeight_shader_program, virtualcam, false, CameraGL::FrameBuffer::COSWEIGHT);
+				updateForwardWrappingTexture(screen_cosWeightDiscard_shader_program, virtualcam, false, CameraGL::FrameBuffer::AFTERDISCARD);
+			}
+		}
 	}
 	
 	void render3dworld() {
@@ -293,24 +364,26 @@ public:
 
 		camManager.getAllDevice([this, &mvp](auto device, auto allDevice) {
 			renderFrustum(device);
-			camPoseCalibrator.waitCalibrateCamera(device, allDevice);
 		});
 
 		// render virtual camera frustum
 		glm::mat4 devicemvp = mvp * virtualcam->getModelMat(lookAtPoint, curFrame);
 		virtualcam->renderFrustum(devicemvp, vao, vbo, shader_program);
 
-		GLuint _3dshader = cosWeightDiscard_shader_program;
-		camManager.getFoward3DWrappingDevice([&_3dshader, &mvp, this](auto device) {
-			std::string uniformName[] = {"weightThreshold"};
-			float values[] = {cullTriangleThreshold};
-			ImguiOpeGL3App::setUniformFloats(_3dshader, uniformName, values, 1);
-			std::string uniformNames[] = { "color" };
-			GLuint texture[] = { device->image };
-			ImguiOpeGL3App::activateTextures(_3dshader, uniformNames, texture, 1);
-			ImguiOpeGL3App::setUniformMat(_3dshader, "modelMat", device->camera->modelMat);
-			device->renderMesh(mvp, _3dshader);
-		});
+		if (use3D) {
+			GLuint _3dshader = cosWeightDiscard_shader_program;
+			camManager.getFoward3DWrappingDevice([&_3dshader, &mvp, this](auto device) {
+				std::string uniformName[] = { "weightThreshold" };
+				float values[] = { cullTriangleThreshold };
+				ImguiOpeGL3App::setUniformFloats(_3dshader, uniformName, values, 1);
+				std::string uniformNames[] = { "color" };
+				GLuint texture[] = { device->image };
+				ImguiOpeGL3App::activateTextures(_3dshader, uniformNames, texture, 1);
+				ImguiOpeGL3App::setUniformMat(_3dshader, "modelMat", device->camera->modelMat);
+				device->renderMesh(mvp, _3dshader);
+				});
+		}
+
 		camPoseCalibrator.render(mvp, shader_program);
 	}
 
@@ -321,6 +394,7 @@ public:
 			camManager.updateProjectTextureWeight(vmodelMat);
 		}
 		render3dworld();
+
 		curFrame++;
 	}
 };

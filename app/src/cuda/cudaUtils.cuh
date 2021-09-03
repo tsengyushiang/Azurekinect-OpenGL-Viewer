@@ -9,8 +9,7 @@ class CudaAlogrithm {
 public:
 	static void depthMap2point(struct cudaGraphicsResource** vbo_resource,
 		unsigned short* depthRaw, cudaGraphicsResource_t* cudaTexture,
-		unsigned int w, unsigned int h,
-		float fx, float fy, float ppx, float ppy, float depthScale, float depthThreshold
+		unsigned int w, unsigned int h, float* xy_table, float depthScale, float depthThreshold
 	);
 		
 	static void planePointsLaplacianSmoothing(struct cudaGraphicsResource** vbo_resource,
@@ -46,7 +45,6 @@ public:
 		uint16_t* colorRaw, unsigned int w, unsigned int h, float depthScale,float farplane);	
 
 	static void clipFloorAndFarDepth(cudaGraphicsResource_t* mask,
-		uint16_t* colorRaw, unsigned int w, unsigned int h, 
-		float fx, float fy, float ppx, float ppy, float depthScale, float farplane,
+		uint16_t* colorRaw, unsigned int w, unsigned int h, float* xy_table, float depthScale, float farplane,
 		glm::vec3 planeCenter, glm::vec3 planeNormal,float planeCullingDistance);
 };

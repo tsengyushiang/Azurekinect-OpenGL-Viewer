@@ -19,18 +19,16 @@ class ExtrinsicCalibrator {
 	int collectPointCout = 15;
 	float collectthreshold = 0.1f;
 
-	bool calibrateFloorMode1 = false; // corner only
-	bool calibrateFloorMode2 = false; // covered region
-
 	float icp_correspondThreshold = 0.05;
-	int uniformDepthSample = 2;
-	glm::mat4 runIcp(InputBase* pcdSource, InputBase* pcdTarget,int step);
 
 public :
 
 	void addUI();
 	void render(glm::mat4 mvp, GLuint shader_program);
 
+	int uniformDepthSample = 2;
+	glm::mat4 runIcp(InputBase* pcdSource, InputBase* pcdTarget,int step);
+	void calibrateCollectedPoints(bool reset = false);
 	// detect aruco to calibrate unregisted camera
 	void waitCalibrateCamera(std::vector<CameraGL>::iterator device, std::vector<CameraGL>& allDevice);
 	void collectCalibratePoints();

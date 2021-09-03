@@ -120,11 +120,12 @@ void JsonUtils::loadResolution(
 }
 
 
-void JsonUtils::loadRealsenseJson(
+bool JsonUtils::loadRealsenseJson(
 	std::string filename,
 	int& width, int& height,
 	float& fx, float& fy, float& ppx, float& ppy, int& frameLength,
-	float& depthscale, uint16_t** depthmap, unsigned char** colormap
+	float& depthscale, uint16_t** depthmap, unsigned char** colormap,float** xytable,
+	float& farplane,float& plane_cx, float& plane_cy, float& plane_cz, float& plane_nx, float& plane_ny, float& plane_nz, float& plane_threshold
 ) {
 	std::ifstream i(filename);
 	json j;
@@ -137,32 +138,42 @@ void JsonUtils::loadRealsenseJson(
 	fy = j["fy"];
 	ppx = j["ppx"];
 	ppy = j["ppy"];
-	frameLength = 1;
+
+	farplane = j["far-plane"];
+	json plane = j["floor-plane"];
+	plane_cx = plane["cx"];
+	plane_cy = plane["cy"];
+	plane_cz = plane["cz"];
+	plane_nx = plane["nx"];
+	plane_ny = plane["ny"];
+	plane_nz = plane["nz"];
+	plane_threshold = plane["threshold"];
 
 	std::cout << std::endl << filename<<" has : "<< depthscale<<" "<< width << " " << height <<"..."<< std::endl;
-	free(*depthmap);
-	free(*colormap);
-	*depthmap = (uint16_t*)calloc(width * height * frameLength, sizeof(uint16_t));
-	*colormap = (unsigned char*)calloc(INPUT_COLOR_CHANNEL * width * height * frameLength, sizeof(unsigned char));
 
+	bool hasXYtable = j.contains("xy_table");
+	
 	const int INPUT_JSON_COLOR_CHANNEL = 3;
-	for (int frame = 0; frame < frameLength; frame++) {
-
-		for (int i = 0; i < width * height; i++) {
-			int index = frame * width * height + i;
-			(*depthmap)[index] = j["depthmap_raw"][index];
+	for (int i = 0; i < width * height; i++) {
+		
+		//load xy table
+		if (hasXYtable) {
+			(*xytable)[i * 2 + 0] = j["xy_table"][i * 2 + 0];
+			(*xytable)[i * 2 + 1] = j["xy_table"][i * 2 + 1];
 		}
 
-		int frameBegin = frame * width * height * INPUT_JSON_COLOR_CHANNEL;
-		for (int i = 0; i < width * height; i++) {
-			for (int channel = 0; channel < INPUT_JSON_COLOR_CHANNEL; channel++) {
-				(*colormap)[frameBegin + i* INPUT_COLOR_CHANNEL + channel] = 
-					j["colormap_raw"][frameBegin + i * INPUT_JSON_COLOR_CHANNEL + channel];
-			}
+		// load depth
+		(*depthmap)[i] = j["depthmap_raw"][i];
+
+		// load color
+		for (int channel = 0; channel < INPUT_JSON_COLOR_CHANNEL; channel++) {
+			(*colormap)[i* INPUT_COLOR_CHANNEL + channel] = 
+				j["colormap_raw"][i * INPUT_JSON_COLOR_CHANNEL + channel];
 		}
 	}
 
 	i.close();
+	return hasXYtable;
 }
 
 void JsonUtils::saveMultiCamSyncInfo(
@@ -224,10 +235,11 @@ void JsonUtils::saveRealsenseJson(
 	std::string filename,
 	int width, int height,
 	float fx, float fy, float ppx, float ppy,
-	float depthscale, const unsigned short* depthmap, const unsigned char* colormap,
-	float visulizeFarplane
+	float depthscale, const unsigned short* depthmap, const unsigned char* colormap, float* xy_table,
+	float visulizeFarplane, Plane plane
 ) {
 	std::vector<float> depthmap_raw;
+	std::vector<float> xytable;
 	std::vector<unsigned char> colormap_raw;
 	std::vector<unsigned char> mask_raw;
 
@@ -237,12 +249,24 @@ void JsonUtils::saveRealsenseJson(
 			int index = i * width + j;
 
 			depthmap_raw.push_back(depthmap[index]);
+			xytable.push_back(xy_table[index*2+0]);
+			xytable.push_back(xy_table[index*2+1]);
 			colormap_raw.push_back(colormap[cindex * INPUT_COLOR_CHANNEL + 0]);
 			colormap_raw.push_back(colormap[cindex * INPUT_COLOR_CHANNEL + 1]);
 			colormap_raw.push_back(colormap[cindex * INPUT_COLOR_CHANNEL + 2]);
 			mask_raw.push_back(colormap[cindex * INPUT_COLOR_CHANNEL + 3]);
 		}
 	}
+
+	json p = {
+		{"cx",plane.cx},
+		{"cy",plane.cy},
+		{"cz",plane.cz},
+		{"nx",plane.nx},
+		{"ny",plane.ny},
+		{"nz",plane.nz},
+		{"threshold",plane.threshold},
+	};
 
 	json j = {
 		{"width",width},
@@ -254,8 +278,11 @@ void JsonUtils::saveRealsenseJson(
 		{"depthscale",depthscale},
 		{"colormap_raw",colormap_raw},
 		{"depthmap_raw",depthmap_raw},
+		{"xy_table",xytable},
 		{"yzCullingMask",mask_raw},
 		{"frameLength",1},
+		{"floor-plane",p},
+		{"far-plane",visulizeFarplane}
 	};
 
 	cv::Mat image(cv::Size(width, height), CV_8UC3, (void*)colormap_raw.data(), cv::Mat::AUTO_STEP);

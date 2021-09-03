@@ -18,20 +18,20 @@ class AzureKinect :public InputBase {
 
 
 public:
-    AzureKinect(int w=2048, int h=1536);
+    AzureKinect(int w, int h);
     ~AzureKinect();
 
+    void setXY_table();
     void runDevice(int index, bool isMaster);
 
     std::thread autoUpdate;
-    void getLatestFrame();
-
-    int indexOfMultiDeviceCapturer = -1;
-    static MultiDeviceCapturer* capturer;
-    static int alreadyStart;
-    static void startDevices();
-
+    void getLatestFrame();       
+    
     static int ui_isMaster;
+    static int ui_Resolution;
+    static const std::string items[];
+    static const glm::vec2 resolution[];
     static std::vector<std::string> availableSerialnums;
+    static k4a_device_configuration_t get_default_config();
     static void updateAvailableSerialnums();
 };

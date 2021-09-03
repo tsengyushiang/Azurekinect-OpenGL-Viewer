@@ -166,8 +166,10 @@
     <ClCompile Include="src\ImguiOpenGL\ImguiOpeGL3App.cpp" />
     <ClCompile Include="src\ImguiOpenGL\ImguiOpenGL3App_gl.cpp" />
     <ClCompile Include="src\ImguiOpenGL\ImguiOpenGL3App_glhelper.cpp" />
+    <ClCompile Include="src\ImguiOpenGL\ImGuiTransformControl.cpp" />
     <ClCompile Include="src\ImguiOpenGL\Imgui\imgui.cpp" />
     <ClCompile Include="src\ImguiOpenGL\Imgui\ImGuiFileDialog\ImGuiFileDialog.cpp" />
+    <ClCompile Include="src\ImguiOpenGL\Imgui\ImGuizmo.cpp" />
     <ClCompile Include="src\ImguiOpenGL\Imgui\imgui_demo.cpp" />
     <ClCompile Include="src\ImguiOpenGL\Imgui\imgui_draw.cpp" />
     <ClCompile Include="src\ImguiOpenGL\Imgui\imgui_impl_glfw.cpp" />
@@ -204,8 +206,10 @@
     <ClInclude Include="src\gl3w\glcorearb.h" />
     <ClInclude Include="src\ImguiOpenGL\examples.h" />
     <ClInclude Include="src\ImguiOpenGL\ImguiOpeGL3App.h" />
+    <ClInclude Include="src\ImguiOpenGL\ImGuiTransformControl.h" />
     <ClInclude Include="src\ImguiOpenGL\Imgui\imconfig.h" />
     <ClInclude Include="src\ImguiOpenGL\Imgui\imgui.h" />
+    <ClInclude Include="src\ImguiOpenGL\Imgui\ImGuizmo.h" />
     <ClInclude Include="src\ImguiOpenGL\Imgui\imgui_impl_glfw.h" />
     <ClInclude Include="src\ImguiOpenGL\Imgui\imgui_impl_opengl3.h" />
     <ClInclude Include="src\ImguiOpenGL\Imgui\imgui_internal.h" />

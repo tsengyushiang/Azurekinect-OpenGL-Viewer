@@ -5,6 +5,7 @@
 #include <string>
 #include <fstream>
 #include <iostream>
+#include <cuda_runtime.h>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -28,6 +29,8 @@ private:
     void keepTryingSave();
 
 public:
+
+    // for json data
     int syncTime = 0;
     int currentTime = -1;
 
@@ -40,14 +43,14 @@ public:
 
     ~InputBase();
 
+    bool calibrated = false;
     glm::mat4 modelMat;
+
+    bool floorEquationGot = false;
     glm::vec3 esitmatePlaneCenter;
     glm::vec3 esitmatePlaneNormal;
 
-    bool calibrated = false;
-    Intrinsic intri;
     std::string serial;
-
     // result resolution of aligned depth/color
     int width;
     int height;
@@ -55,13 +58,13 @@ public:
     // resolution for color/depth
     int cwidth, cheight, dwidth, dheight;
 
-    uint16_t* p_depth_frame;
+    uint16_t* p_depth_frame;    
     unsigned char* p_color_frame;
 
+    // record test
     uint16_t** depth_cache;
     unsigned char** color_cache;
     const int MAXCACHE = 1000;
-
     int curRecordFrame=0;
     int curSaveFrame = 0;
     int maxSave = 0;
@@ -71,6 +74,7 @@ public:
     FILE* recordDepthFile;
     void startRecord(int);
 
+    // post process : clip point
     float farPlane = 5.0;
     float point2floorDistance=100;
 
@@ -82,5 +86,17 @@ public:
 
     // fetch signle pixel-point
     glm::vec3 colorPixel2point(glm::vec2);
+
+
+    /*
+    cuda mem for 3d point:
+        x= xy_table_cuda[i*2]*depth
+        y= xy_table_cuda[i*2+1]*depth
+    */
+    Intrinsic intri;
+    float* xy_table_cuda;
+    float* xy_table;
+    bool xy_tableReady = false;
+    void setXYtable(float ppx, float ppy, float fx, float fy, bool forceupdate=false);
 };
 

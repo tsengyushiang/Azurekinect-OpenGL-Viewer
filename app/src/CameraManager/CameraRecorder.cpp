@@ -11,11 +11,15 @@ void CameraRecorder::addGUI(std::vector<CameraGL> cameras){
 			uint16_t* p_depth_frame = (uint16_t*)calloc(device->camera->width * device->camera->height, sizeof(uint16_t));
 			memcpy((void*)p_depth_frame, (uint16_t*)(void*)device->camera->p_depth_frame, device->camera->width * device->camera->height * sizeof(uint16_t));
 			
+			float* xy_table = (float*)calloc(device->camera->width * device->camera->height*2, sizeof(float));
+			memcpy((void*)xy_table, (uint16_t*)(void*)device->camera->xy_table, device->camera->width * device->camera->height * 2 * sizeof(float));
+
 			bufferFramesCount++;
 			getBuffer(device->camera->serial)->push_back({
 				device->camera,
 				device->getProcessedColorFrame(),
-				p_depth_frame
+				p_depth_frame,
+				xy_table
 				});
 		}
 	}
@@ -52,10 +56,19 @@ void CameraRecorder::exportBuffer2files() {
 				filename,
 				camera->width, camera->height,
 				camera->intri.fx, camera->intri.fy, camera->intri.ppx, camera->intri.ppy,
-				camera->intri.depth_scale, data.p_depth_frame, data.colorRaw,
-				camera->farPlane
+				camera->intri.depth_scale, data.p_depth_frame, data.colorRaw,data.xy_table,
+				camera->farPlane, {
+					camera->esitmatePlaneCenter.x,
+					camera->esitmatePlaneCenter.y,
+					camera->esitmatePlaneCenter.z,
+					camera->esitmatePlaneNormal.x,
+					camera->esitmatePlaneNormal.y,
+					camera->esitmatePlaneNormal.z,
+					camera->point2floorDistance
+				}
 			);
 			free(data.colorRaw);
+			free(data.xy_table);
 			free(data.p_depth_frame);
 		}
 

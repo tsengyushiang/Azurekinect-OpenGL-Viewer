@@ -70,6 +70,8 @@ public:
 	virtual void framebufferRender();
 	virtual void addGui();
 	virtual void addMenu();
+	//return false to block mouse drag viewport
+	virtual bool addOpenGLPanelGui();
 	virtual void mousedrag(float,float);
 	virtual void onBeforeRender();
 	virtual void onAfterRender();

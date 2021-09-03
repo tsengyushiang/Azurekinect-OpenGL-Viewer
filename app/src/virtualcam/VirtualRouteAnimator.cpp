@@ -1,7 +1,10 @@
 #include "./VirtualRouteAnimator.h"
+#include <opencv2/core/utils/filesystem.hpp>
+#include <filesystem>
+#include <iomanip>
+#include <ctime>
 
-VirtualRouteAnimator::VirtualRouteAnimator() 
-	:fps(30), durationSecond(3) 
+VirtualRouteAnimator::VirtualRouteAnimator()
 {
 	// init
 	running = false;
@@ -43,7 +46,17 @@ void VirtualRouteAnimator::addUI(SphericalCamPose& virtualCam) {
 	}
 	ImGui::Text("azAngle/pAngle/distance : %.1f/%.1f/%.1f", endPose.AzimuthAngle, endPose.PolarAngle, endPose.distance);
 
+	ImGui::SliderInt("fps", &fps, 0, 144);
+	ImGui::SliderInt("durationSecond", &durationSecond, 0, 10);
+
 	if (ImGui::Button("Run Animation")) {
 		running = true;
+
+		auto t = std::time(nullptr);
+		auto tm = *std::localtime(&t);
+		std::ostringstream sstr;
+		sstr << "./" << std::put_time(&tm, "%Y-%m-%d-%H-%M-%S")<<"-warppingResult-fps"<<fps<<"-duration"<<durationSecond;
+		folder = sstr.str();
+		cv::utils::fs::createDirectory(folder);
 	}
 }

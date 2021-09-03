@@ -14,6 +14,10 @@ InputBase::InputBase(int cw, int ch, int dw, int dh)
         color_cache[i] = (uchar*)calloc(INPUT_COLOR_CHANNEL * width * height, sizeof(uchar));
     }
 
+    // for depth to point
+    xy_table = (float*)calloc(width * height * 2, sizeof(float));
+    cudaMalloc((void**)&xy_table_cuda, width * height * 2 * sizeof(float));
+
     p_depth_frame = (uint16_t*)calloc(width * height, sizeof(uint16_t));
     p_color_frame = (unsigned char*)calloc(INPUT_COLOR_CHANNEL * width * height, sizeof(unsigned char));
 
@@ -33,6 +37,9 @@ InputBase::~InputBase() {
     
     free((void*)p_depth_frame);
     free((void*)p_color_frame);
+
+    free(xy_table);
+    cudaFree(xy_table_cuda);
 }
 
 void InputBase::startRecord(int _recordLength) {
@@ -87,6 +94,26 @@ void InputBase::keepTryingSave() {
     }
 }
 
+void InputBase::setXYtable(float ppx, float ppy, float fx, float fy, bool forceupdate) {
+    if (!forceupdate && xy_tableReady)return;
+
+    intri.ppx = ppx;
+    intri.ppy = ppy;
+    intri.fx = fx;
+    intri.fy = fy;
+
+    for (int i = 0, idx = 0; i < height; ++i) {
+        for (int j = 0; j < width; ++j,++idx) {
+            xy_table[idx * 2] = (float(j) - intri.ppx) / intri.fx;
+            xy_table[idx * 2 + 1] = (height - 1 - float(i) - intri.ppy) / intri.fy;
+        }
+    }
+
+    cudaMemcpy(xy_table_cuda, xy_table, width * height * 2 * sizeof(float), cudaMemcpyHostToDevice);
+
+    xy_tableReady = true;
+}
+
 glm::vec3 InputBase::colorPixel2point(glm::vec2 pixel) {
     int i = pixel.y;
     int j = pixel.x;
@@ -96,11 +123,18 @@ glm::vec3 InputBase::colorPixel2point(glm::vec2 pixel) {
     if (depthValue > farPlane) {
         return glm::vec3(0, 0, 0);
     }
+
     glm::vec3 point(
-        (float(j) - intri.ppx) / intri.fx * depthValue,
-        (height - 1 - float(i) - intri.ppy) / intri.fy * depthValue,
+        xy_table[index * 2] * depthValue,
+        xy_table[index * 2 + 1] * depthValue,
         depthValue
     );
+
+    glm::vec3 planeCoordinate = point - esitmatePlaneCenter;
+    double distance2plane = (glm::dot<3, float, glm::qualifier::highp>(planeCoordinate, esitmatePlaneNormal)) / glm::length(esitmatePlaneNormal);
+    if (depthValue != 0 && distance2plane > point2floorDistance) {
+        return glm::vec3(0, 0, 0);
+    }
 
     return point;
 }

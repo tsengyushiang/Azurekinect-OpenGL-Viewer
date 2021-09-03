@@ -100,17 +100,25 @@ namespace k4a
 #endif // __DEVICE_UTILITY__
 
 int AzureKinect::ui_isMaster=0;
+int AzureKinect::ui_Resolution=1;
+const glm::vec2 AzureKinect::resolution[]{
+	glm::vec2(0,0),
+	glm::vec2(1280,720),
+	glm::vec2(1920,1080),
+	glm::vec2(2560,1440),
+	glm::vec2(2048,1536),
+};
 std::vector<std::string> AzureKinect::availableSerialnums;
 void AzureKinect::updateAvailableSerialnums() {
 	availableSerialnums = k4a::device_query();
 }
 
 constexpr uint32_t MIN_TIME_BETWEEN_DEPTH_CAMERA_PICTURES_USEC = 160;
-k4a_device_configuration_t get_default_config()
+k4a_device_configuration_t AzureKinect::get_default_config()
 {
 	k4a_device_configuration_t camera_config = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
 	camera_config.color_format = K4A_IMAGE_FORMAT_COLOR_BGRA32;
-	camera_config.color_resolution = K4A_COLOR_RESOLUTION_1536P;
+	camera_config.color_resolution = (k4a_color_resolution_t)AzureKinect::ui_Resolution;
 	camera_config.depth_mode = K4A_DEPTH_MODE_NFOV_UNBINNED; // No need for depth during calibration
 	camera_config.camera_fps = K4A_FRAMES_PER_SECOND_30;     // Don't use all USB bandwidth
 	camera_config.subordinate_delay_off_master_usec = 0;     // Must be zero for master
@@ -119,7 +127,7 @@ k4a_device_configuration_t get_default_config()
 
 k4a_device_configuration_t get_master_config()
 {
-	k4a_device_configuration_t camera_config = get_default_config();
+	k4a_device_configuration_t camera_config = AzureKinect::get_default_config();
 	camera_config.wired_sync_mode = K4A_WIRED_SYNC_MODE_MASTER;
 
 	// Two depth images should be seperated by MIN_TIME_BETWEEN_DEPTH_CAMERA_PICTURES_USEC to ensure the depth imaging
@@ -134,7 +142,7 @@ k4a_device_configuration_t get_master_config()
 // Subordinate customizable settings
 k4a_device_configuration_t get_subordinate_config()
 {
-	k4a_device_configuration_t camera_config = get_default_config();
+	k4a_device_configuration_t camera_config = AzureKinect::get_default_config();
 	camera_config.wired_sync_mode = K4A_WIRED_SYNC_MODE_SUBORDINATE;
 
 	// Two depth images should be seperated by MIN_TIME_BETWEEN_DEPTH_CAMERA_PICTURES_USEC to ensure the depth imaging
@@ -146,34 +154,41 @@ k4a_device_configuration_t get_subordinate_config()
 	return camera_config;
 }
 
-int AzureKinect::alreadyStart = 0;
-MultiDeviceCapturer* AzureKinect::capturer;
-void AzureKinect::startDevices() {
-	int32_t color_exposure_usec = 3e+4;  // somewhat reasonable default exposure time
-	int32_t powerline_freq = 2;          // default to a 60 Hz powerline
-	size_t num_devices = k4a::device::get_installed_count();
-	std::vector<uint32_t> device_indices;
-	for (int i = 0; i < num_devices; i++) {
-		device_indices.emplace_back(i);
-	}
-	try {
-		capturer = new MultiDeviceCapturer(device_indices, color_exposure_usec, powerline_freq);
-		// Create configurations for devices
-		k4a_device_configuration_t main_config = get_master_config();
-		if (num_devices == 1) // no need to have a master cable if it's standalone
-		{
-			main_config.wired_sync_mode = K4A_WIRED_SYNC_MODE_STANDALONE;
-		}
-		k4a_device_configuration_t secondary_config = get_subordinate_config();
-		capturer->start_devices(main_config, secondary_config);
-	}
-	catch (...) {
-		printf("Azure kinect device canonot open.");
-	}
-}
-
-AzureKinect::AzureKinect(int w, int h) :InputBase(w, h, w, h){
+AzureKinect::AzureKinect(int w, int h) :InputBase(w,h,w,h){
 };
+
+void AzureKinect::setXY_table() {
+
+	k4a_float2_t p;
+	k4a_float3_t ray;
+	int valid;
+
+	for (int y = 0; y < height; y++)
+	{
+		p.xy.y = (float)y;
+		for (int x = 0; x < width; x++)
+		{
+			int idx = (height -1 -y) * width + x;
+			p.xy.x = (float)x;
+
+			k4a_calibration_2d_to_3d(
+				&calibration, &p, 1.f, K4A_CALIBRATION_TYPE_COLOR, K4A_CALIBRATION_TYPE_COLOR, &ray, &valid);
+
+			if (valid)
+			{
+				xy_table[idx*2] = ray.xyz.x;
+				xy_table[idx*2+1] = ray.xyz.y;
+			}
+			else
+			{
+				xy_table[idx * 2] = 0;
+				xy_table[idx * 2 + 1] = 0;
+			}
+		}
+	}
+	cudaMemcpy(xy_table_cuda, xy_table, width * height * 2 * sizeof(float), cudaMemcpyHostToDevice);
+	xy_tableReady = true;
+}
 
 
 void AzureKinect::runDevice(int index,bool isMaster) {
@@ -208,6 +223,7 @@ void AzureKinect::runDevice(int index,bool isMaster) {
 
 	// TODO : get the actual scale value!!
 	intri.depth_scale = 1e-3;
+	setXY_table();
 
 	autoUpdate = std::thread(&AzureKinect::getLatestFrame, this);
 }

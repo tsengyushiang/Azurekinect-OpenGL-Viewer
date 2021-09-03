@@ -1,7 +1,7 @@
 import cv2
 import os 
 # Opens the Video file
-outputdir = './20210820-146frames-testing-data_CDCL/'
+outputdir = './20210820-146frames-testing-data-CDCL+depthculling/'
 cap= cv2.VideoCapture(os.path.join(outputdir,'output.avi'))
 out = None
 while(cap.isOpened()):

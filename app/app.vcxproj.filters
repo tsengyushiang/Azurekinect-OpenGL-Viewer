@@ -42,9 +42,6 @@
     <Filter Include="來源檔案\ImguiOpenGL">
       <UniqueIdentifier>{1e5ad840-f581-43f5-a716-00b341f4e87f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="來源檔案\ImguiOpenGL\include">
-      <UniqueIdentifier>{7d06e8c8-de46-41b0-8470-536aa793c636}</UniqueIdentifier>
-    </Filter>
     <Filter Include="來源檔案\ImguiOpenGL\example">
       <UniqueIdentifier>{8750612c-7a4b-4b11-968f-08159df39303}</UniqueIdentifier>
     </Filter>
@@ -53,6 +50,9 @@
     </Filter>
     <Filter Include="來源檔案\eigen">
       <UniqueIdentifier>{433906bd-a22f-481a-ba83-1ccefa7fa1cb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="來源檔案\ImguiOpenGL\imgui">
+      <UniqueIdentifier>{7d06e8c8-de46-41b0-8470-536aa793c636}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -111,25 +111,25 @@
       <Filter>來源檔案\ImguiOpenGL\example</Filter>
     </ClCompile>
     <ClCompile Include="src\ImguiOpenGL\Imgui\imgui.cpp">
-      <Filter>來源檔案\ImguiOpenGL\include</Filter>
+      <Filter>來源檔案\ImguiOpenGL\imgui</Filter>
     </ClCompile>
     <ClCompile Include="src\ImguiOpenGL\Imgui\imgui_demo.cpp">
-      <Filter>來源檔案\ImguiOpenGL\include</Filter>
+      <Filter>來源檔案\ImguiOpenGL\imgui</Filter>
     </ClCompile>
     <ClCompile Include="src\ImguiOpenGL\Imgui\imgui_draw.cpp">
-      <Filter>來源檔案\ImguiOpenGL\include</Filter>
+      <Filter>來源檔案\ImguiOpenGL\imgui</Filter>
     </ClCompile>
     <ClCompile Include="src\ImguiOpenGL\Imgui\imgui_impl_glfw.cpp">
-      <Filter>來源檔案\ImguiOpenGL\include</Filter>
+      <Filter>來源檔案\ImguiOpenGL\imgui</Filter>
     </ClCompile>
     <ClCompile Include="src\ImguiOpenGL\Imgui\imgui_impl_opengl3.cpp">
-      <Filter>來源檔案\ImguiOpenGL\include</Filter>
+      <Filter>來源檔案\ImguiOpenGL\imgui</Filter>
     </ClCompile>
     <ClCompile Include="src\ImguiOpenGL\Imgui\imgui_tables.cpp">
-      <Filter>來源檔案\ImguiOpenGL\include</Filter>
+      <Filter>來源檔案\ImguiOpenGL\imgui</Filter>
     </ClCompile>
     <ClCompile Include="src\ImguiOpenGL\Imgui\imgui_widgets.cpp">
-      <Filter>來源檔案\ImguiOpenGL\include</Filter>
+      <Filter>來源檔案\ImguiOpenGL\imgui</Filter>
     </ClCompile>
     <ClCompile Include="src\ImguiOpenGL\GLFrameBuffer.cpp">
       <Filter>來源檔案\ImguiOpenGL</Filter>
@@ -153,7 +153,7 @@
       <Filter>來源檔案\InputCamera</Filter>
     </ClCompile>
     <ClCompile Include="src\ImguiOpenGL\Imgui\ImGuiFileDialog\ImGuiFileDialog.cpp">
-      <Filter>來源檔案\ImguiOpenGL\include</Filter>
+      <Filter>來源檔案\ImguiOpenGL\imgui</Filter>
     </ClCompile>
     <ClCompile Include="src\virtualcam\VirtualRouteAnimator.cpp">
       <Filter>來源檔案\virtualcam</Filter>
@@ -166,6 +166,12 @@
     </ClCompile>
     <ClCompile Include="src\pcl\icp.cpp">
       <Filter>來源檔案\pcl</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ImguiOpenGL\Imgui\ImGuizmo.cpp">
+      <Filter>來源檔案\ImguiOpenGL\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ImguiOpenGL\ImGuiTransformControl.cpp">
+      <Filter>來源檔案\ImguiOpenGL</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -221,19 +227,19 @@
       <Filter>來源檔案\ImguiOpenGL\example</Filter>
     </ClInclude>
     <ClInclude Include="src\ImguiOpenGL\Imgui\imconfig.h">
-      <Filter>來源檔案\ImguiOpenGL\include</Filter>
+      <Filter>來源檔案\ImguiOpenGL\imgui</Filter>
     </ClInclude>
     <ClInclude Include="src\ImguiOpenGL\Imgui\imgui.h">
-      <Filter>來源檔案\ImguiOpenGL\include</Filter>
+      <Filter>來源檔案\ImguiOpenGL\imgui</Filter>
     </ClInclude>
     <ClInclude Include="src\ImguiOpenGL\Imgui\imgui_impl_glfw.h">
-      <Filter>來源檔案\ImguiOpenGL\include</Filter>
+      <Filter>來源檔案\ImguiOpenGL\imgui</Filter>
     </ClInclude>
     <ClInclude Include="src\ImguiOpenGL\Imgui\imgui_impl_opengl3.h">
-      <Filter>來源檔案\ImguiOpenGL\include</Filter>
+      <Filter>來源檔案\ImguiOpenGL\imgui</Filter>
     </ClInclude>
     <ClInclude Include="src\ImguiOpenGL\Imgui\imgui_internal.h">
-      <Filter>來源檔案\ImguiOpenGL\include</Filter>
+      <Filter>來源檔案\ImguiOpenGL\imgui</Filter>
     </ClInclude>
     <ClInclude Include="src\ImguiOpenGL\ImguiOpeGL3App.h">
       <Filter>來源檔案\ImguiOpenGL</Filter>
@@ -258,6 +264,12 @@
     </ClInclude>
     <ClInclude Include="src\CameraManager\CameraRecorder.h">
       <Filter>來源檔案\CameraManager</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ImguiOpenGL\Imgui\ImGuizmo.h">
+      <Filter>來源檔案\ImguiOpenGL\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ImguiOpenGL\ImGuiTransformControl.h">
+      <Filter>來源檔案\ImguiOpenGL</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

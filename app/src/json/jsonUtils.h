@@ -18,6 +18,16 @@ namespace Jsonformat {
 	void from_json(const json& j, T& p);
 }
 
+typedef struct Plane {
+	float cx;
+	float cy;
+	float cz;
+	float nx;
+	float ny;
+	float nz;
+	float threshold;
+}Plane;
+
 class JsonUtils {
 
 public:
@@ -41,8 +51,8 @@ public:
 		std::string filename, 
 		int width,int height,
 		float fx,float fy,float ppx,float ppy,
-		float depthscale, const unsigned short* depthmap,const unsigned char* colormap,
-		float visulizeFarplane
+		float depthscale, const unsigned short* depthmap,const unsigned char* colormap,float* xy_table,
+		float visulizeFarplane, Plane plane
 	);
 	static void saveRealsenseJson(
 		std::string filename, 
@@ -52,11 +62,13 @@ public:
 		std::vector<float> extrinsic4x4
 	);
 
-	static void loadRealsenseJson(
+	// return if xy_table is found.
+	static bool loadRealsenseJson(
 		std::string filename,
 		int& width, int& height,
 		float& fx, float& fy, float& ppx, float& ppy,
-		int& frameLength, float& depthscale, uint16_t** depthmap, unsigned char** colormap
+		int& frameLength, float& depthscale, uint16_t** depthmap, unsigned char** colormap, float** xytable,
+		float& farplane, float& plane_cx, float& plane_cy, float& plane_cz, float& plane_nx, float& plane_ny, float& plane_nz, float& plane_threshold
 	);
 	static void loadResolution(
 		std::string filename,

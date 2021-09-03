@@ -2,8 +2,7 @@
 #include <stdio.h>
 
 __global__ void clipFloorAndFarDepth_kernel(
-    cudaSurfaceObject_t mask, uint16_t* depthRaw, unsigned int w, unsigned int h,
-    float fx, float fy, float ppx, float ppy, float depthScale,float farplane, 
+    cudaSurfaceObject_t mask, uint16_t* depthRaw, unsigned int w, unsigned int h,float* xy_table, float depthScale,float farplane, 
     glm::vec3 planeCenter, glm::vec3 planeNormal,float planeCullingDistance
 )
 {
@@ -17,8 +16,8 @@ __global__ void clipFloorAndFarDepth_kernel(
     float depthValue = (float)depthRaw[index] * depthScale;
 
     glm::vec4 localPos3d = glm::vec4(
-        (x - ppx) / fx * depthValue,
-        (y - ppy) / fy * depthValue,
+        xy_table[index * 2] * depthValue,
+        xy_table[index * 2+1] * depthValue,
         depthValue,
         1.0
     );
@@ -40,21 +39,19 @@ __global__ void clipFloorAndFarDepth_kernel(
 
 void launch_kernel(
     cudaSurfaceObject_t mask, uint16_t* depthRaw, 
-    unsigned int w, unsigned int h,
-    float fx, float fy, float ppx, float ppy, float depthScale, float farplane, 
+    unsigned int w, unsigned int h,float* xy_table, float depthScale, float farplane,
     glm::vec3 planeCenter, glm::vec3 planeNormal, float planeCullingDistance
 )
 {
     // execute the kernel
     dim3 block(8, 8, 1);
     dim3 grid(w / block.x, h / block.y, 1);
-    clipFloorAndFarDepth_kernel << < grid, block >> > (mask, depthRaw, w, h, fx, fy, ppx, ppy, depthScale, farplane, planeCenter, planeNormal, planeCullingDistance);
+    clipFloorAndFarDepth_kernel << < grid, block >> > (mask, depthRaw, w, h, xy_table, depthScale, farplane, planeCenter, planeNormal, planeCullingDistance);
 }
 
 void CudaAlogrithm::clipFloorAndFarDepth(
     cudaGraphicsResource_t* maskTexture,
-    uint16_t* depthRaw, unsigned int w, unsigned int h, 
-    float fx, float fy, float ppx, float ppy, float depthScale, float farplane, 
+    uint16_t* depthRaw, unsigned int w, unsigned int h, float* xy_table, float depthScale, float farplane,
     glm::vec3 planeCenter, glm::vec3 planeNormal, float planeCullingDistance
 )
 {
@@ -71,7 +68,7 @@ void CudaAlogrithm::clipFloorAndFarDepth(
     cudaCreateSurfaceObject(&surfObject2, &resDesc2);
     // You now have a CUDA Surface object that refers to the GL texture.
     // Write to the Surface using CUDA.
-    launch_kernel(surfObject2, depthRaw, w, h, fx, fy, ppx, ppy, depthScale, farplane, planeCenter, planeNormal, planeCullingDistance);
+    launch_kernel(surfObject2, depthRaw, w, h, xy_table, depthScale, farplane, planeCenter, planeNormal, planeCullingDistance);
 
     // We're not going to use this Surface object again.  We'll make a new one next frame.
     cudaDestroySurfaceObject(surfObject2);

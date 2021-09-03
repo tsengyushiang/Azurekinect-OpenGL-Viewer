@@ -97,31 +97,6 @@ void CameraManager::setExtrinsicsUI() {
 	}
 }
 
-void CameraManager::addDepthAndTextureControlsUI() {
-
-	auto KEY = [this](std::string keyword,InputBase* camera)->const char* {
-		return (camera->serial + std::string("##") + keyword).c_str();
-	};
-		
-	ImGui::Text("ShowOutput : ");
-	for (int i = 0; i < cameras.size(); i++) {
-		ImGui::RadioButton(KEY("showOutput", cameras[i].camera), &debugOutputDeviceIndex, i);
-	}
-	ImGui::RadioButton("None##showOutput", &debugOutputDeviceIndex, -1);
-
-	ImGui::Text("SaveOutput : ");
-	for (int i = 0; i < cameras.size(); i++) {
-		if(ImGui::Button(KEY("SaveOutput", cameras[i].camera))){
-			cameras[i].saveWrappedResult();
-		}
-	}
-
-	ImGui::Text("UseDevice : ");
-	for (auto device = cameras.begin(); device != cameras.end(); device++) {
-		ImGui::Checkbox(KEY("useDepth", device->camera), &(device->useDepth));
-	}
-}
-
 void CameraManager::recordFrame() {
 
 	const int MAXCAPTUREFRAME = 5000;
@@ -216,18 +191,14 @@ void CameraManager::addLocalFileUI() {
 	}
 }
 
-void CameraManager::addCameraUI() {
-		
+void CameraManager::addRecorderUI() {
 	camRecroder.addGUI(cameras);
-
-	if (ImGui::Button("Toggle create point cloud or not")) {
-		for (auto device = cameras.begin(); device != cameras.end(); device++) {
-			device->create3d = !device->create3d;
-		}
-	}
-	if (ImGui::Button(std::string("Already Record "+std::to_string(recordFrameCount)+" frames").c_str())) {
+	if (ImGui::Button(std::string("Already Record " + std::to_string(recordFrameCount) + " frames").c_str())) {
 		recording = !recording;
 	}
+}
+
+void CameraManager::addCameraUI() {
 
 	if (ImGui::Button("Refresh")) {
 		Realsense::updateAvailableSerialnums(ctx);
@@ -237,9 +208,26 @@ void CameraManager::addCameraUI() {
 	ImGui::RadioButton("Master##azurekinect", &AzureKinect::ui_isMaster, 1);
 	ImGui::SameLine();
 	ImGui::RadioButton("Sub##azurekinect", &AzureKinect::ui_isMaster, 0);
+	const char* items[]{
+		"K4A_COLOR_RESOLUTION_OFF", /**< Color camera will be turned off with this setting */
+		"K4A_COLOR_RESOLUTION_720P",    /**< 1280 * 720  16:9 */
+		"K4A_COLOR_RESOLUTION_1080P",   /**< 1920 * 1080 16:9 */
+		"K4A_COLOR_RESOLUTION_1440P",   /**< 2560 * 1440 16:9 */
+		"K4A_COLOR_RESOLUTION_1536P",   /**< 2048 * 1536 4:3  */
+	};
+	ImGui::Combo("Resolution", &AzureKinect::ui_Resolution, items, IM_ARRAYSIZE(items));
 	for (int i = 0; i < AzureKinect::availableSerialnums.size(); i++) {
-		if (ImGui::Button((AzureKinect::availableSerialnums[i]+"##azurekinect").c_str())) {
-			addAzuekinect(i);
+		bool alreadyStart = false;
+		for (auto device = cameras.begin(); device != cameras.end(); device++) {
+			if (device->camera->serial == AzureKinect::availableSerialnums[i]) {
+				alreadyStart = true;
+				break;
+			}
+		}
+		if (!alreadyStart) {
+			if (ImGui::Button((AzureKinect::availableSerialnums[i] + "##azurekinect").c_str())) {
+				addAzuekinect(i);
+			}
 		}
 	}
 
@@ -284,6 +272,32 @@ void CameraManager::addCameraUI() {
 	}	
 }
 
+void CameraManager::addManulPick2Gui() {
+	if (ImGui::BeginCombo("source", pickedCams.sourceSerial.c_str())) {
+		for (auto device = cameras.begin(); device != cameras.end(); device++) {
+			bool isSelceted = pickedCams.sourceSerial == device->camera->serial;
+			if (ImGui::Selectable((device->camera->serial + "##sourceselectBox").c_str(), isSelceted))
+			{
+				pickedCams.sourceSerial = device->camera->serial;
+				pickedCams.source = device->camera;
+			}
+		}			
+		ImGui::EndCombo();
+	}
+	if (ImGui::BeginCombo("target", pickedCams.targetSerial.c_str())) {
+		for (auto device = cameras.begin(); device != cameras.end(); device++) {
+			bool isSelceted = pickedCams.targetSerial == device->camera->serial;
+			if (ImGui::Selectable((device->camera->serial + "##targetselectBox").c_str(), isSelceted))
+			{
+				pickedCams.targetSerial = device->camera->serial;
+				pickedCams.target = device->camera;
+			}
+		}
+		ImGui::EndCombo();
+	}
+}
+
+
 int CameraManager::addJsonDevice(std::string serial, std::string filePath) {
 
 	int w, h;
@@ -304,7 +318,10 @@ int CameraManager::addJsonDevice(std::string serial, std::string filePath) {
 }
 
 void CameraManager::addAzuekinect(int index) {
-	AzureKinect* azureKinect = new AzureKinect();
+	AzureKinect* azureKinect = new AzureKinect(
+		AzureKinect::resolution[AzureKinect::ui_Resolution].x,
+		AzureKinect::resolution[AzureKinect::ui_Resolution].y
+	);
 	azureKinect->runDevice(index,AzureKinect::ui_isMaster);
 	CameraGL device(azureKinect);
 	cameras.push_back(device);
@@ -322,9 +339,49 @@ void CameraManager::addRealsense(std::string serial,int cw,int ch,int dw,int dh)
 	}
 }
 
-void CameraManager::getOutputDebugDevice(std::function<void(CameraGL)> callback) {
-	if (debugOutputDeviceIndex < 0 || debugOutputDeviceIndex >= cameras.size())return;
-	callback(cameras[debugOutputDeviceIndex]);
+typedef struct {
+	std::string serial;
+	float weight;
+}SortWeight;
+bool operator<(const SortWeight& x, const SortWeight& y)
+{
+	return x.weight > y.weight;
+}
+
+void CameraManager::getNearestKcamera(int kneaerest,glm::mat4 virutalCamModelMat, glm::vec3 lookAtPoint, std::function<void(CamIterator)> callback) {
+	std::vector<SortWeight> weight;
+
+	glm::vec3 virtualCamDir = glm::vec3(
+		virutalCamModelMat[3][0],
+		virutalCamModelMat[3][1],
+		virutalCamModelMat[3][2]
+	) - lookAtPoint;
+
+	for (auto device = cameras.begin(); device != cameras.end(); device++) {
+		glm::mat4 camMat = device->camera->modelMat;
+		glm::vec3 realCamDir = glm::vec3(
+			camMat[3][0],
+			camMat[3][1],
+			camMat[3][2]
+		) - lookAtPoint;
+
+		float camWeight = glm::dot(glm::normalize(realCamDir), glm::normalize(virtualCamDir));
+		weight.push_back({
+			device->camera->serial ,
+			camWeight
+		});
+	}
+	
+	std::sort(weight.begin(), weight.end());
+
+	for (int i = 0; i < kneaerest && i < weight.size(); i++) {
+		for (auto device = cameras.begin(); device != cameras.end(); device++) {
+			if (device->camera->serial == weight[i].serial) {
+				callback(device);
+				break;
+			}
+		}
+	}
 }
 
 void CameraManager::getAllDevice(std::function<void(CamIterator)> callback) {
@@ -338,6 +395,7 @@ void CameraManager::getAllDevice(std::function<void(CamIterator, std::vector<Cam
 	}
 }
 
+// deprecated
 int CameraManager::getProjectTextureDevice(std::function<void(CamIterator)> callback) {
 	int count = 0;
 	for (auto device = cameras.begin(); device != cameras.end(); device++) {

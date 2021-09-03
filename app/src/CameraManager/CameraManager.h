@@ -7,10 +7,18 @@
 #include "../InputCamera/AzureKinect.h"
 #include <functional>
 #include <thread>
+#include <algorithm>
 
 using namespace std;
 
 #define RecordContainer FILE
+
+typedef  struct Picked2Cam {
+	std::string sourceSerial;
+	InputBase* source;
+	std::string targetSerial;
+	InputBase* target;
+}Picked2Cam;
 
 class CameraManager {
 
@@ -41,16 +49,17 @@ public :
 
 	void addCameraUI();
 	void setExtrinsicsUI();
-	void addDepthAndTextureControlsUI();
 	void addLocalFileUI();
+	void addRecorderUI();
+
+	Picked2Cam pickedCams;
+	void addManulPick2Gui();
 
 	size_t size();
 
 	void recordFrame();
 	
-	int debugOutputDeviceIndex = -1;
-	void getOutputDebugDevice(std::function<void(CameraGL)> callback);
-
+	void getNearestKcamera(int kneaerest, glm::mat4 virutalCamModelMat, glm::vec3 lookAtPoint, std::function<void(CamIterator)> callback);
 	void getAllDevice(std::function<void(CamIterator)> callback);
 	void getAllDevice(std::function<void(CamIterator, std::vector<CameraGL>&)> callback);
 	int getProjectTextureDevice(std::function<void(CamIterator)> callback);

@@ -50,7 +50,7 @@ glm::mat4 pcl_icp(float correspondThreshold, std::vector<glm::vec3> sourcePoints
     // Set the max correspondence distance to 5cm (e.g., correspondences with higher distances will be ignored)
     icp.setMaxCorrespondenceDistance(correspondThreshold);
     // Set the maximum number of iterations (criterion 1)
-    //icp.setMaximumIterations(1);
+    icp.setMaximumIterations(1);
     // Set the transformation epsilon (criterion 2)
     //icp.setTransformationEpsilon(1e-8);
     // Set the euclidean distance difference epsilon (criterion 3)

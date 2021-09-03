@@ -79,7 +79,7 @@ bool CorrespondPointCollector::pushCorrepondPoint(glm::vec3 src, glm::vec3 trg) 
 }
 
 void CorrespondPointCollector::calibrate() {
-	glm::mat4 transform = pcl_pointset_rigid_calibrate(size, srcPoint, dstPoint);
+	glm::mat4 transform = pcl_pointset_rigid_calibrate(vaildCount, srcPoint, dstPoint);
 	sourcecam->modelMat = transform * sourcecam->modelMat;
 	sourcecam->calibrated = true;
 }
