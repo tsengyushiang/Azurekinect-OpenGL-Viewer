@@ -9,6 +9,9 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>  // Video write
 using namespace std;
 
@@ -29,6 +32,8 @@ private:
     void keepTryingSave();
 
 public:
+
+    bool showOpenCVwindow = false;
 
     // for json data
     int syncTime = 0;

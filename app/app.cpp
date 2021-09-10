@@ -49,7 +49,7 @@ class FowardWarppingApp :public ImguiOpeGL3App {
 
 	bool detectMarkerEveryFrame = false;
 	ImVec4 chromaKeyColor;
-	float chromaKeyColorThreshold=2;
+	glm::vec3 chromaKeyColorThreshold;
 	int pointsSmoothing = 10;
 	bool autoDepthDilation = false;
 	int maskErosion = 3;
@@ -83,11 +83,13 @@ public:
 			std::string outputFolder = cv::utils::fs::join(animator.folder, std::to_string(currentRecordFrame));
 			cv::utils::fs::createDirectory(outputFolder);
 
-			camManager.getNearestKcamera(nearsetK, virtualcam->getModelMat(lookAtPoint, curFrame), lookAtPoint, [this, &outputFolder](auto cam) {
-				std::string imgefilename = cv::utils::fs::join(outputFolder, cam->camera->serial + ".png");
+			int i = 0;
+			camManager.getNearestKcamera(nearsetK, virtualcam->getModelMat(lookAtPoint, curFrame), lookAtPoint, [&i,this, &outputFolder](auto cam) {
+				std::string imgefilename = cv::utils::fs::join(outputFolder, std::to_string(i++) + ".png");
 				unsigned char* colorRaw = cam->getFrameBuffer(CameraGL::FrameBuffer::AFTERDISCARD)->getRawColorData();
 				cv::Mat image(cv::Size(cam->camera->width, cam->camera->height), CV_8UC4, (void*)colorRaw, cv::Mat::AUTO_STEP);
 				cv::imwrite(imgefilename, image);
+				delete colorRaw;
 				currentRecordFrame = -1;				
 			});
 		}
@@ -95,6 +97,20 @@ public:
 		camManager.recordFrame();
 	}
 	bool addOpenGLPanelGui() override{
+
+		if (ImGui::Button("Snapshot OpenGL")) {
+			auto t = std::time(nullptr);
+			auto tm = *std::localtime(&t);
+			std::ostringstream sstr;
+			sstr << "./Opengl-snapshot" << std::put_time(&tm, "%Y-%m-%d-%H-%M-%S")<<".png";
+			std::string imgefilename = sstr.str();
+
+			std::cout << "save opengl" << std::endl;
+			unsigned char* colorRaw = main->getRawColorData();
+			cv::Mat image(cv::Size(width, height), CV_8UC4, (void*)colorRaw, cv::Mat::AUTO_STEP);
+			cv::flip(image, image, 0);
+			cv::imwrite(imgefilename, image);
+		}
 
 		camManager.getAllDevice([this](auto device, auto allDevice) {
 			device->addfloatingSerialGui(Projection * View * Model, device->camera->serial);
@@ -166,7 +182,9 @@ public:
 			ImGui::Checkbox("Preprocessing", &preprocessing);
 
 			ImGui::ColorEdit3("chromaKeycolor", (float*)&chromaKeyColor); // Edit 3 floats representing a color
-			ImGui::SliderFloat("chromaKeyColorThreshold", &chromaKeyColorThreshold, 0, 5); // Edit 3 floats representing a color
+			ImGui::SliderFloat("H-Threshold", &chromaKeyColorThreshold.x, 0, 255); // Edit 3 floats representing a color
+			ImGui::SliderFloat("S-Threshold", &chromaKeyColorThreshold.y, 0, 255); // Edit 3 floats representing a color
+			ImGui::SliderFloat("V-Threshold", &chromaKeyColorThreshold.z, 0, 255); // Edit 3 floats representing a color
 			ImGui::SliderInt("MaskErosion", &maskErosion, 0, 50);
 			ImGui::Checkbox("AutoDepthDilation", &autoDepthDilation);
 
@@ -178,13 +196,6 @@ public:
 		}
 		if (ImGui::CollapsingHeader("Floor,Extrinsics Calibrator")) {			
 			//aruco calibrate feature point collector params
-
-			if (ImGui::Button("Calibrated floor by conrner")) {
-				camManager.getAllDevice([this](auto device, auto allDevice) {
-					camPoseCalibrator.fitMarkersOnEstimatePlane(device->camera, OpenCVUtils::getArucoMarkerCorners);
-				});
-			}
-
 			if (ImGui::Button("Calibrated floor by region")) {
 				camManager.getAllDevice([this](auto device, auto allDevice) {
 					camPoseCalibrator.fitMarkersOnEstimatePlane(device->camera, OpenCVUtils::getArucoMarkerConvexRegion);
@@ -193,10 +204,16 @@ public:
 
 			ImGui::Text("Cam-to-cam extrinsics calibrate");
 			camPoseCalibrator.addUI();
-
-			ImGui::Checkbox("detect Marker every frame", &detectMarkerEveryFrame);
-			if (detectMarkerEveryFrame || ImGui::Button("Start/Capture")) {
-
+			{
+				ImGui::SliderInt("maxCollectFrame", &camPoseCalibrator.maxCollectFeaturePoint, 1, 144);
+				ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+				ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+				ImGui::PopItemFlag();
+				float progress = float(camPoseCalibrator.alreadyGet) / camPoseCalibrator.maxCollectFeaturePoint;
+				ImGui::SliderFloat("CollectProgress", &progress, 0, 1);
+				ImGui::PopStyleVar();
+			}
+			if (ImGui::Button("Start/Capture")) {
 				bool noCalibratedCam = true;
 				camManager.getAllDevice([this,&noCalibratedCam](auto device, auto allDevice) {
 					if (device->camera->calibrated)noCalibratedCam = false;
@@ -209,10 +226,7 @@ public:
 						}
 					});
 				}
-
-				camManager.getAllDevice([this](auto device, auto allDevice) {
-					camPoseCalibrator.waitCalibrateCamera(device, allDevice);
-				});
+				camPoseCalibrator.startCollectPoint = true;
 			}
 		}
 		if (ImGui::CollapsingHeader("Manual tune Camera pose")) {
@@ -235,6 +249,11 @@ public:
 				transformWidget.detachMatrix4();
 			}
 			transformWidget.addMenu();
+
+			ImGui::Text("Manual Adjust hardware:");
+			camManager.getAllDevice([this](auto device) {
+				ImGui::Checkbox((device->camera->serial + "##showOpenCV").c_str(),&device->camera->showOpenCVwindow);
+			});
 		}
 		if (ImGui::CollapsingHeader("Virtual camera")) {
 			virtualcam->addUI();
@@ -330,10 +349,51 @@ public:
 		);
 	}
 	
+
+	void RGBtoHSV(float *fR, float *fG, float  *fB, float* fH, float* fS, float* fV) {
+		float fCMax = max(max(*fR, *fG), *fB);
+		float fCMin = min(min(*fR, *fG), *fB);
+		float fDelta = fCMax - fCMin;
+
+		if (fDelta > 0) {
+			if (fCMax == *fR) {
+				*fH = 60 * (fmod(((*fG - *fB) / fDelta), float(6)));
+			}
+			else if (fCMax == *fG) {
+				*fH = 60 * (((*fB - *fR) / fDelta) + 2);
+			}
+			else if (fCMax == *fB) {
+				*fH = 60 * (((*fR - *fG) / fDelta) + 4);
+			}
+
+			if (fCMax > 0) {
+				*fS = fDelta / fCMax;
+			}
+			else {
+				*fS = 0;
+			}
+
+			*fV = fCMax;
+		}
+		else {
+			*fH = 0;
+			*fS = 0;
+			*fV = fCMax;
+		}
+
+		if (*fH < 0) {
+			*fH = 360 + *fH;
+		}
+	}
+
 	// render realsense mesh on framebuffer
 	void framebufferRender() override {
 		camManager.deleteIdleCam();
 
+		float cR= chromaKeyColor.x * 255, cG= chromaKeyColor.y * 255, cB= chromaKeyColor.z * 255;
+		float H, S, V;
+		RGBtoHSV(&cR, &cG, &cB, &H, &S, &V);
+		std::cout << H/360.0*255.0<<" " << S*255<<" " << V << std::endl;
 		camManager.getAllDevice([this](auto device) {
 			device->updateImages(chromaKeyColor, chromaKeyColorThreshold);
 			if(preprocessing)
@@ -393,6 +453,11 @@ public:
 			glm::mat4 vmodelMat = virtualcam->getModelMat(lookAtPoint, curFrame);
 			camManager.updateProjectTextureWeight(vmodelMat);
 		}
+		
+		camManager.getAllDevice([this](auto device, auto allDevice) {
+			camPoseCalibrator.waitCalibrateCamera(device, allDevice);
+		});
+
 		render3dworld();
 
 		curFrame++;

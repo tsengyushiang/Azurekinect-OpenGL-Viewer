@@ -139,15 +139,20 @@ bool JsonUtils::loadRealsenseJson(
 	ppx = j["ppx"];
 	ppy = j["ppy"];
 
-	farplane = j["far-plane"];
-	json plane = j["floor-plane"];
-	plane_cx = plane["cx"];
-	plane_cy = plane["cy"];
-	plane_cz = plane["cz"];
-	plane_nx = plane["nx"];
-	plane_ny = plane["ny"];
-	plane_nz = plane["nz"];
-	plane_threshold = plane["threshold"];
+	if (j.contains("far-plane")) {
+		farplane = j["far-plane"];
+	}
+
+	if (j.contains("floor-plane")) {
+		json plane = j["floor-plane"];
+		plane_cx = plane["cx"];
+		plane_cy = plane["cy"];
+		plane_cz = plane["cz"];
+		plane_nx = plane["nx"];
+		plane_ny = plane["ny"];
+		plane_nz = plane["nz"];
+		plane_threshold = plane["threshold"];
+	}
 
 	std::cout << std::endl << filename<<" has : "<< depthscale<<" "<< width << " " << height <<"..."<< std::endl;
 

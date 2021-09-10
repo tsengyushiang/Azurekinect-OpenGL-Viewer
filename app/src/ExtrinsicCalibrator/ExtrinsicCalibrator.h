@@ -16,12 +16,13 @@ typedef struct calibrateResult {
 class ExtrinsicCalibrator {
 
 	CorrespondPointCollector* calibrator = nullptr;
-	int collectPointCout = 15;
-	float collectthreshold = 0.1f;
+	int collectPointCout = 9999;
+	float collectthreshold = 0.0f;
 
 	float icp_correspondThreshold = 0.05;
 
 public :
+	bool startCollectPoint = false;
 
 	void addUI();
 	void render(glm::mat4 mvp, GLuint shader_program);
@@ -31,7 +32,13 @@ public :
 	void calibrateCollectedPoints(bool reset = false);
 	// detect aruco to calibrate unregisted camera
 	void waitCalibrateCamera(std::vector<CameraGL>::iterator device, std::vector<CameraGL>& allDevice);
-	void collectCalibratePoints();
+	
+	int maxCollectFeaturePoint=30;
+	int alreadyGet = 0;
+	std::map<std::string, std::vector<std::pair<glm::vec4, glm::vec4>>> featurePointsPool;
+	// return collect is enough or not;
+	bool collectCalibratePoints(int waitFrames);
+
 	void alignDevice2calibratedDevice(InputBase* uncalibratedCam, std::vector<CameraGL>& allDevice);
 	void fitMarkersOnEstimatePlane(InputBase* camera,
 		std::function<std::vector<glm::vec2>(int, int, uchar*, int)> findMarkerPoints);

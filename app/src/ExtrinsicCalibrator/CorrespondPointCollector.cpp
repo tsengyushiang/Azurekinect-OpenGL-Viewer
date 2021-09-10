@@ -26,11 +26,11 @@ CorrespondPointCollector:: ~CorrespondPointCollector() {
 }
 
 void CorrespondPointCollector::render(glm::mat4 mvp, GLuint shader_program) {
-	ImguiOpeGL3App::setPointsVAO(vao, vbo, source, size);
-	ImguiOpeGL3App::render(mvp, 10, shader_program, vao, size, GL_POINTS);
+	ImguiOpeGL3App::setPointsVAO(vao, vbo, source, vaildCount);
+	ImguiOpeGL3App::render(mvp, 10, shader_program, vao, vaildCount, GL_POINTS);
 
-	ImguiOpeGL3App::setPointsVAO(vao, vbo, target, size);
-	ImguiOpeGL3App::render(mvp, 10, shader_program, vao, size, GL_POINTS);
+	ImguiOpeGL3App::setPointsVAO(vao, vbo, target, vaildCount);
+	ImguiOpeGL3App::render(mvp, 10, shader_program, vao, vaildCount, GL_POINTS);
 }
 
 bool CorrespondPointCollector::pushCorrepondPoint(glm::vec3 src, glm::vec3 trg) {

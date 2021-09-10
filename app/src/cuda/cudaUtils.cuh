@@ -26,11 +26,11 @@ public:
 	);
 
 	static void chromaKeyBackgroundRemove(cudaGraphicsResource_t* cudaTexture,
-		unsigned char* colorRaw, unsigned int w, unsigned int h, glm::vec3 color, float threshold
+		unsigned char* colorRaw, unsigned int w, unsigned int h, glm::vec3 color, glm::vec3 HSVthreshold
 	);	
 	
 	static void chromaKeyBackgroundRemove(cudaGraphicsResource_t* cudaTexture,
-		unsigned char* colorRaw, unsigned int w, unsigned int h, glm::vec3 color, float threshold, glm::vec3 replaceColor
+		unsigned char* colorRaw, unsigned int w, unsigned int h, glm::vec3 color, glm::vec3 HSVthreshold, glm::vec3 replaceColor
 	);
 
 	static void maskErosion(cudaGraphicsResource_t* cudaTexture, 

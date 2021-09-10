@@ -50,7 +50,7 @@ void CameraGL::imagesPreprocessing(int maskErosionSize, bool autoDepthDilation) 
 }
 
 void CameraGL::updateImages(
-	ImVec4 chromaKeyColor,float chromaKeyColorThreshold
+	ImVec4 chromaKeyColor,glm::vec3 chromaKeyColorThreshold
 ) 
 {
 	auto copyHost2Device = [this](const void* depthRaw, size_t depthSize, const void* colorRaw, size_t colorSize) {

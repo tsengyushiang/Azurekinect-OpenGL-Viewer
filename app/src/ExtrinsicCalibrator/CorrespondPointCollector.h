@@ -19,7 +19,7 @@ public:
 	float* source;
 	float* target;
 	float* result;
-	CorrespondPointCollector(InputBase* srcCam, InputBase* trgCam, int count = 10, float threshold = 0.2f);		
+	CorrespondPointCollector(InputBase* srcCam, InputBase* trgCam, int count = INT_MAX, float threshold = 0);		
 	~CorrespondPointCollector();
 
 	void render(glm::mat4 mvp, GLuint shader_program);

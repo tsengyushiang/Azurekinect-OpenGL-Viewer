@@ -74,7 +74,10 @@ void ImguiOpeGL3App::setcamera(float width, float height) {
     Model = glm::mat4(1.0);
 }
 
-void ImguiOpeGL3App::initImguiOpenGL3(int width, int height) {
+void ImguiOpeGL3App::initImguiOpenGL3(int width, int height){
+
+    this->width = width;
+    this->height = height;
 
     // Setup window
     glfwSetErrorCallback(glfw_error_callback);

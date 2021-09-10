@@ -116,8 +116,13 @@ void InputBase::setXYtable(float ppx, float ppy, float fx, float fy, bool forceu
 
 glm::vec3 InputBase::colorPixel2point(glm::vec2 pixel) {
     int i = pixel.y;
-    int j = pixel.x;
+    int j = pixel.x;  
     int index = i* width + j;
+    
+    // illegal index
+    if (i < 0 || j < 0 || i >= height || j >= width) {
+        return glm::vec3(0, 0, 0);
+    }
 
     float depthValue = (float)p_depth_frame[index] * intri.depth_scale;
     if (depthValue > farPlane) {
@@ -148,6 +153,16 @@ bool InputBase::fetchframes(std::function<void(
         callback(
             p_depth_frame, width * height * sizeof(uint16_t),
             p_color_frame, INPUT_COLOR_CHANNEL * width * height * sizeof(unsigned char));
+
+
+        if (showOpenCVwindow) {
+            cv::Mat image(cv::Size(width, height), INPUT_COLOR_CHANNEL==4?CV_8UC4: CV_8UC3, (void*)p_color_frame, cv::Mat::AUTO_STEP);
+            cv::flip(image, image, 0);
+            cv::circle(image, cv::Size(width/2, height/2), 20, cv::Scalar(0, 0, 255));
+            cv::line(image, cv::Size(width / 2, 0), cv::Size(width / 2, height),cv::Scalar(0, 0, 255));
+            cv::line(image, cv::Size(0, height / 2), cv::Size(width, height/2),cv::Scalar(0, 0, 255));
+            cv::imshow(serial.c_str(), image);
+        }
 
         frameNeedsUpdate = false;
         return true;

@@ -59,6 +59,7 @@ public:
 	//---------------------following method implement in ImguiOpeGL3App.cpp
 
 	GLFrameBuffer* main;
+	int width, height;
 	GLFWwindow* window;
 	void initImguiOpenGL3(int width = 1920, int height = 1080);
 	~ImguiOpeGL3App() {

@@ -1,15 +1,8 @@
 #include "./ExtrinsicCalibrator.h"
 
 void ExtrinsicCalibrator::addUI() {
-
-	ImGui::SliderFloat("Distance Threshold", &collectthreshold, 0.05f, 0.3f);
-	ImGui::SliderInt("MaxCollect Point Count", &collectPointCout, 3, 50);
+	ImGui::SliderFloat("Distance Threshold", &collectthreshold, 0.0f, 0.3f);
 	if (calibrator != nullptr) {
-		ImGui::SliderInt("ICP uniformDepthSample", &uniformDepthSample, 1, 10);
-		if (ImGui::Button("Run ICP")) {
-			auto mat = runIcp(calibrator->sourcecam, calibrator->targetcam, uniformDepthSample);
-			calibrator->sourcecam->modelMat = mat * calibrator->sourcecam->modelMat;
-		}
 		if (ImGui::Button(("Run pose estimate for "+ std::to_string(calibrator->vaildCount)).c_str())) {
 			calibrateCollectedPoints(true);
 		}
@@ -17,20 +10,15 @@ void ExtrinsicCalibrator::addUI() {
 			delete calibrator;
 			calibrator = nullptr;
 		}
+
 	}
 }
 
 void ExtrinsicCalibrator::calibrateCollectedPoints(bool reset) {
-	InputBase* src = calibrator->sourcecam;
-	InputBase* trg = calibrator->targetcam;
-
 	calibrator->calibrate();
+	startCollectPoint = false;
 	delete calibrator;
 	calibrator = nullptr;
-
-	if (reset) {
-		calibrator = new CorrespondPointCollector(src, trg, collectPointCout, collectthreshold);
-	}
 }
 
 
@@ -115,93 +103,114 @@ void ExtrinsicCalibrator::waitCalibrateCamera(
 	std::vector<CameraGL>::iterator device,
 	std::vector<CameraGL>& allDevice
 ) {
-	if (!device->camera->calibrated) {
+	if (startCollectPoint && !device->camera->calibrated) {
 
 		if (calibrator == nullptr) {
 			alignDevice2calibratedDevice(device->camera, allDevice);
+			startCollectPoint = false;
 		}
 		else {
-			collectCalibratePoints();
+			startCollectPoint = !collectCalibratePoints(maxCollectFeaturePoint);
 		}
 	}
 }
 
-void ExtrinsicCalibrator::collectCalibratePoints() {
-	if (calibrator == nullptr) return;
+bool ExtrinsicCalibrator::collectCalibratePoints(int waitFrames) {
+	if (calibrator == nullptr) return true;
 
-	std::vector<glm::vec2> cornerSrc = OpenCVUtils::getArucoMarkerCorners(
-		calibrator->sourcecam->width,
-		calibrator->sourcecam->height,
-		calibrator->sourcecam->p_color_frame,
-		INPUT_COLOR_CHANNEL
+	std::map<std::string, std::pair<cv::Point2f, cv::Point2f>> pixelpairs = OpenCVUtils::getCorrespondingArucoMarker(
+		calibrator->sourcecam->width,calibrator->sourcecam->height,calibrator->sourcecam->p_color_frame, INPUT_COLOR_CHANNEL,
+		calibrator->targetcam->width,calibrator->targetcam->height,calibrator->targetcam->p_color_frame, INPUT_COLOR_CHANNEL
 	);
-	if (cornerSrc.size() == 0)return;
-	std::vector<glm::vec2> cornerTrg = OpenCVUtils::getArucoMarkerCorners(
-		calibrator->targetcam->width,
-		calibrator->targetcam->height,
-		calibrator->targetcam->p_color_frame,
-		INPUT_COLOR_CHANNEL
-	);
-	if (cornerTrg.size() == 0)return;
 
-	if (calibrator->vaildCount == calibrator->size) {
-		calibrator->calibrate();
-	}
-	else {
-		glm::vec3 centerSrc = glm::vec3(0, 0, 0);
-		int count = 0;
-		for (auto p : cornerSrc) {
-			glm::vec3 point = calibrator->sourcecam->colorPixel2point(p);
-			if (point.z == 0)	return;
-			centerSrc += point;
-			count++;
+	if (pixelpairs.size() > 0) {
+		for (auto keyValue : pixelpairs) {
+			auto pair = keyValue.second;
+			glm::vec3 srcpoint = calibrator->sourcecam->colorPixel2point(glm::vec2(pair.first.x, pair.first.y));
+			if (srcpoint.z == 0)	continue;
+			glm::vec3 trgpoint = calibrator->targetcam->colorPixel2point(glm::vec2(pair.second.x, pair.second.y));
+			if (trgpoint.z == 0)	continue;
+
+			glm::vec4 src = calibrator->sourcecam->modelMat * glm::vec4(srcpoint.x, srcpoint.y, srcpoint.z, 1.0);
+			glm::vec4 dst = calibrator->targetcam->modelMat * glm::vec4(trgpoint.x, trgpoint.y, trgpoint.z, 1.0);
+
+			featurePointsPool[keyValue.first].push_back(std::pair<glm::vec4, glm::vec4 >(src, dst));
 		}
-		centerSrc /= count;
+		alreadyGet++;
 
-		glm::vec3 centerTrg = glm::vec3(0, 0, 0);
-		count = 0;
-		for (auto p : cornerTrg) {
-			glm::vec3 point = calibrator->targetcam->colorPixel2point(p);
-			if (point.z == 0)	return;
-			centerTrg += point;
-			count++;
+		if (alreadyGet > waitFrames) {
+
+			for (auto valueKey : featurePointsPool) {
+				auto pairList = valueKey.second;
+
+				glm::vec4 srcavg(0, 0, 0, 0);
+				glm::vec4 dstavg(0, 0, 0, 0);
+
+				for (auto pair : pairList) {
+					srcavg += pair.first;
+					dstavg += pair.second;
+				}
+
+				if (pairList.size() > 0) {
+					srcavg /= pairList.size();
+					dstavg /= pairList.size();
+
+					calibrator->pushCorrepondPoint(
+						glm::vec3(srcavg.x, srcavg.y, srcavg.z),
+						glm::vec3(dstavg.x, dstavg.y, dstavg.z)
+					);
+				}
+			}
+
+			featurePointsPool.clear();
+			alreadyGet = 0;
+			return true;
 		}
-		centerTrg /= count;
-
-		glm::vec4 src = calibrator->sourcecam->modelMat * glm::vec4(centerSrc.x, centerSrc.y, centerSrc.z, 1.0);
-		glm::vec4 dst = calibrator->targetcam->modelMat * glm::vec4(centerTrg.x, centerTrg.y, centerTrg.z, 1.0);
-
-		bool result = calibrator->pushCorrepondPoint(
-			glm::vec3(src.x, src.y, src.z),
-			glm::vec3(dst.x, dst.y, dst.z)
-		);
-	}
+	}	
+	return false;
 }
 
 void ExtrinsicCalibrator::alignDevice2calibratedDevice(InputBase* uncalibratedCam, std::vector<CameraGL>& allDevice) {
 
 	InputBase* baseCamera = nullptr;
-	glm::mat4 baseCam2Markerorigion;
 	for (auto device = allDevice.begin(); device != allDevice.end(); device++) {
-		if (device->camera->calibrated) {
-			CalibrateResult c = putAruco2Origion(device->camera);
-			if (c.success) {
+		if (device->camera->calibrated && device->camera->serial!= uncalibratedCam->serial) {
+
+			std::map<std::string, std::pair<cv::Point2f, cv::Point2f>> pixelpairs = OpenCVUtils::getCorrespondingArucoMarker(
+				uncalibratedCam->width, uncalibratedCam->height, uncalibratedCam->p_color_frame, INPUT_COLOR_CHANNEL,
+				device->camera->width, device->camera->height, device->camera->p_color_frame, INPUT_COLOR_CHANNEL
+			);
+
+			int validCorrespondingPoint = 0;
+			for (auto keyValue : pixelpairs) {
+				auto pair = keyValue.second;
+				if (pair.first.x < 0 || pair.first.y < 0 || pair.second.x < 0 || pair.second.y < 0) {
+					continue;
+				}
+				validCorrespondingPoint++;
+			}
+			std::cout << "Attempt to calibrate " << device->camera->serial << " " << uncalibratedCam->serial <<"get features :"<< validCorrespondingPoint <<std::endl;
+			if (validCorrespondingPoint > 0) {
 				baseCamera = device->camera;
-				baseCam2Markerorigion = c.calibMat;
 				break;
 			}
+
 		}
 	}
 	if (baseCamera) {
-		// calculate a rough camera pose
-		CalibrateResult c = putAruco2Origion(uncalibratedCam);
-		if (c.success) {
-			uncalibratedCam->modelMat = baseCamera->modelMat * glm::inverse(baseCam2Markerorigion) * c.calibMat;
-			calibrator = new CorrespondPointCollector(uncalibratedCam, baseCamera, collectPointCout, collectthreshold);
+		std::cout << "Init calibrate " << baseCamera->serial << " " << uncalibratedCam->serial << std::endl;		
+		calibrator = new CorrespondPointCollector(uncalibratedCam, baseCamera, collectPointCout, collectthreshold);
+		if (collectCalibratePoints(0)) {
+			calibrator->calibrate();
+			uncalibratedCam->calibrated = false;
+			delete calibrator;
+			calibrator = nullptr;
 		}
+		calibrator = new CorrespondPointCollector(uncalibratedCam, baseCamera, collectPointCout, collectthreshold);		
 	}
 }
 
+// single marker direct solve (deprecated)
 CalibrateResult ExtrinsicCalibrator::putAruco2Origion(InputBase* camera) {
 
 	CalibrateResult result;
