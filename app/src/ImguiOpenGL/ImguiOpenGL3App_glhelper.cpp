@@ -90,6 +90,49 @@ void ImguiOpeGL3App::genCameraHelper(
 	ImguiOpeGL3App::setPointsVAO(vao, vbo, frustum, 6 * 3 * 4);
 }
 
+void ImguiOpeGL3App::genBoundingboxWireframe(GLuint& vao, GLuint& vbo,glm::vec3 max,glm::vec3 min) {
+	//// draw xyz-axis
+	GLfloat axisData[] = {
+		//  X     Y     Z           R     G     B
+			max.x, max.y, max.z,       1.0f, 1.0f, 1.0f,
+			max.x, max.y, min.z,       1.0f, 1.0f, 1.0f,
+
+			max.x, max.y, max.z,       1.0f, 1.0f, 1.0f,
+			min.x, max.y, max.z,       1.0f, 1.0f, 1.0f,
+
+			min.x, max.y, min.z,       1.0f, 1.0f, 1.0f,
+			max.x, max.y, min.z,       1.0f, 1.0f, 1.0f,
+
+			min.x, max.y, min.z,       1.0f, 1.0f, 1.0f,
+			min.x, max.y, max.z,       1.0f, 1.0f, 1.0f,
+
+			max.x, max.y, max.z,       1.0f, 1.0f, 1.0f,
+			max.x, min.y, max.z,       1.0f, 1.0f, 1.0f,
+
+			max.x, max.y, min.z,       1.0f, 1.0f, 1.0f,
+			max.x, min.y, min.z,       1.0f, 1.0f, 1.0f,
+
+			min.x, max.y, min.z,       1.0f, 1.0f, 1.0f,
+			min.x, min.y, min.z,       1.0f, 1.0f, 1.0f,
+
+			min.x, max.y, max.z,       1.0f, 1.0f, 1.0f,
+			min.x, min.y, max.z,       1.0f, 1.0f, 1.0f,
+
+			max.x, min.y, max.z,       1.0f, 1.0f, 1.0f,
+			max.x, min.y, min.z,       1.0f, 1.0f, 1.0f,
+
+			max.x, min.y, max.z,       1.0f, 1.0f, 1.0f,
+			min.x, min.y, max.z,       1.0f, 1.0f, 1.0f,
+
+			min.x, min.y, min.z,       1.0f, 1.0f, 1.0f,
+			max.x, min.y, min.z,       1.0f, 1.0f, 1.0f,
+
+			min.x, min.y, min.z,       1.0f, 1.0f, 1.0f,
+			min.x, min.y, max.z,       1.0f, 1.0f, 1.0f,
+	};
+	ImguiOpeGL3App::setPointsVAO(vao, vbo, axisData, 24);
+}
+
 void ImguiOpeGL3App::genOrigionAxis(GLuint& vao, GLuint& vbo) {
 	//// draw xyz-axis
 	GLfloat axisData[] = {

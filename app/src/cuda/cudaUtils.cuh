@@ -45,6 +45,12 @@ public:
 		uint16_t* colorRaw, unsigned int w, unsigned int h, float depthScale,float farplane);	
 
 	static void clipFloorAndFarDepth(cudaGraphicsResource_t* mask,
-		uint16_t* colorRaw, unsigned int w, unsigned int h, float* xy_table, float depthScale, float farplane,
+		uint16_t* depthRaw, unsigned int w, unsigned int h, float* xy_table, float depthScale, float farplane,
 		glm::vec3 planeCenter, glm::vec3 planeNormal,float planeCullingDistance);
+
+	static void boundingboxWorldClipping(cudaGraphicsResource_t* mask,
+		uint16_t* depthRaw, unsigned int w, unsigned int h, float* xy_table, float depthScale, glm::mat4 modelMat,
+		glm::mat4 boundingboxWorld,glm::vec3 boundingboxMax, glm::vec3 boundingboxmin
+	);
+
 };

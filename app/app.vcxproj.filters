@@ -338,5 +338,8 @@
     <CudaCompile Include="src\cuda\detphclipping.cu">
       <Filter>來源檔案\cuda</Filter>
     </CudaCompile>
+    <CudaCompile Include="src\cuda\boundingboxWorldClipping.cu">
+      <Filter>來源檔案\cuda</Filter>
+    </CudaCompile>
   </ItemGroup>
 </Project>

@@ -26,6 +26,13 @@ class FowardWarppingApp :public ImguiOpeGL3App {
 	GLuint screen_cosWeightDiscard_shader_program;
 	GLuint cosWeightDiscard_shader_program;
 
+	/*
+	* clipping bounding box, use matrix for transform controls, only translateXYZ is used.
+	*/
+	glm::vec3 clippingBoundingBoxMin = glm::vec3(-0.5, -0.1, -0.5);
+	glm::vec3 clippingBoundingBoxMax = glm::vec3(0.5, 1, 0.5);
+	glm::mat4 clippingBoundingBoxMat4 = glm::scale(glm::mat4(1.0),glm::vec3(1,2,1));
+
 	TransformContorl transformWidget;
 
 	int nearsetK = 2;
@@ -34,7 +41,7 @@ class FowardWarppingApp :public ImguiOpeGL3App {
 	VirtualCam* virtualcam;
 
 	// snapshot warpping result
-	int currentRecordFrame = -1;
+	RecordProgress currentRecordFrame = {-1,-1};
 
 	CameraManager camManager;
 
@@ -46,9 +53,10 @@ class FowardWarppingApp :public ImguiOpeGL3App {
 	// for better performance when calibration
 	bool preprocessing = false;
 	bool warpping = false;
+	bool warppingShowDepth = false;
 
 	bool detectMarkerEveryFrame = false;
-	ImVec4 chromaKeyColor;
+	ImVec4 chromaKeyColor = ImVec4(84.0/255,64.0/255,109.0/255,1.0);
 	glm::vec3 chromaKeyColorThreshold;
 	int pointsSmoothing = 10;
 	bool autoDepthDilation = false;
@@ -72,25 +80,59 @@ public:
 	void onBeforeRender() override {
 		//run animation if is triggered
 		currentRecordFrame = animator.animeVirtualCamPose(virtualcam->pose);
-		if (currentRecordFrame > -1) {
-			std::cout << currentRecordFrame << std::endl;
+		if (currentRecordFrame.frameIndex > -1) {
+			camManager.getNearestKcamera(nearsetK, virtualcam->getModelMat(lookAtPoint, curFrame), lookAtPoint, [this](auto cam) {
+				cam->camera->setFrameIndex(currentRecordFrame.frameIndex);
+			});
 		}
 	}
 	void onAfterRender() override {
-		if (currentRecordFrame > -1) {
+		if (currentRecordFrame.frameIndex > -1) {
 
 			// save all animation frames
-			std::string outputFolder = cv::utils::fs::join(animator.folder, std::to_string(currentRecordFrame));
+			std::ostringstream sstr;
+			sstr << std::setfill('0') << std::setw(8) <<currentRecordFrame.frameIndex;
+			std::string currentRecordfolder = sstr.str();
+
+			std::string outputFolder = cv::utils::fs::join(animator.folder, currentRecordfolder);
 			cv::utils::fs::createDirectory(outputFolder);
 
 			int i = 0;
 			camManager.getNearestKcamera(nearsetK, virtualcam->getModelMat(lookAtPoint, curFrame), lookAtPoint, [&i,this, &outputFolder](auto cam) {
-				std::string imgefilename = cv::utils::fs::join(outputFolder, std::to_string(i++) + ".png");
-				unsigned char* colorRaw = cam->getFrameBuffer(CameraGL::FrameBuffer::AFTERDISCARD)->getRawColorData();
-				cv::Mat image(cv::Size(cam->camera->width, cam->camera->height), CV_8UC4, (void*)colorRaw, cv::Mat::AUTO_STEP);
-				cv::imwrite(imgefilename, image);
-				delete colorRaw;
-				currentRecordFrame = -1;				
+				std::ostringstream sstr;
+				sstr << std::setfill('0') << std::setw(8) << i++ << ".png";
+				std::string knearestview = sstr.str();
+				std::string imgefilename = cv::utils::fs::join(outputFolder, knearestview);
+
+				if(warppingShowDepth)
+				{
+					// get gpu depth frame
+					float* depthRaw = cam->getFrameBuffer(CameraGL::FrameBuffer::AFTERDISCARD)->getRawDepthData();
+					cv::Mat image(cv::Size(cam->camera->width, cam->camera->height), CV_8UC4);
+					for (int i = 0; i < cam->camera->height; i++) {
+						for (int j = 0; j < cam->camera->width; j++) {
+							int index = i * cam->camera->width + j;
+							float depthvalue = depthRaw[index];
+								image.at < cv::Vec4b >(i,j) = cv::Vec4b(
+									depthvalue*255,
+									depthvalue*255,
+									depthvalue*255,
+									depthvalue > 0.999?0:255
+								);
+						}
+					}
+					cv::imwrite(imgefilename, image);
+					delete depthRaw;
+				}
+				else {
+					// get gpu color frame
+					unsigned char* colorRaw = cam->getFrameBuffer(CameraGL::FrameBuffer::AFTERDISCARD)->getRawColorData();
+					cv::Mat image(cv::Size(cam->camera->width, cam->camera->height), CV_8UC4, (void*)colorRaw, cv::Mat::AUTO_STEP);
+					cv::imwrite(imgefilename, image);
+					delete colorRaw;
+				}
+
+				currentRecordFrame = {-1,-1};
 			});
 		}
 
@@ -155,6 +197,7 @@ public:
 			ImGui::Begin("Warpping Result");
 			{
 				ImGui::Checkbox("Warpping", &warpping);
+				ImGui::Checkbox("Depth/Color", &warppingShowDepth);
 				// Using a Child allow to fill all the space of the window.
 				// It also alows customization
 				ImGui::BeginChild("Textures");
@@ -163,8 +206,13 @@ public:
 				float inputCount = camManager.size();
 				wsize.y /= inputCount;
 
-				camManager.getAllDevice([&wsize](auto cam) {
-					ImGui::Image((ImTextureID)cam->getFrameBuffer(CameraGL::FrameBuffer::AFTERDISCARD)->texColorBuffer, ImVec2(wsize.x, wsize.y), ImVec2(0, 1), ImVec2(1, 0));
+				camManager.getAllDevice([&wsize, this](auto cam) {
+					if (warppingShowDepth) {
+						ImGui::Image((ImTextureID)cam->getFrameBuffer(CameraGL::FrameBuffer::AFTERDISCARD)->depthBuffer, ImVec2(wsize.x, wsize.y), ImVec2(0, 1), ImVec2(1, 0));
+					}
+					else {
+						ImGui::Image((ImTextureID)cam->getFrameBuffer(CameraGL::FrameBuffer::AFTERDISCARD)->texColorBuffer, ImVec2(wsize.x, wsize.y), ImVec2(0, 1), ImVec2(1, 0));
+					}
 				});
 
 				ImGui::EndChild();
@@ -177,18 +225,22 @@ public:
 	void addMenu() override {
 
 		if (ImGui::CollapsingHeader("Reconstruct & Texture :")) {
-			
-			ImGui::Checkbox("Create3D", &use3D);
-			ImGui::Checkbox("Preprocessing", &preprocessing);
+
+			if (ImGui::Button("Clipping BoundingBox")) {
+				transformWidget.attachMatrix4(clippingBoundingBoxMat4);
+			}
+			transformWidget.addMenu();
 
 			ImGui::ColorEdit3("chromaKeycolor", (float*)&chromaKeyColor); // Edit 3 floats representing a color
 			ImGui::SliderFloat("H-Threshold", &chromaKeyColorThreshold.x, 0, 255); // Edit 3 floats representing a color
 			ImGui::SliderFloat("S-Threshold", &chromaKeyColorThreshold.y, 0, 255); // Edit 3 floats representing a color
 			ImGui::SliderFloat("V-Threshold", &chromaKeyColorThreshold.z, 0, 255); // Edit 3 floats representing a color
+
+			ImGui::Checkbox("Preprocessing :", &preprocessing);
 			ImGui::SliderInt("MaskErosion", &maskErosion, 0, 50);
 			ImGui::Checkbox("AutoDepthDilation", &autoDepthDilation);
 
-			ImGui::Text("Reconstruct:");
+			ImGui::Checkbox("Reconstruct:", &use3D);
 			ImGui::SliderFloat("planeMeshThreshold", &planeMeshThreshold, 0.0f, 90.0f);
 			ImGui::SliderFloat("cullTriangleThreshold", &cullTriangleThreshold, 0, 1);
 			ImGui::SliderInt("pointsSmoothing", &pointsSmoothing, 0, 50);
@@ -245,9 +297,6 @@ public:
 					transformWidget.attachMatrix4(device->camera->modelMat);
 				}
 			});
-			if (ImGui::Button("Disable##manualDragPos")) {
-				transformWidget.detachMatrix4();
-			}
 			transformWidget.addMenu();
 
 			ImGui::Text("Manual Adjust hardware:");
@@ -296,6 +345,13 @@ public:
 		virtualcam->fy = 913.079833984375;
 		virtualcam->ppx = 960.0040283203125;
 		virtualcam->ppy = 552.7597045898438;
+
+		//  init pose for real world catpure
+		lookAtPoint.y = 1.0;
+		virtualcam->pose.AzimuthAngle = -1.564;
+		virtualcam->pose.PolarAngle = 1.570;
+		virtualcam->pose.distance = 2;
+		virtualcam->farplane = 3;		
 	}
 
 	void updateForwardWrappingTexture(GLuint shader, VirtualCam* virtualcam, bool drawIndex,CameraGL::FrameBuffer type) {
@@ -350,52 +406,13 @@ public:
 	}
 	
 
-	void RGBtoHSV(float *fR, float *fG, float  *fB, float* fH, float* fS, float* fV) {
-		float fCMax = max(max(*fR, *fG), *fB);
-		float fCMin = min(min(*fR, *fG), *fB);
-		float fDelta = fCMax - fCMin;
-
-		if (fDelta > 0) {
-			if (fCMax == *fR) {
-				*fH = 60 * (fmod(((*fG - *fB) / fDelta), float(6)));
-			}
-			else if (fCMax == *fG) {
-				*fH = 60 * (((*fB - *fR) / fDelta) + 2);
-			}
-			else if (fCMax == *fB) {
-				*fH = 60 * (((*fR - *fG) / fDelta) + 4);
-			}
-
-			if (fCMax > 0) {
-				*fS = fDelta / fCMax;
-			}
-			else {
-				*fS = 0;
-			}
-
-			*fV = fCMax;
-		}
-		else {
-			*fH = 0;
-			*fS = 0;
-			*fV = fCMax;
-		}
-
-		if (*fH < 0) {
-			*fH = 360 + *fH;
-		}
-	}
-
 	// render realsense mesh on framebuffer
 	void framebufferRender() override {
 		camManager.deleteIdleCam();
 
-		float cR= chromaKeyColor.x * 255, cG= chromaKeyColor.y * 255, cB= chromaKeyColor.z * 255;
-		float H, S, V;
-		RGBtoHSV(&cR, &cG, &cB, &H, &S, &V);
-		std::cout << H/360.0*255.0<<" " << S*255<<" " << V << std::endl;
 		camManager.getAllDevice([this](auto device) {
-			device->updateImages(chromaKeyColor, chromaKeyColorThreshold);
+			device->updateImages(chromaKeyColor, chromaKeyColorThreshold,
+				glm::inverse(clippingBoundingBoxMat4), clippingBoundingBoxMax, clippingBoundingBoxMin);
 			if(preprocessing)
 				device->imagesPreprocessing(maskErosion, autoDepthDilation);
 		});
@@ -421,6 +438,14 @@ public:
 		ImguiOpeGL3App::genOrigionAxis(vao, vbo);
 		glm::mat4 mvpAxis = Projection * View * glm::translate(glm::mat4(1.0), lookAtPoint) * Model;
 		ImguiOpeGL3App::render(mvpAxis, pointsize, shader_program, vao, 6, GL_LINES);
+		
+		// render clipp bounding obx
+		ImguiOpeGL3App::genBoundingboxWireframe(vao, vbo, 
+			clippingBoundingBoxMin,
+			clippingBoundingBoxMax
+		);
+		glm::mat4 mvpBoundingbox = Projection * View * Model * clippingBoundingBoxMat4;
+		ImguiOpeGL3App::render(mvpBoundingbox, pointsize, shader_program, vao, 24, GL_LINES);
 
 		camManager.getAllDevice([this, &mvp](auto device, auto allDevice) {
 			renderFrustum(device);

@@ -17,4 +17,6 @@ public :
     JsonData(int w,int h);
     ~JsonData();
 
+    void setFrameIndex(int) override;
+    void updateFrame();
 };

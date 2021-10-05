@@ -38,6 +38,7 @@ public:
     // for json data
     int syncTime = 0;
     int currentTime = -1;
+    virtual void setFrameIndex(int) {};
 
     InputBase(
         int cw,
@@ -82,7 +83,7 @@ public:
     // post process : clip point
     float farPlane = 5.0;
     float point2floorDistance=100;
-
+    bool enableUpdateFrame = true;
     bool frameNeedsUpdate = false;
     virtual bool fetchframes(std::function<void(
         const void* depthRaw, size_t depthSize,

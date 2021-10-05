@@ -122,13 +122,14 @@ k4a_device_configuration_t AzureKinect::get_default_config()
 	camera_config.depth_mode = K4A_DEPTH_MODE_NFOV_UNBINNED; // No need for depth during calibration
 	camera_config.camera_fps = K4A_FRAMES_PER_SECOND_30;     // Don't use all USB bandwidth
 	camera_config.subordinate_delay_off_master_usec = 0;     // Must be zero for master
+	camera_config.wired_sync_mode = K4A_WIRED_SYNC_MODE_STANDALONE;
 	return camera_config;
 }
 
 k4a_device_configuration_t get_master_config()
 {
 	k4a_device_configuration_t camera_config = AzureKinect::get_default_config();
-	camera_config.wired_sync_mode = K4A_WIRED_SYNC_MODE_MASTER;
+	//camera_config.wired_sync_mode = K4A_WIRED_SYNC_MODE_MASTER;
 
 	// Two depth images should be seperated by MIN_TIME_BETWEEN_DEPTH_CAMERA_PICTURES_USEC to ensure the depth imaging
 	// sensor doesn't interfere with the other. To accomplish this the master depth image captures
@@ -143,7 +144,7 @@ k4a_device_configuration_t get_master_config()
 k4a_device_configuration_t get_subordinate_config()
 {
 	k4a_device_configuration_t camera_config = AzureKinect::get_default_config();
-	camera_config.wired_sync_mode = K4A_WIRED_SYNC_MODE_SUBORDINATE;
+	//camera_config.wired_sync_mode = K4A_WIRED_SYNC_MODE_SUBORDINATE;
 
 	// Two depth images should be seperated by MIN_TIME_BETWEEN_DEPTH_CAMERA_PICTURES_USEC to ensure the depth imaging
 	// sensor doesn't interfere with the other. To accomplish this the master depth image captures
@@ -245,6 +246,7 @@ void AzureKinect::getLatestFrame() {
 
 	while (true) {
 		try {
+			if (!enableUpdateFrame) continue;
 			k4a_capture_t capture;
 			k4a_wait_result_t get_capture_result = k4a_device_get_capture(device, &capture, K4A_WAIT_INFINITE);
 			if (get_capture_result == K4A_WAIT_RESULT_SUCCEEDED)
@@ -253,6 +255,7 @@ void AzureKinect::getLatestFrame() {
 
 				if (colorImage != nullptr)
 				{
+					if (!enableUpdateFrame) continue;
 					memcpy((void*)p_color_frame, k4a_image_get_buffer(colorImage), INPUT_COLOR_CHANNEL * width * height * sizeof(unsigned char));
 					k4a_image_release(colorImage);
 					frameNeedsUpdate = true;
@@ -268,7 +271,7 @@ void AzureKinect::getLatestFrame() {
 					{
 						printf("Failed to compute transformed depth image\n");
 					}
-
+					if (!enableUpdateFrame) continue;
 					memcpy((void*)p_depth_frame, (uint16_t*)(void*)k4a_image_get_buffer(transformed_depth_image), width * height * sizeof(uint16_t));
 
 					k4a_image_release(depthImage);

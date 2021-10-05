@@ -50,7 +50,8 @@ void CameraGL::imagesPreprocessing(int maskErosionSize, bool autoDepthDilation) 
 }
 
 void CameraGL::updateImages(
-	ImVec4 chromaKeyColor,glm::vec3 chromaKeyColorThreshold
+	ImVec4 chromaKeyColor,glm::vec3 chromaKeyColorThreshold,
+	glm::mat4 world2BoundingBox,glm::vec3 boundingBoxMax,glm::vec3 boundingBoxmin
 ) 
 {
 	auto copyHost2Device = [this](const void* depthRaw, size_t depthSize, const void* colorRaw, size_t colorSize) {
@@ -72,6 +73,12 @@ void CameraGL::updateImages(
 		&image_cuda, planemesh.cudaDepthData,
 		camera->width, camera->height, camera->xy_table_cuda, camera->intri.depth_scale,
 		camera->farPlane, camera->esitmatePlaneCenter, camera->esitmatePlaneNormal, camera->point2floorDistance
+	);
+
+	CudaAlogrithm::boundingboxWorldClipping(
+		&image_cuda, planemesh.cudaDepthData,
+		camera->width, camera->height, camera->xy_table_cuda, camera->intri.depth_scale,
+		camera->modelMat, world2BoundingBox, boundingBoxMax, boundingBoxmin
 	);
 
 	CudaAlogrithm::depthVisualize(&image_cuda, &depthvis_cuda, planemesh.cudaDepthData, camera->width, camera->height, camera->intri.depth_scale, camera->farPlane);	
@@ -158,21 +165,21 @@ void CameraGL::addfloatingSerialGui(glm::mat4 mvp,std::string text) {
 }
 
 void CameraGL::addui() {
-	auto KEY = [this](std::string keyword)->const char* {
-		return (keyword + std::string("##") + camera->serial).c_str();
+	auto KEY = [this](std::string keyword,std::string invisibleTag)->const char* {
+		return (keyword + std::string("##") + invisibleTag).c_str();
 	};
-	if (ImGui::Button(KEY("stop"))) {
+	if (ImGui::Button(KEY("stop",camera->serial))) {
 		ready2Delete = true;
 	}
 	ImGui::SameLine();
 	ImGui::Text(camera->serial.c_str());
 	ImGui::SameLine();
-	ImGui::Checkbox(KEY("calibrated"), &(camera->calibrated));
+	ImGui::Checkbox(KEY("calibrated", camera->serial), &(camera->calibrated));
 	ImGui::SameLine();
-	ImGui::Checkbox(KEY("visible"), &(visible));
-	ImGui::ColorEdit3(KEY("color"), (float*)&color); // Edit 3 floats representing a color
-	ImGui::SliderFloat(KEY("clip-z"), &camera->farPlane, 0.5f, 15.0f);
-	ImGui::SliderFloat(KEY("clip-floor"), &camera->point2floorDistance, -0.1f, 0.2f);
+	ImGui::Checkbox(KEY("visible", camera->serial), &(visible));
+	ImGui::ColorEdit3(KEY("color", camera->serial), (float*)&color); // Edit 3 floats representing a color
+	ImGui::SliderFloat(KEY("clip-z", camera->serial), &camera->farPlane, 0.5f, 15.0f);
+	ImGui::SliderFloat(KEY("clip-floor", camera->serial), &camera->point2floorDistance, -0.1f, 0.2f);
 }
 
 // render single realsense mesh

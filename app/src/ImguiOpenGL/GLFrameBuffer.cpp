@@ -57,6 +57,13 @@ void GLFrameBuffer::render(std::function<void()> callback, int CULLINGTYPE) {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
+float* GLFrameBuffer::getRawDepthData() {
+    float* depthRaw = new float[width * height];
+    glBindTexture(GL_TEXTURE_2D, depthBuffer);
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_FLOAT, depthRaw);
+    return depthRaw;
+}
+
 unsigned char* GLFrameBuffer::getRawColorData() {
     unsigned char* colorRaw = new unsigned char[width * height * 4];
 	glBindTexture(GL_TEXTURE_2D, texColorBuffer);

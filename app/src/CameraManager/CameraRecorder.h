@@ -13,16 +13,40 @@ typedef struct MannulBufferingFrame {
 	float* xy_table;
 }MannulBufferingFrame;
 
-class CameraRecorder {
+const std::string STATE_MSG[3] = {
+	" (in memory)",
+	" (saving)",
+	" (done)"
+};
+enum STATE {
+	INMEMORY=0,
+	SAVING=1,
+	DONE=2
+};
 
-	int bufferFramesCount = 0;
+class CameraRecorder {
+	STATE state = INMEMORY;
+	bool autoPlayPreview = true;
+	bool preview = false;
+	int currentPreviewIndex = -1;
+	int nextpreviewIndex = -1;
+
+	bool recordingMode = false;
 	std::map<std::string, std::vector<MannulBufferingFrame>*>buffers;
 
 	std::vector<MannulBufferingFrame>* getBuffer(std::string);
-	void exportBuffer2files();
+	int getSize();
+
+	int alreadySavedFileCount = 0;
+	std::thread exportBuffer2filesThread;
+	void saveFiles();
 
 public:
+	std::string folder;
+	bool clearBuffer();
+	void exportBuffer2files();
+
+	CameraRecorder();
 	~CameraRecorder();
 	void addGUI(std::vector<CameraGL> camera);
-
 };

@@ -24,7 +24,7 @@ class CameraManager {
 
 	rs2::context ctx;
 	std::vector<CameraGL> cameras;
-	CameraRecorder camRecroder;
+	std::vector<CameraRecorder*> camRecorder;
 
 	// return length of file
 	int jsonDataLen = 0;

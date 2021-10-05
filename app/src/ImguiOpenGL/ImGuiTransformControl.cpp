@@ -37,6 +37,10 @@ void TransformContorl::addMenu() {
 	}
 
 	{
+		if (ImGui::Button("detach Matrix4")) {
+			detachMatrix4();
+			return;
+		}
 		if (ImGui::IsKeyPressed(90))
 			mCurrentGizmoOperation = ImGuizmo::TRANSLATE;
 		if (ImGui::IsKeyPressed(69))
@@ -51,8 +55,8 @@ void TransformContorl::addMenu() {
 		ImGui::SameLine();
 		if (ImGui::RadioButton("Scale", mCurrentGizmoOperation == ImGuizmo::SCALE))
 			mCurrentGizmoOperation = ImGuizmo::SCALE;
-		if (ImGui::RadioButton("Universal", mCurrentGizmoOperation == ImGuizmo::UNIVERSAL))
-			mCurrentGizmoOperation = ImGuizmo::UNIVERSAL;
+		/*if (ImGui::RadioButton("Universal", mCurrentGizmoOperation == ImGuizmo::UNIVERSAL))
+			mCurrentGizmoOperation = ImGuizmo::UNIVERSAL;*/
 		float matrixTranslation[3], matrixRotation[3], matrixScale[3];
 		ImGuizmo::DecomposeMatrixToComponents(matrix, matrixTranslation, matrixRotation, matrixScale);
 		ImGui::InputFloat3("Tr", matrixTranslation);

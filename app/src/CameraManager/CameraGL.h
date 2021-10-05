@@ -47,7 +47,10 @@ public:
 	void addui();
 	void addfloatingSerialGui(glm::mat4, std::string text);
 
-	void updateImages(ImVec4 chromaKeyColor, glm::vec3 chromaKeyColorThreshold);
+	void updateImages(
+		ImVec4 chromaKeyColor, glm::vec3 chromaKeyColorThreshold,
+		glm::mat4 world2BoundingBox, glm::vec3 boundingBoxMax, glm::vec3 boundingBoxmin
+	);
 	void imagesPreprocessing(int maskErosionSize, bool autoDepthDilation);
 
 	// pass realsense data to cuda and compute plane mesh and point cloud

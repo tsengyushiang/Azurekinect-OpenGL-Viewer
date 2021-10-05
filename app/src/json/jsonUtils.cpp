@@ -250,7 +250,7 @@ void JsonUtils::saveRealsenseJson(
 
 	for (int i = 0; i < height; i++) {
 		for (int j = 0; j < width; j++) {
-			int cindex = (height-i-1) * width + j;
+			int cindex = i * width + j;
 			int index = i * width + j;
 
 			depthmap_raw.push_back(depthmap[index]);
@@ -259,7 +259,7 @@ void JsonUtils::saveRealsenseJson(
 			colormap_raw.push_back(colormap[cindex * INPUT_COLOR_CHANNEL + 0]);
 			colormap_raw.push_back(colormap[cindex * INPUT_COLOR_CHANNEL + 1]);
 			colormap_raw.push_back(colormap[cindex * INPUT_COLOR_CHANNEL + 2]);
-			mask_raw.push_back(colormap[cindex * INPUT_COLOR_CHANNEL + 3]);
+			//mask_raw.push_back(colormap[cindex * INPUT_COLOR_CHANNEL + 3]);
 		}
 	}
 
@@ -284,14 +284,14 @@ void JsonUtils::saveRealsenseJson(
 		{"colormap_raw",colormap_raw},
 		{"depthmap_raw",depthmap_raw},
 		{"xy_table",xytable},
-		{"yzCullingMask",mask_raw},
+		//{"yzCullingMask",mask_raw},
 		{"frameLength",1},
 		{"floor-plane",p},
 		{"far-plane",visulizeFarplane}
 	};
 
-	cv::Mat image(cv::Size(width, height), CV_8UC3, (void*)colormap_raw.data(), cv::Mat::AUTO_STEP);
-	cv::imwrite(filename + +".color.png", image);
+	//cv::Mat image(cv::Size(width, height), CV_8UC3, (void*)colormap_raw.data(), cv::Mat::AUTO_STEP);
+	//cv::imwrite(filename + +".color.png", image);
 
 	// write prettified JSON to another file
 	std::ofstream o(filename +".json");

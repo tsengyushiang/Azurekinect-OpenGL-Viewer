@@ -11,9 +11,12 @@ VirtualRouteAnimator::VirtualRouteAnimator()
 	currentFrame = 0;
 }
 
-int VirtualRouteAnimator::animeVirtualCamPose(SphericalCamPose& virtualCamPose){
+RecordProgress VirtualRouteAnimator::animeVirtualCamPose(SphericalCamPose& virtualCamPose){
 
-	if (!running)return -1;
+	if (!running)return {
+		-1,
+		-1
+	};
 
 	int frame = currentFrame;
 	int totalFrame = fps * durationSecond;
@@ -29,7 +32,10 @@ int VirtualRouteAnimator::animeVirtualCamPose(SphericalCamPose& virtualCamPose){
 		running = false;
 		currentFrame = 0;
 	}
-	return frame;
+	return {
+		frame,
+		currentPercentage
+	};
 }
 
 void VirtualRouteAnimator::addUI(SphericalCamPose& virtualCam) {

@@ -180,22 +180,45 @@ void CameraManager::addLocalFileUI() {
 
 	// time control
 	{
-		std::vector<std::string> index;
-		for (int i = 0; i < jsonDataLen; i++) {
-			index.push_back(std::to_string(i));
+		ImGui::SliderInt("Time", &time, 0, jsonDataLen);
+		ImGui::SameLine();
+		if(ImGui::Button("Apply")) {
+			for (auto device = cameras.begin(); device != cameras.end(); device++) {
+				device->camera->syncTime = time;
+			}
 		}
-		ImGui::ListBoxVec("Time", &time, index);
-		for (auto device = cameras.begin(); device != cameras.end(); device++) {
-			device->camera->syncTime = time;
-		}
+		
 	}
 }
 
 void CameraManager::addRecorderUI() {
-	camRecroder.addGUI(cameras);
-	if (ImGui::Button(std::string("Already Record " + std::to_string(recordFrameCount) + " frames").c_str())) {
-		recording = !recording;
+	auto KEY = [this](std::string keyword, std::string invisibleTag)->const char* {
+		return (keyword + std::string("##") + invisibleTag).c_str();
+	};
+
+	if (ImGui::Button("Add Clip")) {
+		camRecorder.push_back(new CameraRecorder());
+	};
+	if (ImGui::Button("Export clips")) {
+		for (auto clip : camRecorder) {
+			clip->exportBuffer2files();
+		}
+	};
+	for (int i = 0; i < camRecorder.size(); ++i) {
+		auto clip = camRecorder[i];
+		if (ImGui::Button(KEY("Delete Clip", clip->folder))) {
+			if (clip->clearBuffer()) {
+				delete clip;
+				camRecorder.erase(camRecorder.begin() + i);
+				return;
+			}
+		}
+		ImGui::SameLine();
+		clip->addGUI(cameras);
 	}
+	//if (ImGui::Button(std::string("Already Record " + std::to_string(recordFrameCount) + " frames").c_str())) {
+	//	recording = !recording;
+	//}
 }
 
 void CameraManager::addCameraUI() {
@@ -356,7 +379,7 @@ void CameraManager::getNearestKcamera(int kneaerest,glm::mat4 virutalCamModelMat
 		virutalCamModelMat[3][1],
 		virutalCamModelMat[3][2]
 	) - lookAtPoint;
-
+	virtualCamDir.y = 0;
 	for (auto device = cameras.begin(); device != cameras.end(); device++) {
 		glm::mat4 camMat = device->camera->modelMat;
 		glm::vec3 realCamDir = glm::vec3(
@@ -364,7 +387,7 @@ void CameraManager::getNearestKcamera(int kneaerest,glm::mat4 virutalCamModelMat
 			camMat[3][1],
 			camMat[3][2]
 		) - lookAtPoint;
-
+		realCamDir.y = 0;
 		float camWeight = glm::dot(glm::normalize(realCamDir), glm::normalize(virtualCamDir));
 		weight.push_back({
 			device->camera->serial ,

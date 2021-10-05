@@ -50,6 +50,7 @@ public :
 	GLFrameBuffer(int w, int h);
 	void render(std::function<void()> callback, int CULLINGTYPE = GL_FRONT);
 	unsigned char* getRawColorData();
+	float* getRawDepthData();
 };
 
 class ImguiOpeGL3App
@@ -119,7 +120,7 @@ public:
 		float width, float height, float ppx, float ppy, float fx, float fy, 
 		glm::vec3 color, float size,bool isPlane);
 	static void genOrigionAxis(GLuint& vao, GLuint& vbo);
-
+	static void genBoundingboxWireframe(GLuint& vao, GLuint& vbo, glm::vec3 max, glm::vec3 min);
 };
 
 //custum rener and init demo
