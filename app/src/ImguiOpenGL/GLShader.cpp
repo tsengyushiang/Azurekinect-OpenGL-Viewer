@@ -36,6 +36,10 @@ void GLShader::loadshaders() {
 #include "shaders/projectTexture.fs"
         ;
 
+    shaderLibs["renderMeshUvTexture.vs"] =
+#include "shaders/renderMeshUvTexture.vs"
+        ;
+
     shaderLibs["texture.vs"] =
 #include "shaders/texture.vs"
         ;

@@ -14,6 +14,9 @@ GLFrameBuffer* CameraGL::getFrameBuffer(FrameBuffer type) {
 	else if (type == FrameBuffer::AFTERDISCARD) {
 		return &afterDicardInVirtualView;
 	}
+	else if (type == FrameBuffer::COSDISCARDMAP) {
+		return &cosDiscardMap;
+	}
 }
 glm::mat4 CameraGL::getModelMat() {
 	return camera->modelMat;
@@ -23,7 +26,8 @@ CameraGL::CameraGL(InputBase* cam) :planemesh(cam->width, cam->height, INPUT_COL
 	maskInVirtualView(cam->width, cam->height),
 	meshnormalInVirtualView(cam->width, cam->height),
 	cosWeightInVirtualView(cam->width, cam->height),
-	afterDicardInVirtualView(cam->width, cam->height)
+	afterDicardInVirtualView(cam->width, cam->height),
+	cosDiscardMap(cam->width, cam->height)
 {
 	camera = cam;
 	CudaOpenGL::createCudaGLTexture(&image, &image_cuda, camera->width, camera->height);
@@ -40,18 +44,10 @@ void CameraGL::destory() {
 	free(camera);
 }
 
-void CameraGL::imagesPreprocessing(int maskErosionSize, bool autoDepthDilation) {
-
-	CudaAlogrithm::maskErosion(&image_cuda, camera->width, camera->height, maskErosionSize);
-
-	if (autoDepthDilation) {
-		CudaAlogrithm::fillDepthWithDilation(&image_cuda, planemesh.cudaDepthData, camera->width, camera->height);
-	}
-}
-
 void CameraGL::updateImages(
 	ImVec4 chromaKeyColor,glm::vec3 chromaKeyColorThreshold,
-	glm::mat4 world2BoundingBox,glm::vec3 boundingBoxMax,glm::vec3 boundingBoxmin
+	glm::mat4 world2BoundingBox,glm::vec3 boundingBoxMax,glm::vec3 boundingBoxmin,
+	int maskErosionSize, int depthdilation
 ) 
 {
 	auto copyHost2Device = [this](const void* depthRaw, size_t depthSize, const void* colorRaw, size_t colorSize) {
@@ -59,6 +55,8 @@ void CameraGL::updateImages(
 		cudaMemcpy(planemesh.cudaColorData, colorRaw, colorSize, cudaMemcpyHostToDevice);
 	};
 	camera->fetchframes(copyHost2Device);
+
+	CudaAlogrithm::fillDepthWithDilation(&image_cuda, planemesh.cudaDepthData, planemesh.cudaDilatedDepthData, camera->width, camera->height, depthdilation);
 
 	// acutal texture and create Mask
 	CudaAlogrithm::chromaKeyBackgroundRemove(&image_cuda, planemesh.cudaColorData, camera->width, camera->height,
@@ -68,7 +66,7 @@ void CameraGL::updateImages(
 			chromaKeyColor.z * 255
 		), chromaKeyColorThreshold
 	);
-	
+
 	CudaAlogrithm::clipFloorAndFarDepth(
 		&image_cuda, planemesh.cudaDepthData,
 		camera->width, camera->height, camera->xy_table_cuda, camera->intri.depth_scale,
@@ -80,8 +78,9 @@ void CameraGL::updateImages(
 		camera->width, camera->height, camera->xy_table_cuda, camera->intri.depth_scale,
 		camera->modelMat, world2BoundingBox, boundingBoxMax, boundingBoxmin
 	);
+	CudaAlogrithm::maskErosion(&image_cuda, camera->width, camera->height, maskErosionSize);
 
-	CudaAlogrithm::depthVisualize(&image_cuda, &depthvis_cuda, planemesh.cudaDepthData, camera->width, camera->height, camera->intri.depth_scale, camera->farPlane);	
+	CudaAlogrithm::depthVisualize(&image_cuda, &depthvis_cuda, planemesh.cudaDepthData, camera->width, camera->height, camera->intri.depth_scale, camera->farPlane);
 
 	//// debug : index map for project coverage
 	//CudaAlogrithm::chromaKeyBackgroundRemove(&representColorImage_cuda, planemesh.cudaColorData, camera->width, camera->height,

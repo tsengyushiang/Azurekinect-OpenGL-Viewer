@@ -66,4 +66,6 @@ public :
 	void getFoward3DWrappingDevice(std::function<void(CamIterator)> callback);
 
 	void updateProjectTextureWeight(glm::mat4 vmodelMat);
+
+	std::vector<Jsonformat::CamPose> getCamerasConfig();
 };

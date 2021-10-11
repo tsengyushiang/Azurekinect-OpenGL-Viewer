@@ -5,6 +5,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "../config.h"
 
+#define MAXITERATION 50
+#define ISVALIDDEPTHVALUE(x) (x>1e-3? true:false)
+
 class CudaAlogrithm {
 public:
 	static void depthMap2point(struct cudaGraphicsResource** vbo_resource,
@@ -38,7 +41,7 @@ public:
 	);
 
 	static void fillDepthWithDilation(cudaGraphicsResource_t* mask, 
-		unsigned short* depthRaw, unsigned int w, unsigned int h
+		unsigned short* depthRaw, unsigned short* dilatedDepth, unsigned int w, unsigned int h, int dilationPixel = MAXITERATION
 	);
 
 	static void depthVisualize(cudaGraphicsResource_t* mask, cudaGraphicsResource_t* cudaTexture,

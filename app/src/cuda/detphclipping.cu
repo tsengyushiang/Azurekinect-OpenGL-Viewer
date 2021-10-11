@@ -14,6 +14,9 @@ __global__ void clipFloorAndFarDepth_kernel(
     surf2Dread(&pixelCenter, mask, x * sizeof(uchar4), y);
 
     float depthValue = (float)depthRaw[index] * depthScale;
+    if (!ISVALIDDEPTHVALUE(depthValue)) {
+        pixelCenter.w = 0; 
+    }
 
     glm::vec4 localPos3d = glm::vec4(
         xy_table[index * 2] * depthValue,

@@ -15,6 +15,10 @@ __global__ void clipFloorAndFarDepth_kernel(
 
     float depthValue = (float)depthRaw[index] * depthScale;
 
+    if (!ISVALIDDEPTHVALUE(depthValue)) {
+        pixelCenter.w = 0;
+    }
+
     glm::vec4 worldPosition = world2BoundingBoxMat * modelMat * glm::vec4(
         xy_table[index * 2] * depthValue,
         xy_table[index * 2 + 1] * depthValue,

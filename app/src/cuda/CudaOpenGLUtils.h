@@ -1,7 +1,7 @@
 #pragma once
 
+#include<iostream>
 #include <functional>
-
 #include <GL/gl3w.h>            // Initialize with gl3wInit()
 #include <GLFW/glfw3.h>         // Include glfw3.h after our OpenGL definitions
 #include <cuda_runtime.h>
@@ -22,6 +22,7 @@ public :
 	//cuda opengl
 	int* cudaIndicesCount = 0;
 	uint16_t* cudaDepthData = 0;
+	uint16_t* cudaDilatedDepthData = 0;
 	unsigned char* cudaColorData = 0;
 	GLuint vao, vbo, ibo;
 	struct cudaGraphicsResource* cuda_vbo_resource, * cuda_ibo_resource;
@@ -31,4 +32,6 @@ public :
 	CudaGLDepth2PlaneMesh(int w, int h,int colorchannel);
 	void destory();
 	void render(std::function<void(GLuint& vao, int& count)>callback);
+
+	void getMeshData(float** posnormalvertexArr, unsigned int** faceIndices,int* faceCount);
 };

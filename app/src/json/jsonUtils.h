@@ -10,6 +10,7 @@ namespace Jsonformat {
 	struct CamPose {
 		std::string id;
 		std::vector<float> extrinsic;
+		float w,h,fx, fy, cx, cy;
 	};
 
 	template<typename T>
@@ -76,7 +77,8 @@ public:
 	);
 	static std::string cameraPoseFilename;
 	static void saveCameraPoses(
-		std::vector<Jsonformat::CamPose>& poses
+		std::vector<Jsonformat::CamPose>& poses,
+		std::string filename = "CameraExtrinsics"
 	);
 	static void loadCameraPoses(
 		std::string filename,

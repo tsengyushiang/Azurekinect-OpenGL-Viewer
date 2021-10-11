@@ -4,7 +4,7 @@
 
 template<typename T>
 void Jsonformat::to_json(json& j, const T& p) {
-	j = json{ {"id", p.id}, {"extrinsic", p.extrinsic} };
+	j = json{ {"id", p.id}, {"extrinsic", p.extrinsic},{"fx",p.fx},{"fy",p.fy},{"cx",p.cx},{"cy",p.cy},{"w",p.w} ,{"h",p.h} };
 }
 
 template<typename T>
@@ -13,7 +13,6 @@ void Jsonformat::from_json(const json& j, T& p) {
 	j.at("extrinsic").get_to(p.extrinsic);
 }
 
-std::string JsonUtils::cameraPoseFilename = "CameraExtrinsics";
 void JsonUtils::loadCameraPoses(
 	std::string filename,
 	std::vector<Jsonformat::CamPose>& poses
@@ -72,7 +71,8 @@ void JsonUtils::loadVirtualCam(
 }
 
 void JsonUtils::saveCameraPoses(
-	std::vector<Jsonformat::CamPose>& poses
+	std::vector<Jsonformat::CamPose>& poses,
+	std::string filename
 ) {
 	json j;
 	for (Jsonformat::CamPose p : poses) {
@@ -80,7 +80,7 @@ void JsonUtils::saveCameraPoses(
 	}
 
 	// write prettified JSON to another file
-	std::ofstream o(cameraPoseFilename + ".json");
+	std::ofstream o(filename + ".json");
 	o << std::setw(4) << j << std::endl;
 	o.close();
 }
@@ -175,6 +175,8 @@ bool JsonUtils::loadRealsenseJson(
 			(*colormap)[i* INPUT_COLOR_CHANNEL + channel] = 
 				j["colormap_raw"][i * INPUT_JSON_COLOR_CHANNEL + channel];
 		}
+		// assign alpha
+		(*colormap)[i * INPUT_COLOR_CHANNEL + 3] = 255;
 	}
 
 	i.close();

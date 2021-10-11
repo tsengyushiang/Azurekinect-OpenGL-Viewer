@@ -14,12 +14,13 @@ class CameraGL {
 	GLFrameBuffer meshnormalInVirtualView;
 	GLFrameBuffer cosWeightInVirtualView;
 	GLFrameBuffer afterDicardInVirtualView;
+	GLFrameBuffer cosDiscardMap;
 
 public:
 	
 	enum FrameBuffer
 	{
-		MASK, MESHNORMAL, COSWEIGHT, AFTERDISCARD
+		MASK, MESHNORMAL, COSWEIGHT, AFTERDISCARD, COSDISCARDMAP
 	};
 	GLFrameBuffer* getFrameBuffer(FrameBuffer);
 
@@ -49,9 +50,9 @@ public:
 
 	void updateImages(
 		ImVec4 chromaKeyColor, glm::vec3 chromaKeyColorThreshold,
-		glm::mat4 world2BoundingBox, glm::vec3 boundingBoxMax, glm::vec3 boundingBoxmin
+		glm::mat4 world2BoundingBox, glm::vec3 boundingBoxMax, glm::vec3 boundingBoxmin,
+		int maskErosionSize, int depthdilation
 	);
-	void imagesPreprocessing(int maskErosionSize, bool autoDepthDilation);
 
 	// pass realsense data to cuda and compute plane mesh and point cloud
 	void updateMeshwithCUDA(float planeMeshThreshold, int pointSmoothing);

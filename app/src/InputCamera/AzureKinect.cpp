@@ -123,6 +123,7 @@ k4a_device_configuration_t AzureKinect::get_default_config()
 	camera_config.camera_fps = K4A_FRAMES_PER_SECOND_30;     // Don't use all USB bandwidth
 	camera_config.subordinate_delay_off_master_usec = 0;     // Must be zero for master
 	camera_config.wired_sync_mode = K4A_WIRED_SYNC_MODE_STANDALONE;
+	camera_config.synchronized_images_only = true;
 	return camera_config;
 }
 

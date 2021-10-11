@@ -4,7 +4,7 @@
 __global__ void depthMap2point_kernel(
     float* pos, 
     unsigned short* depthRaw, cudaSurfaceObject_t colorRaw,
-    unsigned int w, unsigned int h, float* xy_table, float depthScale, float depthThreshold)
+    unsigned int w, unsigned int h, float* xy_table, float depthScale, float far)
 {
     unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
     unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -15,7 +15,7 @@ __global__ void depthMap2point_kernel(
     uchar4 pixel = { 0,0,0,0 };
     surf2Dread(&pixel, colorRaw, x * sizeof(uchar4), y);
 
-    if (depthValue < depthThreshold && pixel.w!=0) {
+    if (depthValue < far && pixel.w!=0) {
 
         // write output vertex
         pos[index * ATTRIBUTESIZE + ATTRIBUTE_OFFSET_VERTEX + 0] = xy_table[index * 2] * depthValue;

@@ -38,7 +38,7 @@ public:
     // for json data
     int syncTime = 0;
     int currentTime = -1;
-    virtual void setFrameIndex(int) {};
+    virtual bool setFrameIndex(int) { return false; };
 
     InputBase(
         int cw,

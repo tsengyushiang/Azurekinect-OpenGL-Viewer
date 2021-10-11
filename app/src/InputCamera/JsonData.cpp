@@ -9,9 +9,10 @@ JsonData::~JsonData() {
 	autoUpdate.join();
 }
 
-void JsonData::setFrameIndex(int index){
+bool JsonData::setFrameIndex(int index){
 	syncTime = index;
 	updateFrame();
+	return framefiles.size() > syncTime;
 }
 
 void JsonData::updateFrame() {
@@ -55,8 +56,11 @@ void JsonData::updateFrame() {
 			esitmatePlaneNormal = glm::vec3(planenx, planeny, planenz);
 			point2floorDistance = planeThreshold;
 		}
-
 		frameNeedsUpdate = true;
+	}
+	else if (currentTime == syncTime) {
+		frameNeedsUpdate = true;
+
 	}
 }
 

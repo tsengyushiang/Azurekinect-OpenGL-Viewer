@@ -10,12 +10,14 @@
 #include "src/virtualcam/VirtualRouteAnimator.h"
 #include <opencv2/core/utils/filesystem.hpp>
 #include "src/ImguiOpenGL/ImGuiTransformControl.h"
+#include "src/metaDataExporter/MetaDataExporter.h"
 #include <filesystem>
 
 class FowardWarppingApp :public ImguiOpeGL3App {
 	GLuint vao, vbo;
 
 	GLuint shader_program;
+	GLuint screen_shader_program;
 
 	GLuint texture_shader_program;
 	GLuint screen_texturedMesh_shader_program;
@@ -23,8 +25,7 @@ class FowardWarppingApp :public ImguiOpeGL3App {
 	GLuint screen_MeshMask_shader_program;
 	GLuint screen_facenormal_shader_program;
 	GLuint screen_cosWeight_shader_program;
-	GLuint screen_cosWeightDiscard_shader_program;
-	GLuint cosWeightDiscard_shader_program;
+	GLuint renderCosDiscardMap_shader_program;
 
 	/*
 	* clipping bounding box, use matrix for transform controls, only translateXYZ is used.
@@ -34,6 +35,9 @@ class FowardWarppingApp :public ImguiOpeGL3App {
 	glm::mat4 clippingBoundingBoxMat4 = glm::scale(glm::mat4(1.0),glm::vec3(1,2,1));
 
 	TransformContorl transformWidget;
+
+
+	MetaDataExporter metaDataExporter;
 
 	int nearsetK = 2;
 	VirtualRouteAnimator animator;
@@ -51,7 +55,6 @@ class FowardWarppingApp :public ImguiOpeGL3App {
 
 	bool use3D = false;
 	// for better performance when calibration
-	bool preprocessing = false;
 	bool warpping = false;
 	bool warppingShowDepth = false;
 
@@ -59,9 +62,8 @@ class FowardWarppingApp :public ImguiOpeGL3App {
 	ImVec4 chromaKeyColor = ImVec4(84.0/255,64.0/255,109.0/255,1.0);
 	glm::vec3 chromaKeyColorThreshold;
 	int pointsSmoothing = 10;
-	bool autoDepthDilation = false;
 	int maskErosion = 3;
-	float planeMeshThreshold=0;
+	int depthdilation = 3;
 	float cullTriangleThreshold = 0.25;
 
 	bool calculatDeviceWeights=false;
@@ -85,8 +87,23 @@ public:
 				cam->camera->setFrameIndex(currentRecordFrame.frameIndex);
 			});
 		}
+		if (metaDataExporter.isExporting()) {
+			if (metaDataExporter.frameIndex == 0) {
+				auto config = camManager.getCamerasConfig();
+				JsonUtils::saveCameraPoses(config,
+					cv::utils::fs::join(metaDataExporter.folder, "camsConfig.json")
+				);
+			}
+			camManager.getAllDevice([this](auto cam){				
+				bool success= cam->camera->setFrameIndex(metaDataExporter.frameIndex);
+				if (!success)
+					metaDataExporter.stopExport();
+			});
+			metaDataExporter.frameIndex++;
+		}
 	}
 	void onAfterRender() override {
+		// export warped images
 		if (currentRecordFrame.frameIndex > -1) {
 
 			// save all animation frames
@@ -136,7 +153,32 @@ public:
 			});
 		}
 
-		camManager.recordFrame();
+		// export mesh
+		if (metaDataExporter.isExporting()) {
+			// save all meshes
+			std::ostringstream sstr;
+			sstr << std::setfill('0') << std::setw(8) << metaDataExporter.frameIndex;
+			std::string currentRecordfolder = sstr.str();
+			std::string outputFolder = cv::utils::fs::join(metaDataExporter.folder, currentRecordfolder);
+			cv::utils::fs::createDirectory(outputFolder);
+
+			camManager.getAllDevice([this,&outputFolder](auto cam) {
+				float* posuvnormal;
+				unsigned int* faceIndices;
+				int faceCount;
+				cam->planemesh.getMeshData(&posuvnormal, &faceIndices, &faceCount);				
+				
+				unsigned char* discardMap = cam->getFrameBuffer(CameraGL::FrameBuffer::COSDISCARDMAP)->getRawColorData();
+				cv::Mat color(cv::Size(cam->camera->width, cam->camera->height), CV_8UC4, (void*)cam->camera->p_color_frame, cv::Mat::AUTO_STEP);				
+				metaDataExporter.writeObjWithMaterial(
+					&posuvnormal, &faceIndices, 
+					cam->planemesh.width, cam->planemesh.height, faceCount, color,
+					outputFolder, cam->camera->serial
+				);
+				free(posuvnormal);
+				free(faceIndices);
+			});
+		}
 	}
 	bool addOpenGLPanelGui() override{
 
@@ -233,15 +275,13 @@ public:
 
 			ImGui::ColorEdit3("chromaKeycolor", (float*)&chromaKeyColor); // Edit 3 floats representing a color
 			ImGui::SliderFloat("H-Threshold", &chromaKeyColorThreshold.x, 0, 255); // Edit 3 floats representing a color
-			ImGui::SliderFloat("S-Threshold", &chromaKeyColorThreshold.y, 0, 255); // Edit 3 floats representing a color
-			ImGui::SliderFloat("V-Threshold", &chromaKeyColorThreshold.z, 0, 255); // Edit 3 floats representing a color
+			//ImGui::SliderFloat("S-Threshold", &chromaKeyColorThreshold.y, 0, 255); // Edit 3 floats representing a color
+			//ImGui::SliderFloat("V-Threshold", &chromaKeyColorThreshold.z, 0, 255); // Edit 3 floats representing a color
 
-			ImGui::Checkbox("Preprocessing :", &preprocessing);
 			ImGui::SliderInt("MaskErosion", &maskErosion, 0, 50);
-			ImGui::Checkbox("AutoDepthDilation", &autoDepthDilation);
+			ImGui::SliderInt("Depthdilation", &depthdilation, 0, 50);				
 
 			ImGui::Checkbox("Reconstruct:", &use3D);
-			ImGui::SliderFloat("planeMeshThreshold", &planeMeshThreshold, 0.0f, 90.0f);
 			ImGui::SliderFloat("cullTriangleThreshold", &cullTriangleThreshold, 0, 1);
 			ImGui::SliderInt("pointsSmoothing", &pointsSmoothing, 0, 50);
 
@@ -304,7 +344,10 @@ public:
 				ImGui::Checkbox((device->camera->serial + "##showOpenCV").c_str(),&device->camera->showOpenCVwindow);
 			});
 		}
-		if (ImGui::CollapsingHeader("Virtual camera")) {
+		if (ImGui::CollapsingHeader("MetaDataExporter")) {
+			metaDataExporter.addGui();
+		}
+		if (ImGui::CollapsingHeader("Virtual camera, Warped Images export")) {
 			virtualcam->addUI();
 			animator.addUI(virtualcam->pose);
 			ImGui::SliderInt("Nearest K WarppingResult", &nearsetK, 0, camManager.size());
@@ -322,14 +365,12 @@ public:
 	}
 	void initGL() override {
 		shader_program = GLShader::genShaderProgram(this->window, "vertexcolor.vs", "vertexcolor.fs");
-		texture_shader_program = GLShader::genShaderProgram(this->window, "texture.vs", "texture.fs");
-		
+		texture_shader_program = GLShader::genShaderProgram(this->window, "texture.vs", "texture.fs");		
 		screen_texturedMesh_shader_program = GLShader::genShaderProgram(this->window, "projectOnScreen.vs", "texture.fs");
 		screen_facenormal_shader_program = GLShader::genShaderProgram(this->window, "projectOnScreen.vs", "facenormal.fs");
 		screen_cosWeight_shader_program = GLShader::genShaderProgram(this->window, "projectOnScreen.vs", "cosWeight.fs");
-		screen_cosWeightDiscard_shader_program = GLShader::genShaderProgram(this->window, "projectOnScreen.vs", "cosWeightDiscardwTexture.fs");
-		cosWeightDiscard_shader_program = GLShader::genShaderProgram(this->window, "vertexcolor.vs", "cosWeightDiscardwTexture.fs");
 		screen_MeshMask_shader_program = GLShader::genShaderProgram(this->window, "projectOnScreen.vs", "mask.fs");
+		renderCosDiscardMap_shader_program = GLShader::genShaderProgram(this->window, "renderMeshUvTexture.vs", "cosWeightDiscardwTexture.fs");
 
 		glGenVertexArrays(1, &vao);
 		glGenBuffers(1, &vbo);
@@ -376,9 +417,8 @@ public:
 			virtualcam->ppy,
 			virtualcam->nearplane,
 			virtualcam->farplane,
-			cullTriangleThreshold
 		};
-		ImguiOpeGL3App::setUniformFloats(shader, uniformNames, values, 8+1);
+		ImguiOpeGL3App::setUniformFloats(shader, uniformNames, values, 8);
 
 		camManager.getFoward3DWrappingDevice([
 			&type, &drawIndex, &shader, this, &devicemvp
@@ -412,23 +452,23 @@ public:
 
 		camManager.getAllDevice([this](auto device) {
 			device->updateImages(chromaKeyColor, chromaKeyColorThreshold,
-				glm::inverse(clippingBoundingBoxMat4), clippingBoundingBoxMax, clippingBoundingBoxMin);
-			if(preprocessing)
-				device->imagesPreprocessing(maskErosion, autoDepthDilation);
+				glm::inverse(clippingBoundingBoxMat4), clippingBoundingBoxMax, clippingBoundingBoxMin,
+				maskErosion, depthdilation
+			);
 		});
 
 		if (use3D) {
 			camManager.getFoward3DWrappingDevice([this](auto device) {
-				device->updateMeshwithCUDA(planeMeshThreshold, pointsSmoothing);
+				device->updateMeshwithCUDA(cullTriangleThreshold, pointsSmoothing);
 				});
 
 			if (warpping) {
 				updateForwardWrappingTexture(screen_MeshMask_shader_program, virtualcam, false, CameraGL::FrameBuffer::MASK);
 				updateForwardWrappingTexture(screen_facenormal_shader_program, virtualcam, false, CameraGL::FrameBuffer::MESHNORMAL);
 				updateForwardWrappingTexture(screen_cosWeight_shader_program, virtualcam, false, CameraGL::FrameBuffer::COSWEIGHT);
-				updateForwardWrappingTexture(screen_cosWeightDiscard_shader_program, virtualcam, false, CameraGL::FrameBuffer::AFTERDISCARD);
-			}
-		}
+				updateForwardWrappingTexture(screen_texturedMesh_shader_program, virtualcam, false, CameraGL::FrameBuffer::AFTERDISCARD);
+			}		
+		}		
 	}
 	
 	void render3dworld() {
@@ -456,18 +496,15 @@ public:
 		virtualcam->renderFrustum(devicemvp, vao, vbo, shader_program);
 
 		if (use3D) {
-			GLuint _3dshader = cosWeightDiscard_shader_program;
+			GLuint _3dshader = texture_shader_program;
 			camManager.getFoward3DWrappingDevice([&_3dshader, &mvp, this](auto device) {
-				std::string uniformName[] = { "weightThreshold" };
-				float values[] = { cullTriangleThreshold };
-				ImguiOpeGL3App::setUniformFloats(_3dshader, uniformName, values, 1);
 				std::string uniformNames[] = { "color" };
 				GLuint texture[] = { device->image };
 				ImguiOpeGL3App::activateTextures(_3dshader, uniformNames, texture, 1);
 				ImguiOpeGL3App::setUniformMat(_3dshader, "modelMat", device->camera->modelMat);
 				device->renderMesh(mvp, _3dshader);
 				});
-		}
+		}	
 
 		camPoseCalibrator.render(mvp, shader_program);
 	}

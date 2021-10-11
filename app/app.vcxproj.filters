@@ -48,11 +48,17 @@
     <Filter Include="來源檔案\ImguiOpenGL\shaders">
       <UniqueIdentifier>{242da6df-a65d-48d4-88bc-57c4077f5cd5}</UniqueIdentifier>
     </Filter>
-    <Filter Include="來源檔案\eigen">
-      <UniqueIdentifier>{433906bd-a22f-481a-ba83-1ccefa7fa1cb}</UniqueIdentifier>
-    </Filter>
     <Filter Include="來源檔案\ImguiOpenGL\imgui">
       <UniqueIdentifier>{7d06e8c8-de46-41b0-8470-536aa793c636}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="來源檔案\cuda\kernel">
+      <UniqueIdentifier>{0115856b-5ac1-44e8-a0e6-0916a1812caa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="來源檔案\metaDataExporter">
+      <UniqueIdentifier>{7f9b518f-eb80-4d9a-a1dc-80dc77106377}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="來源檔案\eigen">
+      <UniqueIdentifier>{433906bd-a22f-481a-ba83-1ccefa7fa1cb}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -173,6 +179,9 @@
     <ClCompile Include="src\ImguiOpenGL\ImGuiTransformControl.cpp">
       <Filter>來源檔案\ImguiOpenGL</Filter>
     </ClCompile>
+    <ClCompile Include="src\metaDataExporter\MetaDataExporter.cpp">
+      <Filter>來源檔案\metaDataExporter</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -271,6 +280,9 @@
     <ClInclude Include="src\ImguiOpenGL\ImGuiTransformControl.h">
       <Filter>來源檔案\ImguiOpenGL</Filter>
     </ClInclude>
+    <ClInclude Include="src\metaDataExporter\MetaDataExporter.h">
+      <Filter>來源檔案\metaDataExporter</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="src\ImguiOpenGL\shaders\projectOnScreen.vs">
@@ -309,37 +321,40 @@
     <None Include="src\ImguiOpenGL\shaders\mask.fs">
       <Filter>來源檔案\ImguiOpenGL\shaders</Filter>
     </None>
+    <None Include="src\ImguiOpenGL\shaders\renderMeshUvTexture.vs">
+      <Filter>來源檔案\ImguiOpenGL\shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="src\cuda\depthMap2pointcloud.cu">
-      <Filter>來源檔案\cuda</Filter>
-    </CudaCompile>
-    <CudaCompile Include="src\cuda\depthMapTriangulate.cu">
-      <Filter>來源檔案\cuda</Filter>
+    <CudaCompile Include="src\cuda\boundingboxWorldClipping.cu">
+      <Filter>來源檔案\cuda\kernel</Filter>
     </CudaCompile>
     <CudaCompile Include="src\cuda\chromakeyBackgroundRemove.cu">
-      <Filter>來源檔案\cuda</Filter>
+      <Filter>來源檔案\cuda\kernel</Filter>
     </CudaCompile>
-    <CudaCompile Include="src\cuda\maskErosion.cu">
-      <Filter>來源檔案\cuda</Filter>
+    <CudaCompile Include="src\cuda\depthMap2pointcloud.cu">
+      <Filter>來源檔案\cuda\kernel</Filter>
     </CudaCompile>
-    <CudaCompile Include="src\cuda\fillDepthWithDilation.cu">
-      <Filter>來源檔案\cuda</Filter>
+    <CudaCompile Include="src\cuda\depthMapTriangulate.cu">
+      <Filter>來源檔案\cuda\kernel</Filter>
     </CudaCompile>
     <CudaCompile Include="src\cuda\depthVisualize.cu">
-      <Filter>來源檔案\cuda</Filter>
-    </CudaCompile>
-    <CudaCompile Include="src\cuda\pointLaplacianSmoothing.cu">
-      <Filter>來源檔案\cuda</Filter>
-    </CudaCompile>
-    <CudaCompile Include="src\cuda\planeVertexNormalEstimate.cu">
-      <Filter>來源檔案\cuda</Filter>
+      <Filter>來源檔案\cuda\kernel</Filter>
     </CudaCompile>
     <CudaCompile Include="src\cuda\detphclipping.cu">
-      <Filter>來源檔案\cuda</Filter>
+      <Filter>來源檔案\cuda\kernel</Filter>
     </CudaCompile>
-    <CudaCompile Include="src\cuda\boundingboxWorldClipping.cu">
-      <Filter>來源檔案\cuda</Filter>
+    <CudaCompile Include="src\cuda\fillDepthWithDilation.cu">
+      <Filter>來源檔案\cuda\kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="src\cuda\maskErosion.cu">
+      <Filter>來源檔案\cuda\kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="src\cuda\planeVertexNormalEstimate.cu">
+      <Filter>來源檔案\cuda\kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="src\cuda\pointLaplacianSmoothing.cu">
+      <Filter>來源檔案\cuda\kernel</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>

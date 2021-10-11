@@ -47,6 +47,7 @@ void launch_kernel(cudaSurfaceObject_t input,cudaSurfaceObject_t output, unsigne
 
 void CudaAlogrithm::maskErosion(cudaGraphicsResource_t* cudaTexture, unsigned int w, unsigned int h, int erosionPixel)
 {
+    if (erosionPixel == 0)return;
     cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc(8, 8, 8, 8, cudaChannelFormatKindUnsigned);
     cudaArray* cuInputArray;
     cudaMallocArray(&cuInputArray, &channelDesc, w, h, cudaArraySurfaceLoadStore);

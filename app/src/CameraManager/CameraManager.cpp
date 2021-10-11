@@ -80,21 +80,29 @@ void CameraManager::setExtrinsicsUI() {
 		ImGuiFileDialog::Instance()->Close();
 	}
 	ImGui::SameLine();
-	if (ImGui::Button("save camera pose")) {
-		std::vector<Jsonformat::CamPose> setting;
-		getAllDevice([&setting](auto device) {
-			glm::mat4 modelMat = device->camera->modelMat;
-			std::vector<float> extrinsic = {
-				modelMat[0][0],modelMat[1][0],modelMat[2][0],modelMat[3][0],
-				modelMat[0][1],modelMat[1][1],modelMat[2][1],modelMat[3][1],
-				modelMat[0][2],modelMat[1][2],modelMat[2][2],modelMat[3][2],
-				modelMat[0][3],modelMat[1][3],modelMat[2][3],modelMat[3][3]
-			};
-			Jsonformat::CamPose c = { device->camera->serial ,extrinsic };
-			setting.push_back(c);
-		});
-		JsonUtils::saveCameraPoses(setting);
+	if (ImGui::Button("save camera pose")) {		
+		auto config = getCamerasConfig();
+		JsonUtils::saveCameraPoses(config);
 	}
+}
+
+std::vector<Jsonformat::CamPose> CameraManager::getCamerasConfig() {
+	std::vector<Jsonformat::CamPose> setting;
+	getAllDevice([&setting](auto device) {
+		glm::mat4 modelMat = device->camera->modelMat;
+		std::vector<float> extrinsic = {
+			modelMat[0][0],modelMat[1][0],modelMat[2][0],modelMat[3][0],
+			modelMat[0][1],modelMat[1][1],modelMat[2][1],modelMat[3][1],
+			modelMat[0][2],modelMat[1][2],modelMat[2][2],modelMat[3][2],
+			modelMat[0][3],modelMat[1][3],modelMat[2][3],modelMat[3][3]
+		};
+		Jsonformat::CamPose c = { device->camera->serial ,extrinsic,
+			device->camera->width, device->camera->height,
+			device->camera->intri.fx, device->camera->intri.fy, device->camera->intri.ppx, device->camera->intri.ppy,
+		};
+		setting.push_back(c);
+	});
+	return setting;
 }
 
 void CameraManager::recordFrame() {
