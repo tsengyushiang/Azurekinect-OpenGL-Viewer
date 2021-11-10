@@ -168,9 +168,27 @@ void CameraManager::recordFrame() {
 		*/
 	}
 }
-
-void CameraManager::addLocalFileUI() {
-	if (ImGui::Button("Add Camera Frame(s)"))
+void CameraManager::addMKVFileUI() {
+	ImGui::Checkbox("MKV2Frames", &exportOnly);
+	ImGui::SameLine();
+	if (ImGui::Button("Add Azurekinect MKV File(s)"))
+		ImGuiFileDialog::Instance()->OpenDialog("Add Azurekinect MKV", "Add Azurekinect MKV", ".mkv", ".", 0);
+	if (ImGuiFileDialog::Instance()->Display("Add Azurekinect MKV"))
+	{
+		// action if OK
+		if (ImGuiFileDialog::Instance()->IsOk())
+		{
+			auto filePathMap = ImGuiFileDialog::Instance()->GetSelection();
+			for (auto nameAndPath : filePathMap) {
+				jsonDataLen = max(jsonDataLen, addMKVDevice(nameAndPath.second));
+			}
+		}
+		// close
+		ImGuiFileDialog::Instance()->Close();
+	}
+}
+void CameraManager::addJsonFileUI() {
+	if (ImGui::Button("Add Camera Json Frame(s)"))
 		ImGuiFileDialog::Instance()->OpenDialog("Add Camera Frame(s)", "Add Camera Frame(s)", ".json", ".", 0);
 	if (ImGuiFileDialog::Instance()->Display("Add Camera Frame(s)"))
 	{
@@ -184,20 +202,25 @@ void CameraManager::addLocalFileUI() {
 		}
 		// close
 		ImGuiFileDialog::Instance()->Close();
-	}
-
+	}	
+}
+void CameraManager::addFileTimeControlsUI() {
 	// time control
 	{
 		ImGui::SliderInt("Time", &time, 0, jsonDataLen);
-		ImGui::SameLine();
-		if(ImGui::Button("Apply")) {
+		ImGui::Checkbox("auto update time",&autoUpdate);
+		if (autoUpdate) {
 			for (auto device = cameras.begin(); device != cameras.end(); device++) {
-				device->camera->syncTime = time;
+				device->camera->setFrameIndex(time);
+			}
+		}else if (ImGui::Button("Apply")) {
+			for (auto device = cameras.begin(); device != cameras.end(); device++) {
+				device->camera->setFrameIndex(time);
 			}
 		}
-		
 	}
 }
+
 
 void CameraManager::addRecorderUI() {
 	auto KEY = [this](std::string keyword, std::string invisibleTag)->const char* {
@@ -328,6 +351,13 @@ void CameraManager::addManulPick2Gui() {
 	}
 }
 
+int CameraManager::addMKVDevice(std::string filePath) {
+	MKVInfo info = AzureKinectMKV::open(filePath);
+	AzureKinectMKV* camera = new AzureKinectMKV(info.w, info.h, filePath, exportOnly);
+	CameraGL device(camera);
+	cameras.push_back(device);
+	return info.lastTimeStamp;
+}
 
 int CameraManager::addJsonDevice(std::string serial, std::string filePath) {
 
@@ -342,9 +372,7 @@ int CameraManager::addJsonDevice(std::string serial, std::string filePath) {
 	}
 
 	CameraGL device(camera);
-
 	cameras.push_back(device);
-
 	return camera->framefiles.size();
 }
 

@@ -5,6 +5,7 @@
 #include "../InputCamera/Realsense.h"
 #include "../InputCamera/JsonData.h"
 #include "../InputCamera/AzureKinect.h"
+#include "../InputCamera/AzureKinectMKV.h"
 #include <functional>
 #include <thread>
 #include <algorithm>
@@ -29,7 +30,9 @@ class CameraManager {
 	// return length of file
 	int jsonDataLen = 0;
 	int addJsonDevice(std::string serial, std::string filePath);
-	
+	int addMKVDevice(std::string filePath);
+	bool exportOnly = false;
+
 	void addRealsense(std::string serial, int cw, int ch, int dw, int wh);
 	void addAzuekinect(int index);
 	void removeDevice(CamIterator device);
@@ -42,6 +45,7 @@ public :
 	 
 	int recordFrameCount = 0;
 	bool recording = false;
+	bool autoUpdate = false;
 
 	CameraManager();
 	void destory();
@@ -49,7 +53,11 @@ public :
 
 	void addCameraUI();
 	void setExtrinsicsUI();
-	void addLocalFileUI();
+
+	void addJsonFileUI();
+	void addMKVFileUI();
+	void addFileTimeControlsUI();
+
 	void addRecorderUI();
 
 	Picked2Cam pickedCams;

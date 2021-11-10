@@ -32,7 +32,7 @@ class FowardWarppingApp :public ImguiOpeGL3App {
 	*/
 	glm::vec3 clippingBoundingBoxMin = glm::vec3(-0.5, -0.1, -0.5);
 	glm::vec3 clippingBoundingBoxMax = glm::vec3(0.5, 1, 0.5);
-	glm::mat4 clippingBoundingBoxMat4 = glm::scale(glm::mat4(1.0),glm::vec3(1,2,1));
+	glm::mat4 clippingBoundingBoxMat4 = glm::scale(glm::mat4(1.0),glm::vec3(1000,2000,1000));
 
 	TransformContorl transformWidget;
 
@@ -354,9 +354,14 @@ public:
 		}
 		if (ImGui::CollapsingHeader("LocalFiles")) {
 			camManager.setExtrinsicsUI();
-			camManager.addLocalFileUI();
+			camManager.addMKVFileUI();
+			camManager.addJsonFileUI();
+			camManager.addFileTimeControlsUI();
 		}
 		if (ImGui::CollapsingHeader("Recorder")) {
+			ImGui::Text("Use Offical k4arecorder is recommended.");
+			char link[72] =  "https://docs.microsoft.com/zh-tw/azure/kinect-dk/azure-kinect-recorder";
+			ImGui::InputText("k4acorder", link, IM_ARRAYSIZE(link));
 			camManager.addRecorderUI();
 		}
 		if (ImGui::CollapsingHeader("Cameras")) {

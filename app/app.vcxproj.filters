@@ -182,6 +182,9 @@
     <ClCompile Include="src\metaDataExporter\MetaDataExporter.cpp">
       <Filter>來源檔案\metaDataExporter</Filter>
     </ClCompile>
+    <ClCompile Include="src\InputCamera\AzurekinectMKV.cpp">
+      <Filter>來源檔案\InputCamera</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -282,6 +285,9 @@
     </ClInclude>
     <ClInclude Include="src\metaDataExporter\MetaDataExporter.h">
       <Filter>來源檔案\metaDataExporter</Filter>
+    </ClInclude>
+    <ClInclude Include="src\InputCamera\AzurekinectMKV.h">
+      <Filter>來源檔案\InputCamera</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

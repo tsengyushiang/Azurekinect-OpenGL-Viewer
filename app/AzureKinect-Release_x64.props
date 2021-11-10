@@ -8,7 +8,7 @@
       <AdditionalIncludeDirectories>C:\git\Azure Kinect SDK v1.4.1\sdk\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>C:\git\Azure Kinect SDK v1.4.1\sdk\windows-desktop\amd64\release\lib\k4a.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>C:\git\Azure Kinect SDK v1.4.1\sdk\windows-desktop\amd64\release\lib\k4a.lib;C:\git\Azure Kinect SDK v1.4.1\sdk\windows-desktop\amd64\release\lib\k4arecord.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup />

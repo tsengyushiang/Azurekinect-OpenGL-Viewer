@@ -179,6 +179,7 @@
     <ClCompile Include="src\ImguiOpenGL\official-example.cpp" />
     <ClCompile Include="src\ImguiOpenGL\shader-example.cpp" />
     <ClCompile Include="src\InputCamera\AzureKinect.cpp" />
+    <ClCompile Include="src\InputCamera\AzurekinectMKV.cpp" />
     <ClCompile Include="src\InputCamera\InputBase.cpp" />
     <ClCompile Include="src\InputCamera\JsonData.cpp" />
     <ClCompile Include="src\InputCamera\realsense-net-opencv.cpp" />
@@ -215,6 +216,7 @@
     <ClInclude Include="src\ImguiOpenGL\Imgui\imgui_impl_opengl3.h" />
     <ClInclude Include="src\ImguiOpenGL\Imgui\imgui_internal.h" />
     <ClInclude Include="src\InputCamera\AzureKinect.h" />
+    <ClInclude Include="src\InputCamera\AzurekinectMKV.h" />
     <ClInclude Include="src\InputCamera\example-realsense.h" />
     <ClInclude Include="src\InputCamera\InputBase.h" />
     <ClInclude Include="src\InputCamera\JsonData.h" />

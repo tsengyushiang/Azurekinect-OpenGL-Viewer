@@ -12,6 +12,7 @@ _deps
 
 *.json
 *.png
+!docs/*.png
 *.jpg
 *.7z
 *.avi

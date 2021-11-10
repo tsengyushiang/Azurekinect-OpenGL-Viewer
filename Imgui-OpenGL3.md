@@ -14,7 +14,9 @@
 
 - copy code from imgui to your project
 
-![vs code](./docs/copycode-imgui-opengl3.jpg)
+    ![vs code](./docs/copycode-imgui-opengl3.jpg)
+
+    - if file dialog is needed check [ImGuiFileDialog](https://github.com/aiekick/ImGuiFileDialog/tree/Lib_Only). copy files into folder and add `ImGuiFileDialog/ImGuiFileDialog.cpp` to project, use by include `ImGuiFileDialog/ImGuiFileDialog.h`
 
 ## Error
 
